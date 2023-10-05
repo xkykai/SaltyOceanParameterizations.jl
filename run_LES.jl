@@ -80,7 +80,7 @@ simulation.callbacks[:wizard] = Callback(wizard, IterationInterval(10))
 wall_clock = [time_ns()]
 
 function print_progress(sim)
-    @printf("[%05.2f%%] i: %d, t: %s, wall time: %s, max(u): (%6.3e, %6.3e, %6.3e) m/s, max(b) %6.3e, next Δt: %s\n",
+    @printf("[%05.2f%%] i: %d, t: %s, wall time: %s, max(u): (%6.3e, %6.3e, %6.3e) m/s, max(T) %6.3e, max(S) %6.3e, next Δt: %s\n",
             100 * (sim.model.clock.time / sim.stop_time),
             sim.model.clock.iteration,
             prettytime(sim.model.clock.time),
@@ -88,7 +88,8 @@ function print_progress(sim)
             maximum(abs, sim.model.velocities.u),
             maximum(abs, sim.model.velocities.v),
             maximum(abs, sim.model.velocities.w),
-            maximum(abs, sim.model.tracers.b),
+            maximum(abs, sim.model.tracers.T),
+            maximum(abs, sim.model.tracers.S),
             prettytime(sim.Δt))
 
     wall_clock[1] = time_ns()

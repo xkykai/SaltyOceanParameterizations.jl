@@ -18,8 +18,8 @@ const Nz = 128
 const Nx = 256
 const Ny = 256
 
-const Qᵁ = -5e-4
-const Qᵀ = 1e-5
+const Qᵁ = -1e-4
+const Qᵀ = 2e-6
 const Qˢ = 2e-3
 
 const Pr = 1
@@ -34,7 +34,8 @@ const λˢ = 6e-4
 const T_surface = 20
 const S_surface = 35
 
-FILE_DIR = "LES/QU_$(Qᵁ)_QT_$(Qᵀ)_Qs_$(Qˢ)"
+FILE_NAME = "QU_$(Qᵁ)_QT_$(Qᵀ)_Qs_$(Qˢ)"
+FILE_DIR = "LES/$(FILE_NAME)"
 mkpath(FILE_DIR)
 
 grid = RectilinearGrid(GPU(), Float64,
@@ -64,7 +65,7 @@ model = NonhydrostaticModel(;
             closure = ScalarDiffusivity(ν=ν, κ=κ),
             coriolis = FPlane(f=f),
             buoyancy = SeawaterBuoyancy(equation_of_state=eos),
-            tracers = (:T, :S),
+            tracers = (:T, :S, :b),
             timestepper = :RungeKutta3,
             advection = WENO(order=9),
             boundary_conditions = (T=T_bcs, S=S_bcs, u=u_bcs)
@@ -72,7 +73,7 @@ model = NonhydrostaticModel(;
 
 set!(model, T=T_initial, S=S_initial)
 
-simulation = Simulation(model, Δt=1second, stop_time=2days)
+simulation = Simulation(model, Δt=0.1second, stop_time=0.5days)
 
 wizard = TimeStepWizard(max_change=1.05, max_Δt=10minutes, cfl=0.6)
 simulation.callbacks[:wizard] = Callback(wizard, IterationInterval(10))
@@ -112,16 +113,19 @@ end
 
 T = model.tracers.T
 S = model.tracers.S
+b = model.tracers.b
 u, v, w = model.velocities
 
-ū = Average(u, dims=(1, 2))
-v̄ = Average(v, dims=(1, 2))
+ubar = Average(u, dims=(1, 2))
+vbar = Average(v, dims=(1, 2))
 
-T̄ = Average(T, dims=(1, 2))
-S̄ = Average(S, dims=(1, 2))
+bbar = Average(b, dims=(1, 2))
+Tbar = Average(T, dims=(1, 2))
+Sbar = Average(S, dims=(1, 2))
 
-uw = Average(u * w, dims=(1, 2))
-vw = Average(v * w, dims=(1, 2))
+uw = Average(w * u, dims=(1, 2))
+vw = Average(w * v, dims=(1, 2))
+wb = Average(w * b, dims=(1, 2))
 wT = Average(w * T, dims=(1, 2))
 wS = Average(w * S, dims=(1, 2))
 
@@ -133,7 +137,7 @@ simulation.output_writers[:jld2] = JLD2OutputWriter(model, field_outputs,
                                                           with_halos = true,
                                                           init = init_save_some_metadata!)
 
-simulation.output_writers[:timeseries] = JLD2OutputWriter(model, (; ū, v̄, T̄, S̄, uw, vw, wT, wS),
+simulation.output_writers[:timeseries] = JLD2OutputWriter(model, (; ubar, vbar, Tbar, Sbar, uw, vw, wb, wT, wS),
                                                           filename = "$(FILE_DIR)/instantaneous_timeseries.jld2",
                                                           schedule = TimeInterval(10minutes),
                                                           with_halos = true,
@@ -141,16 +145,16 @@ simulation.output_writers[:timeseries] = JLD2OutputWriter(model, (; ū, v̄, T�
 
 simulation.output_writers[:checkpointer] = Checkpointer(model, schedule=TimeInterval(1day), prefix="$(FILE_DIR)/model_checkpoint")
 
-# run!(simulation, pickup="$(FILE_DIR)/model_checkpoint_iteration400195.jld2")
+# run!(simulation, pickup="$(FILE_DIR)/model_checkpoint_iteration97574.jld2")
 run!(simulation)
 
 T_data = FieldTimeSeries("$(FILE_DIR)/instantaneous_fields.jld2", "T", backend=OnDisk())
 S_data = FieldTimeSeries("$(FILE_DIR)/instantaneous_fields.jld2", "S", backend=OnDisk())
 
-ū_data = FieldTimeSeries("$(FILE_DIR)/instantaneous_timeseries.jld2", "ū")
-v̄_data = FieldTimeSeries("$(FILE_DIR)/instantaneous_timeseries.jld2", "v̄")
-T̄_data = FieldTimeSeries("$(FILE_DIR)/instantaneous_timeseries.jld2", "T̄")
-S̄_data = FieldTimeSeries("$(FILE_DIR)/instantaneous_timeseries.jld2", "S̄")
+ubar_data = FieldTimeSeries("$(FILE_DIR)/instantaneous_timeseries.jld2", "ubar")
+vbar_data = FieldTimeSeries("$(FILE_DIR)/instantaneous_timeseries.jld2", "vbar")
+Tbar_data = FieldTimeSeries("$(FILE_DIR)/instantaneous_timeseries.jld2", "Tbar")
+Sbar_data = FieldTimeSeries("$(FILE_DIR)/instantaneous_timeseries.jld2", "Sbar")
 
 uw_data = FieldTimeSeries("$(FILE_DIR)/instantaneous_timeseries.jld2", "uw")
 vw_data = FieldTimeSeries("$(FILE_DIR)/instantaneous_timeseries.jld2", "vw")
@@ -170,10 +174,10 @@ fig = Figure(resolution=(1500, 1500))
 axT = Axis3(fig[1:2, 1:2], title="T", xlabel="x", ylabel="y", zlabel="z", viewmode=:fitzoom, aspect=:data)
 axS = Axis3(fig[1:2, 3:4], title="S", xlabel="x", ylabel="y", zlabel="z", viewmode=:fitzoom, aspect=:data)
 
-axū = Axis(fig[3, 1], title="ū", xlabel="ū", ylabel="z")
-axv̄ = Axis(fig[3, 2], title="v̄", xlabel="v̄", ylabel="z")
-axT̄ = Axis(fig[3, 3], title="T̄", xlabel="T̄", ylabel="z")
-axS̄ = Axis(fig[3, 4], title="S̄", xlabel="S̄", ylabel="z")
+axubar = Axis(fig[3, 1], title="ū", xlabel="ū", ylabel="z")
+axvbar = Axis(fig[3, 2], title="v̄", xlabel="v̄", ylabel="z")
+axTbar = Axis(fig[3, 3], title="T̄", xlabel="T̄", ylabel="z")
+axSbar = Axis(fig[3, 4], title="S̄", xlabel="S̄", ylabel="z")
 
 axuw = Axis(fig[4, 1], title="uw", xlabel="uw", ylabel="z")
 axvw = Axis(fig[4, 2], title="vw", xlabel="vw", ylabel="z")
@@ -205,10 +209,10 @@ colormap = Reverse(:RdBu_10)
 T_color_range = Tlim
 S_color_range = Slim
 
-ūlim = (minimum(ū_data), maximum(ū_data))
-v̄lim = (minimum(v̄_data), maximum(v̄_data))
-T̄lim = (minimum(T̄_data), maximum(T̄_data))
-S̄lim = (minimum(S̄_data), maximum(S̄_data))
+ubarlim = (minimum(ubar_data), maximum(ubar_data))
+vbarlim = (minimum(vbar_data), maximum(vbar_data))
+Tbarlim = (minimum(Tbar_data), maximum(Tbar_data))
+Sbarlim = (minimum(Sbar_data), maximum(Sbar_data))
 
 uwlim = (minimum(uw_data), maximum(uw_data))
 vwlim = (minimum(vw_data), maximum(vw_data))
@@ -217,49 +221,49 @@ wSlim = (minimum(wS_data), maximum(wS_data))
 
 n = Observable(1)
 
-Tn_xy = @lift interior(T_data[$n], :, :, Nz)
-Tn_yz = @lift transpose(interior(T_data[$n], 1, :, :))
-Tn_xz = @lift interior(T_data[$n], :, 1, :)
+Tₙ_xy = @lift interior(T_data[$n], :, :, Nz)
+Tₙ_yz = @lift transpose(interior(T_data[$n], 1, :, :))
+Tₙ_xz = @lift interior(T_data[$n], :, 1, :)
 
-Sn_xy = @lift interior(S_data[$n], :, :, Nz)
-Sn_yz = @lift transpose(interior(S_data[$n], 1, :, :))
-Sn_xz = @lift interior(S_data[$n], :, 1, :)
+Sₙ_xy = @lift interior(S_data[$n], :, :, Nz)
+Sₙ_yz = @lift transpose(interior(S_data[$n], 1, :, :))
+Sₙ_xz = @lift interior(S_data[$n], :, 1, :)
 
 time_str = @lift "Qᵁ = $(Qᵁ), Qᵀ = $(Qᵀ), Qˢ = $(Qˢ), Time = $(round(T_data.times[$n]/24/60^2, digits=3)) days"
 title = Label(fig[0, :], time_str, font=:bold, tellwidth=false)
 
-T_xy_surface = surface!(axT, xs_xy, ys_xy, zs_xy, color=Tn_xy, colormap=colormap, colorrange = T_color_range)
-T_yz_surface = surface!(axT, xs_yz, ys_yz, zs_yz, color=Tn_yz, colormap=colormap, colorrange = T_color_range)
-T_xz_surface = surface!(axT, xs_xz, ys_xz, zs_xz, color=Tn_xz, colormap=colormap, colorrange = T_color_range)
+T_xy_surface = surface!(axT, xs_xy, ys_xy, zs_xy, color=Tₙ_xy, colormap=colormap, colorrange = T_color_range)
+T_yz_surface = surface!(axT, xs_yz, ys_yz, zs_yz, color=Tₙ_yz, colormap=colormap, colorrange = T_color_range)
+T_xz_surface = surface!(axT, xs_xz, ys_xz, zs_xz, color=Tₙ_xz, colormap=colormap, colorrange = T_color_range)
 
-S_xy_surface = surface!(axS, xs_xy, ys_xy, zs_xy, color=Sn_xy, colormap=colormap, colorrange = S_color_range)
-S_yz_surface = surface!(axS, xs_yz, ys_yz, zs_yz, color=Sn_yz, colormap=colormap, colorrange = S_color_range)
-S_xz_surface = surface!(axS, xs_xz, ys_xz, zs_xz, color=Sn_xz, colormap=colormap, colorrange = S_color_range)
+S_xy_surface = surface!(axS, xs_xy, ys_xy, zs_xy, color=Sₙ_xy, colormap=colormap, colorrange = S_color_range)
+S_yz_surface = surface!(axS, xs_yz, ys_yz, zs_yz, color=Sₙ_yz, colormap=colormap, colorrange = S_color_range)
+S_xz_surface = surface!(axS, xs_xz, ys_xz, zs_xz, color=Sₙ_xz, colormap=colormap, colorrange = S_color_range)
 
-ūn = @lift interior(ū_data[$n], 1, 1, :)
-v̄n = @lift interior(v̄_data[$n], 1, 1, :)
-T̄n = @lift interior(T̄_data[$n], 1, 1, :)
-S̄n = @lift interior(S̄_data[$n], 1, 1, :)
+ubarₙ = @lift interior(ubar_data[$n], 1, 1, :)
+vbarₙ = @lift interior(vbar_data[$n], 1, 1, :)
+Tbarₙ = @lift interior(Tbar_data[$n], 1, 1, :)
+Sbarₙ = @lift interior(Sbar_data[$n], 1, 1, :)
 
-uwn = @lift interior(uw_data[$n], 1, 1, :)
-vwn = @lift interior(vw_data[$n], 1, 1, :)
-wTn = @lift interior(wT_data[$n], 1, 1, :)
-wSn = @lift interior(wS_data[$n], 1, 1, :)
+uwₙ = @lift interior(uw_data[$n], 1, 1, :)
+vwₙ = @lift interior(vw_data[$n], 1, 1, :)
+wTₙ = @lift interior(wT_data[$n], 1, 1, :)
+wSₙ = @lift interior(wS_data[$n], 1, 1, :)
 
-lines!(axū, ūn, zC)
-lines!(axv̄, v̄n, zC)
-lines!(axT̄, T̄n, zC)
-lines!(axS̄, S̄n, zC)
+lines!(axubar, ubarₙ, zC)
+lines!(axvbar, vbarₙ, zC)
+lines!(axTbar, Tbarₙ, zC)
+lines!(axSbar, Sbarₙ, zC)
 
-lines!(axuw, uwn, zF)
-lines!(axvw, vwn, zF)
-lines!(axwT, wTn, zF)
-lines!(axwS, wSn, zF)
+lines!(axuw, uwₙ, zF)
+lines!(axvw, vwₙ, zF)
+lines!(axwT, wTₙ, zF)
+lines!(axwS, wSₙ, zF)
 
-xlims!(axū, ūlim)
-xlims!(axv̄, v̄lim)
-xlims!(axT̄, T̄lim)
-xlims!(axS̄, S̄lim)
+xlims!(axubar, ubarlim)
+xlims!(axvbar, vbarlim)
+xlims!(axTbar, Tbarlim)
+xlims!(axSbar, Sbarlim)
 
 xlims!(axuw, uwlim)
 xlims!(axvw, vwlim)
@@ -268,7 +272,7 @@ xlims!(axwS, wSlim)
 
 trim!(fig.layout)
 
-record(fig, "$(FILE_DIR)/$(FILE_DIR).mp4", 1:Nt, framerate=15) do nn
+record(fig, "$(FILE_DIR)/$(FILE_NAME).mp4", 1:Nt, framerate=15) do nn
     n[] = nn
 end
 

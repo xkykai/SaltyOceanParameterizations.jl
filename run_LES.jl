@@ -5,8 +5,12 @@ using FileIO
 using Printf
 using CairoMakie
 using Oceananigans.Grids: halo_size
+using Oceananigans.Operators
+using Oceananigans.AbstractOperations: KernelFunctionOperation
+using Oceananigans.BuoyancyModels
 using SeawaterPolynomials.TEOS10
 using Random
+using Statistics
 
 Random.seed!(123)
 
@@ -18,9 +22,13 @@ const Nz = 128
 const Nx = 256
 const Ny = 256
 
-const Qᵁ = -1e-4
-const Qᵀ = 2e-6
-const Qˢ = 2e-3
+# const Nz = 32
+# const Nx = 64
+# const Ny = 64
+
+const Qᵁ = -1e-6
+const Qᵀ = 2e-8
+const Qˢ = 2e-5
 
 const Pr = 1
 const ν = 1e-5
@@ -58,7 +66,7 @@ T_bcs = FieldBoundaryConditions(top=FluxBoundaryCondition(Qᵀ), bottom=Gradient
 S_bcs = FieldBoundaryConditions(top=FluxBoundaryCondition(Qˢ), bottom=GradientBoundaryCondition(dSdz_bot))
 u_bcs = FieldBoundaryConditions(top=FluxBoundaryCondition(Qᵁ))
 
-eos = TEOS10EquationOfState()
+const eos = TEOS10EquationOfState()
 
 model = NonhydrostaticModel(; 
             grid = grid,
@@ -72,6 +80,16 @@ model = NonhydrostaticModel(;
             )
 
 set!(model, T=T_initial, S=S_initial)
+# set!(model, T=20, S=32)
+
+T = model.tracers.T
+S = model.tracers.S
+b = model.tracers.b
+u, v, w = model.velocities
+
+const T₀ = mean(T)
+const S₀ = mean(S)
+const ρ₀ = TEOS10.ρ(T₀, S₀, 0, eos)
 
 simulation = Simulation(model, Δt=0.1second, stop_time=0.5days)
 
@@ -111,15 +129,44 @@ function init_save_some_metadata!(file, model)
     return nothing
 end
 
-T = model.tracers.T
-S = model.tracers.S
-b = model.tracers.b
-u, v, w = model.velocities
+function calculate_thermal_sensitivity(i, j, k, grid, T, S, eos)
+    return - Oceananigans.BuoyancyModels.thermal_expansionᶜᶜᶜ(i, j, k, grid, eos, T, S)
+end
+
+function calculate_haline_sensitivity(i, j, k, grid, T, S, eos)
+    return Oceananigans.BuoyancyModels.haline_contractionᶜᶜᶜ(i, j, k, grid, eos, T, S)
+end
+
+α_op = KernelFunctionOperation{Center, Center, Center}(calculate_thermal_sensitivity, grid, T, S, eos)
+α = Field(α_op)
+compute!(α)
+
+β_op = KernelFunctionOperation{Center, Center, Center}(calculate_haline_sensitivity, grid, T, S, eos)
+β = Field(β_op)
+compute!(β)
+
+αΔT = Field(α * (T - T₀))
+compute!(αΔT)
+
+βΔS = Field(β * (S - S₀))
+compute!(βΔS)
+
+function get_buoyancy_perturbation(i, j, k, grid, b, C)
+    T, S = Oceananigans.BuoyancyModels.get_temperature_and_salinity(b, C)
+    ρ = Oceananigans.BuoyancyModels.ρ′(i, j, k, grid, b.model.equation_of_state, T, S) + b.model.equation_of_state.reference_density
+    ρ′ = ρ - ρ₀
+    return - b.model.gravitational_acceleration * ρ′ / ρ₀
+end
+
+b_op = KernelFunctionOperation{Center, Center, Center}(get_buoyancy_perturbation, grid, model.buoyancy, model.tracers)
+b = Field(b_op)
+compute!(b)
 
 ubar = Average(u, dims=(1, 2))
 vbar = Average(v, dims=(1, 2))
 
 bbar = Average(b, dims=(1, 2))
+b′bar = Average(model.buoyancy.model.gravitational_acceleration*(αΔT - βΔS), dims=(1, 2))
 Tbar = Average(T, dims=(1, 2))
 Sbar = Average(S, dims=(1, 2))
 

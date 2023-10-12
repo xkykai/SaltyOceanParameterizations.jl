@@ -1,5 +1,6 @@
 using Oceananigans
 using Oceananigans.Units
+using Logging
 using JLD2
 using FileIO
 using Printf
@@ -13,6 +14,7 @@ using Random
 using Statistics
 
 Random.seed!(123)
+Logging.global_logger(OceananigansLogger())
 
 const Lz = 256meter    # depth [m]
 const Lx = 512meter
@@ -27,6 +29,7 @@ const Ny = 256
 # const Ny = 64
 
 const Qᵁ = -1e-6
+# const Qᵁ = 0
 const Qᵀ = 2e-8
 const Qˢ = 2e-5
 
@@ -57,10 +60,10 @@ grid = RectilinearGrid(GPU(), Float64,
 noise(x, y, z) = rand() * exp(z / 8)
 
 T_initial(x, y, z) = T_surface * exp(λᵀ*z) + 1e-6 * noise(x, y, z)
-S_initial(x, y, z) = S_surface * exp(λˢ*z) + 1e-6 * noise(x, y, z)
+S_initial(x, y, z) = S_surface * exp(-λˢ*z) + 1e-6 * noise(x, y, z)
 
 dTdz_bot = T_surface * λᵀ * exp(-λᵀ*Lz)
-dSdz_bot = S_surface * λˢ * exp(-λˢ*Lz)
+dSdz_bot = -S_surface * λˢ * exp(-λˢ*Lz)
 
 T_bcs = FieldBoundaryConditions(top=FluxBoundaryCondition(Qᵀ), bottom=GradientBoundaryCondition(dTdz_bot))
 S_bcs = FieldBoundaryConditions(top=FluxBoundaryCondition(Qˢ), bottom=GradientBoundaryCondition(dSdz_bot))

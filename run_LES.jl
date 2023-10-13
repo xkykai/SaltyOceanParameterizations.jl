@@ -1,6 +1,6 @@
 using Oceananigans
 using Oceananigans.Units
-using Logging
+# using Logging
 using JLD2
 using FileIO
 using Printf
@@ -14,7 +14,7 @@ using Random
 using Statistics
 
 Random.seed!(123)
-Logging.global_logger(OceananigansLogger())
+# Logging.global_logger(OceananigansLogger())
 
 const Lz = 256meter    # depth [m]
 const Lx = 512meter
@@ -28,9 +28,8 @@ const Ny = 256
 # const Nx = 64
 # const Ny = 64
 
-const Qᵁ = -1e-6
-# const Qᵁ = 0
-const Qᵀ = 2e-8
+const Qᵁ = -2e-4
+const Qᵀ = 2e-6
 const Qˢ = 2e-5
 
 const Pr = 1
@@ -45,7 +44,7 @@ const λˢ = 6e-4
 const T_surface = 20
 const S_surface = 35
 
-FILE_NAME = "QU_$(Qᵁ)_QT_$(Qᵀ)_Qs_$(Qˢ)"
+FILE_NAME = "QU_$(Qᵁ)_QT_$(Qᵀ)_Qs_$(Qˢ)_Ttop_$(T_surface)_Stop_$(S_surface)_sponge"
 FILE_DIR = "LES/$(FILE_NAME)"
 mkpath(FILE_DIR)
 
@@ -71,6 +70,17 @@ u_bcs = FieldBoundaryConditions(top=FluxBoundaryCondition(Qᵁ))
 
 const eos = TEOS10EquationOfState()
 
+damping_rate = 1/2minute # relax fields on a 100 second time-scale
+
+T_target(x, y, z, t) = T_initial(x, y, z)
+S_target(x, y, z, t) = S_initial(x, y, z)
+
+bottom_mask = GaussianMask{:z}(center=-grid.Lz, width=grid.Lz/10)
+
+uvw_sponge = Relaxation(rate=damping_rate, mask=bottom_mask)
+T_sponge = Relaxation(rate=damping_rate, mask=bottom_mask, target=T_target)
+S_sponge = Relaxation(rate=damping_rate, mask=bottom_mask, target=S_target)
+
 model = NonhydrostaticModel(; 
             grid = grid,
             closure = ScalarDiffusivity(ν=ν, κ=κ),
@@ -79,6 +89,7 @@ model = NonhydrostaticModel(;
             tracers = (:T, :S, :b),
             timestepper = :RungeKutta3,
             advection = WENO(order=9),
+            forcing = (u=uvw_sponge, v=uvw_sponge, w=uvw_sponge, T=T_sponge, S=S_sponge),
             boundary_conditions = (T=T_bcs, S=S_bcs, u=u_bcs)
             )
 
@@ -87,14 +98,16 @@ set!(model, T=T_initial, S=S_initial)
 
 T = model.tracers.T
 S = model.tracers.S
-b = model.tracers.b
 u, v, w = model.velocities
 
 const T₀ = mean(T)
 const S₀ = mean(S)
 const ρ₀ = TEOS10.ρ(T₀, S₀, 0, eos)
+const g = model.buoyancy.model.gravitational_acceleration
 
-simulation = Simulation(model, Δt=0.1second, stop_time=0.5days)
+# const ρ₀ = eos.reference_density
+
+simulation = Simulation(model, Δt=0.1second, stop_time=2days)
 
 wizard = TimeStepWizard(max_change=1.05, max_Δt=10minutes, cfl=0.6)
 simulation.callbacks[:wizard] = Callback(wizard, IterationInterval(10))
@@ -119,7 +132,7 @@ function print_progress(sim)
     return nothing
 end
 
-simulation.callbacks[:print_progress] = Callback(print_progress, IterationInterval(1000))
+simulation.callbacks[:print_progress] = Callback(print_progress, IterationInterval(1))
 
 function init_save_some_metadata!(file, model)
     file["metadata/author"] = "Xin Kai Lee"
@@ -132,50 +145,55 @@ function init_save_some_metadata!(file, model)
     return nothing
 end
 
-function calculate_thermal_sensitivity(i, j, k, grid, T, S, eos)
-    return - Oceananigans.BuoyancyModels.thermal_expansionᶜᶜᶜ(i, j, k, grid, eos, T, S)
+@inline function calculate_α(i, j, k, grid, T, S, eos)
+    @inbounds return Oceananigans.BuoyancyModels.thermal_expansionᶜᶜᶜ(i, j, k, grid, eos, T, S)
+    # @inbounds return Oceananigans.BuoyancyModels.thermal_expansionᶜᶜᶜ(i, j, k, grid, eos, T, S)
 end
 
-function calculate_haline_sensitivity(i, j, k, grid, T, S, eos)
-    return Oceananigans.BuoyancyModels.haline_contractionᶜᶜᶜ(i, j, k, grid, eos, T, S)
+@inline function calculate_β(i, j, k, grid, T, S, eos)
+    @inbounds return Oceananigans.BuoyancyModels.haline_contractionᶜᶜᶜ(i, j, k, grid, eos, T, S)
+    # @inbounds return Oceananigans.BuoyancyModels.haline_contractionᶜᶜᶜ(i, j, k, grid, eos, T, S)
 end
 
-α_op = KernelFunctionOperation{Center, Center, Center}(calculate_thermal_sensitivity, grid, T, S, eos)
+α_op = KernelFunctionOperation{Center, Center, Center}(calculate_α, grid, T, S, eos)
 α = Field(α_op)
 compute!(α)
 
-β_op = KernelFunctionOperation{Center, Center, Center}(calculate_haline_sensitivity, grid, T, S, eos)
+β_op = KernelFunctionOperation{Center, Center, Center}(calculate_β, grid, T, S, eos)
 β = Field(β_op)
 compute!(β)
 
-αΔT = Field(α * (T - T₀))
-compute!(αΔT)
-
-βΔS = Field(β * (S - S₀))
-compute!(βΔS)
-
-function get_buoyancy_perturbation(i, j, k, grid, b, C)
+@inline function get_buoyancy(i, j, k, grid, b, C)
     T, S = Oceananigans.BuoyancyModels.get_temperature_and_salinity(b, C)
-    ρ = Oceananigans.BuoyancyModels.ρ′(i, j, k, grid, b.model.equation_of_state, T, S) + b.model.equation_of_state.reference_density
+    @inbounds ρ = Oceananigans.BuoyancyModels.ρ′(i, j, k, grid, b.model.equation_of_state, T, S) + b.model.equation_of_state.reference_density
     ρ′ = ρ - ρ₀
-    return - b.model.gravitational_acceleration * ρ′ / ρ₀
+    return -g * ρ′ / ρ₀
 end
 
-b_op = KernelFunctionOperation{Center, Center, Center}(get_buoyancy_perturbation, grid, model.buoyancy, model.tracers)
+b_op = KernelFunctionOperation{Center, Center, Center}(get_buoyancy, model.grid, model.buoyancy, model.tracers)
 b = Field(b_op)
 compute!(b)
 
+# fig = Figure(resolution=(1800, 1500))
+# ax1 = Axis(fig[1, 1], title="b")
+# ax2 = Axis(fig[1, 2], title="b′")
+
+# mean(b, dims=(1, 2))
+# mean(b′, dims=(1, 2))
+
+# heatmap!(ax1, b[1, 1:64, 1:32], colormap=:thermal, colorrange=(minimum(b), maximum(b)))
+# heatmap!(ax2, b′[1, 1:64, 1:32], colormap=:thermal, colorrange=(minimum(b′), maximum(b′)))
+# display(fig)
+
 ubar = Average(u, dims=(1, 2))
 vbar = Average(v, dims=(1, 2))
-
-bbar = Average(b, dims=(1, 2))
-b′bar = Average(model.buoyancy.model.gravitational_acceleration*(αΔT - βΔS), dims=(1, 2))
 Tbar = Average(T, dims=(1, 2))
 Sbar = Average(S, dims=(1, 2))
 
 uw = Average(w * u, dims=(1, 2))
 vw = Average(w * v, dims=(1, 2))
 wb = Average(w * b, dims=(1, 2))
+wb′ = Average(w * g * (α*T - β*S), dims=(1, 2))
 wT = Average(w * T, dims=(1, 2))
 wS = Average(w * S, dims=(1, 2))
 
@@ -187,7 +205,7 @@ simulation.output_writers[:jld2] = JLD2OutputWriter(model, field_outputs,
                                                           with_halos = true,
                                                           init = init_save_some_metadata!)
 
-simulation.output_writers[:timeseries] = JLD2OutputWriter(model, (; ubar, vbar, Tbar, Sbar, uw, vw, wb, wT, wS),
+simulation.output_writers[:timeseries] = JLD2OutputWriter(model, (; ubar, vbar, Tbar, Sbar, uw, vw, wT, wS, wb, wb′),
                                                           filename = "$(FILE_DIR)/instantaneous_timeseries.jld2",
                                                           schedule = TimeInterval(10minutes),
                                                           with_halos = true,
@@ -210,6 +228,8 @@ uw_data = FieldTimeSeries("$(FILE_DIR)/instantaneous_timeseries.jld2", "uw")
 vw_data = FieldTimeSeries("$(FILE_DIR)/instantaneous_timeseries.jld2", "vw")
 wT_data = FieldTimeSeries("$(FILE_DIR)/instantaneous_timeseries.jld2", "wT")
 wS_data = FieldTimeSeries("$(FILE_DIR)/instantaneous_timeseries.jld2", "wS")
+wb_data = FieldTimeSeries("$(FILE_DIR)/instantaneous_timeseries.jld2", "wb")
+wb′_data = FieldTimeSeries("$(FILE_DIR)/instantaneous_timeseries.jld2", "wb′")
 
 Nt = length(T_data.times)
 
@@ -219,20 +239,21 @@ zC = T_data.grid.zᵃᵃᶜ[1:Nz]
 
 zF = uw_data.grid.zᵃᵃᶠ[1:Nz+1]
 ##
-fig = Figure(resolution=(1500, 1500))
+fig = Figure(resolution=(1800, 1500))
 
 axT = Axis3(fig[1:2, 1:2], title="T", xlabel="x", ylabel="y", zlabel="z", viewmode=:fitzoom, aspect=:data)
-axS = Axis3(fig[1:2, 3:4], title="S", xlabel="x", ylabel="y", zlabel="z", viewmode=:fitzoom, aspect=:data)
+axS = Axis3(fig[1:2, 4:5], title="S", xlabel="x", ylabel="y", zlabel="z", viewmode=:fitzoom, aspect=:data)
 
-axubar = Axis(fig[3, 1], title="ū", xlabel="ū", ylabel="z")
-axvbar = Axis(fig[3, 2], title="v̄", xlabel="v̄", ylabel="z")
-axTbar = Axis(fig[3, 3], title="T̄", xlabel="T̄", ylabel="z")
-axSbar = Axis(fig[3, 4], title="S̄", xlabel="S̄", ylabel="z")
+axubar = Axis(fig[3, 1], title="<u>", xlabel="m s⁻¹", ylabel="z")
+axvbar = Axis(fig[3, 2], title="<v>", xlabel="m s⁻¹", ylabel="z")
+axTbar = Axis(fig[3, 3], title="<T>", xlabel="°C", ylabel="z")
+axSbar = Axis(fig[3, 4], title="<S>", xlabel="g kg⁻¹", ylabel="z")
 
-axuw = Axis(fig[4, 1], title="uw", xlabel="uw", ylabel="z")
-axvw = Axis(fig[4, 2], title="vw", xlabel="vw", ylabel="z")
-axwT = Axis(fig[4, 3], title="wT", xlabel="wT", ylabel="z")
-axwS = Axis(fig[4, 4], title="wS", xlabel="wS", ylabel="z")
+axuw = Axis(fig[4, 1], title="uw", xlabel="m² s⁻²", ylabel="z")
+axvw = Axis(fig[4, 2], title="vw", xlabel="m² s⁻²", ylabel="z")
+axwT = Axis(fig[4, 3], title="wT", xlabel="m s⁻¹ °C", ylabel="z")
+axwS = Axis(fig[4, 4], title="wS", xlabel="m s⁻¹ g kg⁻¹", ylabel="z")
+axwb = Axis(fig[4, 5], title="wb", xlabel="m² s⁻³", ylabel="z")
 
 xs_xy = xC
 ys_xy = yC
@@ -268,6 +289,7 @@ uwlim = (minimum(uw_data), maximum(uw_data))
 vwlim = (minimum(vw_data), maximum(vw_data))
 wTlim = (minimum(wT_data), maximum(wT_data))
 wSlim = (minimum(wS_data), maximum(wS_data))
+wblim = (minimum([minimum(wb_data), minimum(wb′_data)]), maximum([maximum(wb_data), maximum(wb′_data)]))
 
 n = Observable(1)
 
@@ -299,6 +321,8 @@ uwₙ = @lift interior(uw_data[$n], 1, 1, :)
 vwₙ = @lift interior(vw_data[$n], 1, 1, :)
 wTₙ = @lift interior(wT_data[$n], 1, 1, :)
 wSₙ = @lift interior(wS_data[$n], 1, 1, :)
+wbₙ = @lift interior(wb_data[$n], 1, 1, :)
+wb′ₙ = @lift interior(wb′_data[$n], 1, 1, :)
 
 lines!(axubar, ubarₙ, zC)
 lines!(axvbar, vbarₙ, zC)
@@ -309,6 +333,9 @@ lines!(axuw, uwₙ, zF)
 lines!(axvw, vwₙ, zF)
 lines!(axwT, wTₙ, zF)
 lines!(axwS, wSₙ, zF)
+lines!(axwb, wbₙ, zF, label="<wb>")
+lines!(axwb, wb′ₙ, zF, label="g<αwT - βwS>")
+axislegend(axwb, position=:rb)
 
 xlims!(axubar, ubarlim)
 xlims!(axvbar, vbarlim)
@@ -319,6 +346,7 @@ xlims!(axuw, uwlim)
 xlims!(axvw, vwlim)
 xlims!(axwT, wTlim)
 xlims!(axwS, wSlim)
+xlims!(axwb, wblim)
 
 trim!(fig.layout)
 

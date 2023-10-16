@@ -37,7 +37,7 @@ function parse_commandline()
       "--S_surface"
         help = "surface salinity (g/kg)"
         arg_type = Float64
-        default = 35
+        default = 35.
       "--f"
         help = "Coriolis parameter (s⁻¹)"
         arg_type = Float64

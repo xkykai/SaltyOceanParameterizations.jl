@@ -12,6 +12,69 @@ using Oceananigans.BuoyancyModels
 using SeawaterPolynomials.TEOS10
 using Random
 using Statistics
+using ArgParse
+
+function parse_commandline()
+    s = ArgParseSettings()
+  
+    @add_arg_table! s begin
+      "--QU"
+        help = "surface momentum flux (m²/s²)"
+        arg_type = Float64
+        default = 0.
+      "--QT"
+        help = "surface temperature flux (°C m/s)"
+        arg_type = Float64
+        default = 0.
+      "--QS"
+        help = "surface salinity flux (m/s g/kg)"
+        arg_type = Float64
+        default = 0.
+      "--T_surface"
+        help = "surface temperature (°C)"
+        arg_type = Float64
+        default = 20.
+      "--S_surface"
+        help = "surface salinity (g/kg)"
+        arg_type = Float64
+        default = 35
+      "--f"
+        help = "Coriolis parameter (s⁻¹)"
+        arg_type = Float64
+        default = 1e-4
+      "--dt"
+        help = "Initial timestep to take (seconds)"
+        arg_type = Float64
+        default = 0.1
+      "--max_dt"
+        help = "Maximum timestep (seconds)"
+        arg_type = Float64
+        default = 10. * 60
+      "--stop_time"
+        help = "Stop time of simulation (days)"
+        arg_type = Float64
+        default = 4.
+      "--time_interval"
+        help = "Time interval of output writer (minutes)"
+        arg_type = Float64
+        default = 10.
+      "--fps"
+        help = "Frames per second of animation"
+        arg_type = Float64
+        default = 15.
+      "--pickup"
+        help = "Whether to pickup from latest checkpoint"
+        arg_type = Bool
+        default = true
+      "--advection"
+        help = "Advection scheme used"
+        arg_type = String
+        default = "WENO9nu1e-5"
+    end
+    return parse_args(s)
+end
+
+args = parse_commandline()
 
 Random.seed!(123)
 # Logging.global_logger(OceananigansLogger())
@@ -28,23 +91,31 @@ const Ny = 256
 # const Nx = 64
 # const Ny = 64
 
-const Qᵁ = -2e-4
-const Qᵀ = 2e-6
-const Qˢ = 2e-5
+const Qᵁ = args["QU"]
+const Qᵀ = args["QT"]
+const Qˢ = args["QS"]
 
 const Pr = 1
-const ν = 1e-5
-const κ = ν / Pr
 
-const f = 1e-4
+if args["advection"] == "WENO9nu1e-5"
+    advection = WENO(order=9)
+    closure = ScalarDiffusivity(ν=1e-5, κ=1e-5/Pr)
+elseif args["advection"] == "AMD"
+    advection = CenteredSecondOrder()
+    closure = AnisotropicMinimumDissipation()
+end
+
+const f = args["f"]
 
 const λᵀ = 8e-5
 const λˢ = 6e-4
 
-const T_surface = 20
-const S_surface = 35
+const T_surface = args["T_surface"]
+const S_surface = args["S_surface"]
 
-FILE_NAME = "QU_$(Qᵁ)_QT_$(Qᵀ)_Qs_$(Qˢ)_Ttop_$(T_surface)_Stop_$(S_surface)_sponge"
+const pickup = args["pickup"]
+
+FILE_NAME = "QU_$(Qᵁ)_QT_$(Qᵀ)_QS_$(Qˢ)_Ttop_$(T_surface)_Stop_$(S_surface)_sponge_$(args["advection"]))"
 FILE_DIR = "LES/$(FILE_NAME)"
 mkpath(FILE_DIR)
 
@@ -70,7 +141,7 @@ u_bcs = FieldBoundaryConditions(top=FluxBoundaryCondition(Qᵁ))
 
 const eos = TEOS10EquationOfState()
 
-damping_rate = 1/2minute # relax fields on a 100 second time-scale
+damping_rate = 1/2minute
 
 T_target(x, y, z, t) = T_initial(x, y, z)
 S_target(x, y, z, t) = S_initial(x, y, z)
@@ -83,18 +154,17 @@ S_sponge = Relaxation(rate=damping_rate, mask=bottom_mask, target=S_target)
 
 model = NonhydrostaticModel(; 
             grid = grid,
-            closure = ScalarDiffusivity(ν=ν, κ=κ),
+            closure = closure,
             coriolis = FPlane(f=f),
             buoyancy = SeawaterBuoyancy(equation_of_state=eos),
             tracers = (:T, :S, :b),
             timestepper = :RungeKutta3,
-            advection = WENO(order=9),
+            advection = advection,
             forcing = (u=uvw_sponge, v=uvw_sponge, w=uvw_sponge, T=T_sponge, S=S_sponge),
             boundary_conditions = (T=T_bcs, S=S_bcs, u=u_bcs)
             )
 
 set!(model, T=T_initial, S=S_initial)
-# set!(model, T=20, S=32)
 
 T = model.tracers.T
 S = model.tracers.S
@@ -105,11 +175,9 @@ const S₀ = mean(S)
 const ρ₀ = TEOS10.ρ(T₀, S₀, 0, eos)
 const g = model.buoyancy.model.gravitational_acceleration
 
-# const ρ₀ = eos.reference_density
+simulation = Simulation(model, Δt=args["dt"]second, stop_time=args["stop_time"]days)
 
-simulation = Simulation(model, Δt=0.1second, stop_time=2days)
-
-wizard = TimeStepWizard(max_change=1.05, max_Δt=10minutes, cfl=0.6)
+wizard = TimeStepWizard(max_change=1.05, max_Δt=args["max_dt"]minutes, cfl=0.6)
 simulation.callbacks[:wizard] = Callback(wizard, IterationInterval(10))
 
 wall_clock = [time_ns()]
@@ -132,7 +200,7 @@ function print_progress(sim)
     return nothing
 end
 
-simulation.callbacks[:print_progress] = Callback(print_progress, IterationInterval(1))
+simulation.callbacks[:print_progress] = Callback(print_progress, IterationInterval(100))
 
 function init_save_some_metadata!(file, model)
     file["metadata/author"] = "Xin Kai Lee"
@@ -203,18 +271,34 @@ simulation.output_writers[:jld2] = JLD2OutputWriter(model, field_outputs,
                                                           filename = "$(FILE_DIR)/instantaneous_fields.jld2",
                                                           schedule = TimeInterval(10minutes),
                                                           with_halos = true,
-                                                          init = init_save_some_metadata!)
+                                                          init = init_save_some_metadata!,
+                                                          verbose = true)
 
 simulation.output_writers[:timeseries] = JLD2OutputWriter(model, (; ubar, vbar, Tbar, Sbar, uw, vw, wT, wS, wb, wb′),
                                                           filename = "$(FILE_DIR)/instantaneous_timeseries.jld2",
                                                           schedule = TimeInterval(10minutes),
                                                           with_halos = true,
-                                                          init = init_save_some_metadata!)
+                                                          init = init_save_some_metadata!,
+                                                          verbose = true)
 
 simulation.output_writers[:checkpointer] = Checkpointer(model, schedule=TimeInterval(1day), prefix="$(FILE_DIR)/model_checkpoint")
 
 # run!(simulation, pickup="$(FILE_DIR)/model_checkpoint_iteration97574.jld2")
-run!(simulation)
+# run!(simulation)
+
+if pickup
+    files = readdir(FILE_DIR)
+    checkpoint_files = files[occursin.("model_checkpoint_iteration", files)]
+    if !isempty(checkpoint_files)
+      checkpoint_iters = parse.(Int, [filename[findfirst("iteration", filename)[end]+1:findfirst(".jld2", filename)[1]-1] for filename in checkpoint_files])
+      pickup_iter = maximum(checkpoint_iters)
+      run!(simulation, pickup="$(FILE_DIR)/model_checkpoint_iteration$(pickup_iter).jld2")
+    else
+      run!(simulation)
+    end
+  else
+    run!(simulation)
+  end
 
 T_data = FieldTimeSeries("$(FILE_DIR)/instantaneous_fields.jld2", "T", backend=OnDisk())
 S_data = FieldTimeSeries("$(FILE_DIR)/instantaneous_fields.jld2", "S", backend=OnDisk())

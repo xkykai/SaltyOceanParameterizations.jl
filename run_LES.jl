@@ -42,6 +42,30 @@ function parse_commandline()
         help = "Coriolis parameter (s⁻¹)"
         arg_type = Float64
         default = 1e-4
+      "--Nz"
+        help = "Number of grid points in z-direction"
+        arg_type = Int64
+        default = 128
+      "--Nx"
+        help = "Number of grid points in x-direction"
+        arg_type = Int64
+        default = 256
+      "--Ny"
+        help = "Number of grid points in y-direction"
+        arg_type = Int64
+        default = 256
+      "--Lz"
+        help = "Domain depth"
+        arg_type = Float64
+        default = 256.
+      "--Lx"
+        help = "Domain width in x-direction"
+        arg_type = Float64
+        default = 512.
+      "--Ly"
+        help = "Domain width in y-direction"
+        arg_type = Float64
+        default = 512.
       "--dt"
         help = "Initial timestep to take (seconds)"
         arg_type = Float64
@@ -79,13 +103,13 @@ args = parse_commandline()
 Random.seed!(123)
 # Logging.global_logger(OceananigansLogger())
 
-const Lz = 256meter    # depth [m]
-const Lx = 512meter
-const Ly = 512meter
+const Lz = args["Lz"]
+const Lx = args["Lx"]
+const Ly = args["Ly"]
 
-const Nz = 128
-const Nx = 256
-const Ny = 256
+const Nz = args["Nz"]
+const Nx = args["Nx"]
+const Ny = args["Ny"]
 
 # const Nz = 32
 # const Nx = 64
@@ -115,7 +139,7 @@ const S_surface = args["S_surface"]
 
 const pickup = args["pickup"]
 
-FILE_NAME = "QU_$(Qᵁ)_QT_$(Qᵀ)_QS_$(Qˢ)_Ttop_$(T_surface)_Stop_$(S_surface)_sponge_$(args["advection"])"
+FILE_NAME = "QU_$(Qᵁ)_QT_$(Qᵀ)_QS_$(Qˢ)_Ttop_$(T_surface)_Stop_$(S_surface)_sponge_$(args["advection"])_Lz_$(Lz)_Lx_$(Lx)_Ly_$(Ly)_Nz_$(Nz)_Nx_$(Nx)_Ny_$(Ny)"
 FILE_DIR = "LES/$(FILE_NAME)"
 mkpath(FILE_DIR)
 
@@ -176,6 +200,7 @@ const ρ₀ = TEOS10.ρ(T₀, S₀, 0, eos)
 const g = model.buoyancy.model.gravitational_acceleration
 
 simulation = Simulation(model, Δt=args["dt"]second, stop_time=args["stop_time"]days)
+# simulation = Simulation(model, Δt=args["dt"]second, stop_time=100minutes)
 
 wizard = TimeStepWizard(max_change=1.05, max_Δt=args["max_dt"]minutes, cfl=0.6)
 simulation.callbacks[:wizard] = Callback(wizard, IterationInterval(10))
@@ -242,17 +267,6 @@ b_op = KernelFunctionOperation{Center, Center, Center}(get_buoyancy, model.grid,
 b = Field(b_op)
 compute!(b)
 
-# fig = Figure(resolution=(1800, 1500))
-# ax1 = Axis(fig[1, 1], title="b")
-# ax2 = Axis(fig[1, 2], title="b′")
-
-# mean(b, dims=(1, 2))
-# mean(b′, dims=(1, 2))
-
-# heatmap!(ax1, b[1, 1:64, 1:32], colormap=:thermal, colorrange=(minimum(b), maximum(b)))
-# heatmap!(ax2, b′[1, 1:64, 1:32], colormap=:thermal, colorrange=(minimum(b′), maximum(b′)))
-# display(fig)
-
 ubar = Average(u, dims=(1, 2))
 vbar = Average(v, dims=(1, 2))
 Tbar = Average(T, dims=(1, 2))
@@ -267,11 +281,28 @@ wS = Average(w * S, dims=(1, 2))
 
 field_outputs = merge(model.velocities, model.tracers)
 
-simulation.output_writers[:jld2] = JLD2OutputWriter(model, field_outputs,
-                                                          filename = "$(FILE_DIR)/instantaneous_fields.jld2",
+simulation.output_writers[:xy_jld2] = JLD2OutputWriter(model, field_outputs,
+                                                          filename = "$(FILE_DIR)/instantaneous_fields_xy.jld2",
                                                           schedule = TimeInterval(10minutes),
                                                           with_halos = true,
                                                           init = init_save_some_metadata!,
+                                                          indices = (:, :, Nz),
+                                                          verbose = true)
+
+simulation.output_writers[:yz_jld2] = JLD2OutputWriter(model, field_outputs,
+                                                          filename = "$(FILE_DIR)/instantaneous_fields_yz.jld2",
+                                                          schedule = TimeInterval(10minutes),
+                                                          with_halos = true,
+                                                          init = init_save_some_metadata!,
+                                                          indices = (1, :, :),
+                                                          verbose = true)
+
+simulation.output_writers[:xz_jld2] = JLD2OutputWriter(model, field_outputs,
+                                                          filename = "$(FILE_DIR)/instantaneous_fields_xz.jld2",
+                                                          schedule = TimeInterval(10minutes),
+                                                          with_halos = true,
+                                                          init = init_save_some_metadata!,
+                                                          indices = (:, 1, :),
                                                           verbose = true)
 
 simulation.output_writers[:timeseries] = JLD2OutputWriter(model, (; ubar, vbar, Tbar, Sbar, uw, vw, wT, wS, wb, wb′),
@@ -283,25 +314,27 @@ simulation.output_writers[:timeseries] = JLD2OutputWriter(model, (; ubar, vbar, 
 
 simulation.output_writers[:checkpointer] = Checkpointer(model, schedule=TimeInterval(1day), prefix="$(FILE_DIR)/model_checkpoint")
 
-# run!(simulation, pickup="$(FILE_DIR)/model_checkpoint_iteration97574.jld2")
-# run!(simulation)
-
 if pickup
     files = readdir(FILE_DIR)
     checkpoint_files = files[occursin.("model_checkpoint_iteration", files)]
     if !isempty(checkpoint_files)
-      checkpoint_iters = parse.(Int, [filename[findfirst("iteration", filename)[end]+1:findfirst(".jld2", filename)[1]-1] for filename in checkpoint_files])
-      pickup_iter = maximum(checkpoint_iters)
-      run!(simulation, pickup="$(FILE_DIR)/model_checkpoint_iteration$(pickup_iter).jld2")
+        checkpoint_iters = parse.(Int, [filename[findfirst("iteration", filename)[end]+1:findfirst(".jld2", filename)[1]-1] for filename in checkpoint_files])
+        pickup_iter = maximum(checkpoint_iters)
+        run!(simulation, pickup="$(FILE_DIR)/model_checkpoint_iteration$(pickup_iter).jld2")
     else
-      run!(simulation)
+        run!(simulation)
     end
-  else
+else
     run!(simulation)
-  end
+end
 
-T_data = FieldTimeSeries("$(FILE_DIR)/instantaneous_fields.jld2", "T", backend=OnDisk())
-S_data = FieldTimeSeries("$(FILE_DIR)/instantaneous_fields.jld2", "S", backend=OnDisk())
+T_xy_data = FieldTimeSeries("$(FILE_DIR)/instantaneous_fields_xy.jld2", "T", backend=OnDisk())
+T_xz_data = FieldTimeSeries("$(FILE_DIR)/instantaneous_fields_xz.jld2", "T", backend=OnDisk())
+T_yz_data = FieldTimeSeries("$(FILE_DIR)/instantaneous_fields_yz.jld2", "T", backend=OnDisk())
+
+S_xy_data = FieldTimeSeries("$(FILE_DIR)/instantaneous_fields_xy.jld2", "S", backend=OnDisk())
+S_xz_data = FieldTimeSeries("$(FILE_DIR)/instantaneous_fields_xz.jld2", "S", backend=OnDisk())
+S_yz_data = FieldTimeSeries("$(FILE_DIR)/instantaneous_fields_yz.jld2", "S", backend=OnDisk())
 
 ubar_data = FieldTimeSeries("$(FILE_DIR)/instantaneous_timeseries.jld2", "ubar")
 vbar_data = FieldTimeSeries("$(FILE_DIR)/instantaneous_timeseries.jld2", "vbar")
@@ -315,11 +348,11 @@ wS_data = FieldTimeSeries("$(FILE_DIR)/instantaneous_timeseries.jld2", "wS")
 wb_data = FieldTimeSeries("$(FILE_DIR)/instantaneous_timeseries.jld2", "wb")
 wb′_data = FieldTimeSeries("$(FILE_DIR)/instantaneous_timeseries.jld2", "wb′")
 
-Nt = length(T_data.times)
+Nt = length(T_xy_data.times)
 
-xC = T_data.grid.xᶜᵃᵃ[1:Nx]
-yC = T_data.grid.xᶜᵃᵃ[1:Ny]
-zC = T_data.grid.zᵃᵃᶜ[1:Nz]
+xC = T_xy_data.grid.xᶜᵃᵃ[1:Nx]
+yC = T_xy_data.grid.yᵃᶜᵃ[1:Ny]
+zC = T_xy_data.grid.zᵃᵃᶜ[1:Nz]
 
 zF = uw_data.grid.zᵃᵃᶠ[1:Nz+1]
 ##
@@ -357,8 +390,16 @@ for i in axes(zs_xz, 1)
   zs_xz[i, :] .= zC
 end
 
-Tlim = (minimum(T_data), maximum(T_data))
-Slim = (minimum(S_data), maximum(S_data))
+function find_min(a...)
+    return minimum(minimum.([a...]))
+end
+
+function find_max(a...)
+    return maximum(maximum.([a...]))
+end
+
+Tlim = (find_min(T_xy_data, T_yz_data, T_xz_data), find_max(T_xy_data, T_yz_data, T_xz_data))
+Slim = (find_min(S_xy_data, S_yz_data, S_xz_data), find_max(S_xy_data, S_yz_data, S_xz_data))
 
 colormap = Reverse(:RdBu_10)
 T_color_range = Tlim
@@ -373,19 +414,19 @@ uwlim = (minimum(uw_data), maximum(uw_data))
 vwlim = (minimum(vw_data), maximum(vw_data))
 wTlim = (minimum(wT_data), maximum(wT_data))
 wSlim = (minimum(wS_data), maximum(wS_data))
-wblim = (minimum([minimum(wb_data), minimum(wb′_data)]), maximum([maximum(wb_data), maximum(wb′_data)]))
+wblim = (find_min(wb_data, wb′_data), find_max(wb_data, wb′_data))
 
 n = Observable(1)
 
-Tₙ_xy = @lift interior(T_data[$n], :, :, Nz)
-Tₙ_yz = @lift transpose(interior(T_data[$n], 1, :, :))
-Tₙ_xz = @lift interior(T_data[$n], :, 1, :)
+Tₙ_xy = @lift interior(T_xy_data[$n], :, :, 1)
+Tₙ_yz = @lift transpose(interior(T_yz_data[$n], 1, :, :))
+Tₙ_xz = @lift interior(T_xz_data[$n], :, 1, :)
 
-Sₙ_xy = @lift interior(S_data[$n], :, :, Nz)
-Sₙ_yz = @lift transpose(interior(S_data[$n], 1, :, :))
-Sₙ_xz = @lift interior(S_data[$n], :, 1, :)
+Sₙ_xy = @lift interior(S_xy_data[$n], :, :, 1)
+Sₙ_yz = @lift transpose(interior(S_yz_data[$n], 1, :, :))
+Sₙ_xz = @lift interior(S_xz_data[$n], :, 1, :)
 
-time_str = @lift "Qᵁ = $(Qᵁ), Qᵀ = $(Qᵀ), Qˢ = $(Qˢ), Time = $(round(T_data.times[$n]/24/60^2, digits=3)) days"
+time_str = @lift "Qᵁ = $(Qᵁ), Qᵀ = $(Qᵀ), Qˢ = $(Qˢ), Time = $(round(T_xy_data.times[$n]/24/60^2, digits=3)) days"
 title = Label(fig[0, :], time_str, font=:bold, tellwidth=false)
 
 T_xy_surface = surface!(axT, xs_xy, ys_xy, zs_xy, color=Tₙ_xy, colormap=colormap, colorrange = T_color_range)

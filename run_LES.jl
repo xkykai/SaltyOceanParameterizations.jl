@@ -115,7 +115,7 @@ const S_surface = args["S_surface"]
 
 const pickup = args["pickup"]
 
-FILE_NAME = "QU_$(Qᵁ)_QT_$(Qᵀ)_QS_$(Qˢ)_Ttop_$(T_surface)_Stop_$(S_surface)_sponge_$(args["advection"]))"
+FILE_NAME = "QU_$(Qᵁ)_QT_$(Qᵀ)_QS_$(Qˢ)_Ttop_$(T_surface)_Stop_$(S_surface)_sponge_$(args["advection"])"
 FILE_DIR = "LES/$(FILE_NAME)"
 mkpath(FILE_DIR)
 

@@ -3,16 +3,16 @@ using Oceananigans
 using JLD2
 
 FILE_DIRS = [
-    "./LES/QU_-0.0005_QT_5.0e-6_QS_-5.0e-5_Ttop_2.0_Stop_35.0_sponge_AMD_Lz_256.0_Lx_512.0_Ly_512.0_Nz_128_Nx_256_Ny_256",
-    "./LES/QU_-0.0005_QT_5.0e-6_QS_-5.0e-5_Ttop_2.0_Stop_35.0_sponge_WENO9nu1e-5_Lz_256.0_Lx_512.0_Ly_512.0_Nz_128_Nx_256_Ny_256",
+    "./LES/QU_-0.0005_QT_5.0e-6_QS_5.0e-5_Ttop_20.0_Stop_35.0_sponge_WENO9nu1e-5_Lz_256.0_Lx_512.0_Ly_512.0_Nz_128_Nx_256_Ny_256",
+    "./LES/QU_-0.0005_QT_5.0e-6_QS_5.0e-5_Ttop_20.0_Stop_35.0_sponge_WENO9nu1e-5_Lz_256.0_Lx_512.0_Ly_512.0_Nz_128_Nx_128_Ny_128"
 ]
 
 labels = [
-    "CenteredSecondOrder, AMD",
-    "WENO(9), ν = κ = 1e-5 "
+    "WENO(9), ν = κ = 1e-5",
+    "WENO(9), ν = κ = 1e-5, halved horizontal domain"
 ]
 
-T_top = 2.
+T_top = 20.
 S_top = 35.
 
 u_datas = [FieldTimeSeries("$(FILE_DIR)/instantaneous_timeseries.jld2", "ubar") for FILE_DIR in FILE_DIRS]

@@ -31,7 +31,7 @@ Qˢ = parameters["salinity_flux"]
 Nx, Ny, Nz = size(u_datas[1].grid)
 zC = u_datas[1].grid.zᵃᵃᶜ[1:Nz]
 zF = uw_datas[1].grid.zᵃᵃᶠ[1:Nz+1]
-T_top = 20.
+T_top = 2.
 S_top = 35.
 
 labels = [

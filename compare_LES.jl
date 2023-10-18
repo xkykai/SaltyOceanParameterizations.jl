@@ -7,6 +7,11 @@ FILE_DIRS = [
     "./LES/QU_-0.0005_QT_5.0e-6_QS_-5.0e-5_Ttop_2.0_Stop_35.0_sponge_WENO9nu1e-5_Lz_256.0_Lx_512.0_Ly_512.0_Nz_128_Nx_256_Ny_256",
 ]
 
+labels = [
+    "CenteredSecondOrder, AMD",
+    "WENO(9), ν = κ = 1e-5 "
+]
+
 u_datas = [FieldTimeSeries("$(FILE_DIR)/instantaneous_timeseries.jld2", "ubar") for FILE_DIR in FILE_DIRS]
 v_datas = [FieldTimeSeries("$(FILE_DIR)/instantaneous_timeseries.jld2", "vbar") for FILE_DIR in FILE_DIRS]
 T_datas = [FieldTimeSeries("$(FILE_DIR)/instantaneous_timeseries.jld2", "Tbar") for FILE_DIR in FILE_DIRS]
@@ -34,11 +39,6 @@ zC = u_datas[1].grid.zᵃᵃᶜ[1:Nz]
 zF = uw_datas[1].grid.zᵃᵃᶠ[1:Nz+1]
 T_top = 2.
 S_top = 35.
-
-labels = [
-    "WENO(9), ν = κ = 1e-5 ",
-    "CenteredSecondOrder, AMD"
-]
 
 #%%
 fig = Figure(resolution = (1800, 600))
@@ -122,7 +122,7 @@ xlims!(axwb, wblim)
 
 trim!(fig.layout)
 
-record(fig, "./Data/QU_$(Qᵁ)_QT_$(Qᵀ)_QS_$(Qˢ)_Ttop_$(T_top)_Stop_$(S_surface)_closure.mp4", 1:Nt, framerate=15) do nn
+record(fig, "./Data/QU_$(Qᵁ)_QT_$(Qᵀ)_QS_$(Qˢ)_Ttop_$(T_top)_Stop_$(S_top)_closure.mp4", 1:Nt, framerate=15) do nn
     n[] = nn
 end
 

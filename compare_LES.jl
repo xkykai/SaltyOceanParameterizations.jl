@@ -61,16 +61,16 @@ function find_max(a...)
     return maximum(maximum.([a...]))
 end
 
-ulim = (find_min(u_datas), find_max(u_datas))
-vlim = (find_min(v_datas), find_max(v_datas))
-Tlim = (find_min(T_datas), find_max(T_datas))
-Slim = (find_min(S_datas), find_max(S_datas))
+ulim = (find_min(u_datas...), find_max(u_datas...))
+vlim = (find_min(v_datas...), find_max(v_datas...))
+Tlim = (find_min(T_datas...), find_max(T_datas...))
+Slim = (find_min(S_datas...), find_max(S_datas...))
 
-uwlim = (find_min(uw_datas), find_max(uw_datas))
-vwlim = (find_min(vw_datas), find_max(vw_datas))
-wTlim = (find_min(wT_datas), find_max(wT_datas))
-wSlim = (find_min(wS_datas), find_max(wS_datas))
-wblim = (find_min([wb_datas..., wb′_datas...]), find_max([wb_datas..., wb′_datas...]))
+uwlim = (find_min(uw_datas...), find_max(uw_datas...))
+vwlim = (find_min(vw_datas...), find_max(vw_datas...))
+wTlim = (find_min(wT_datas...), find_max(wT_datas...))
+wSlim = (find_min(wS_datas...), find_max(wS_datas...))
+wblim = (find_min(wb_datas..., wb′_datas...), find_max(wb_datas..., wb′_datas...))
 
 n = Observable(1)
 

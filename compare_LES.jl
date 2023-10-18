@@ -12,6 +12,9 @@ labels = [
     "WENO(9), ν = κ = 1e-5 "
 ]
 
+T_top = 2.
+S_top = 35.
+
 u_datas = [FieldTimeSeries("$(FILE_DIR)/instantaneous_timeseries.jld2", "ubar") for FILE_DIR in FILE_DIRS]
 v_datas = [FieldTimeSeries("$(FILE_DIR)/instantaneous_timeseries.jld2", "vbar") for FILE_DIR in FILE_DIRS]
 T_datas = [FieldTimeSeries("$(FILE_DIR)/instantaneous_timeseries.jld2", "Tbar") for FILE_DIR in FILE_DIRS]
@@ -37,8 +40,6 @@ Qˢ = parameters["salinity_flux"]
 Nx, Ny, Nz = size(u_datas[1].grid)
 zC = u_datas[1].grid.zᵃᵃᶜ[1:Nz]
 zF = uw_datas[1].grid.zᵃᵃᶠ[1:Nz+1]
-T_top = 2.
-S_top = 35.
 
 #%%
 fig = Figure(resolution = (1800, 600))

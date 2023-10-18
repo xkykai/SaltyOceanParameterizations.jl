@@ -233,6 +233,8 @@ function init_save_some_metadata!(file, model)
     file["metadata/parameters/momentum_flux"] = Qᵁ
     file["metadata/parameters/temperature_flux"] = Qᵀ
     file["metadata/parameters/salinity_flux"] = Qˢ
+    file["metadata/parameters/surface_temperature"] = T_surface
+    file["metadata/parameters/surface_salinity"] = S_surface
     file["metadata/parameters/temperature_escale"] = λᵀ
     file["metadata/parameters/salinity_escale"] = λˢ
     return nothing

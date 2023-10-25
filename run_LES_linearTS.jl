@@ -120,13 +120,21 @@ const Nz = args["Nz"]
 const Nx = args["Nx"]
 const Ny = args["Ny"]
 
-# const Nz = 32
-# const Nx = 64
-# const Ny = 64
-
 const Qᵁ = args["QU"]
 const Qᵀ = args["QT"]
 const Qˢ = args["QS"]
+
+# const Lz = 128
+# const Lx = 64
+# const Ly = 64
+
+# const Nz = 64
+# const Nx = 32
+# const Ny = 32
+
+# const Qᵁ = -4e-6
+# const Qᵀ = 0
+# const Qˢ = 0
 
 const Pr = 1
 
@@ -165,6 +173,9 @@ noise(x, y, z) = rand() * exp(z / 8)
 T_initial(x, y, z) = dTdz * z + T_surface
 S_initial(x, y, z) = dSdz * z + S_surface
 
+T_initial_noisy(x, y, z) = T_initial(x, y, z) + 1e-6 * noise(x, y, z)
+S_initial_noisy(x, y, z) = S_initial(x, y, z) + 1e-6 * noise(x, y, z)
+
 T_bcs = FieldBoundaryConditions(top=FluxBoundaryCondition(Qᵀ), bottom=GradientBoundaryCondition(dTdz))
 S_bcs = FieldBoundaryConditions(top=FluxBoundaryCondition(Qˢ), bottom=GradientBoundaryCondition(dSdz))
 u_bcs = FieldBoundaryConditions(top=FluxBoundaryCondition(Qᵁ))
@@ -194,7 +205,7 @@ model = NonhydrostaticModel(;
             boundary_conditions = (T=T_bcs, S=S_bcs, u=u_bcs)
             )
 
-set!(model, T=T_initial, S=S_initial)
+set!(model, T=T_initial_noisy, S=S_initial_noisy)
 
 T = model.tracers.T
 S = model.tracers.S
@@ -250,19 +261,19 @@ function init_save_some_metadata!(file, model)
 end
 
 @inline function calculate_α(i, j, k, grid, T, S, eos)
-  @inbounds return Oceananigans.BuoyancyModels.thermal_expansionᶜᶜᶜ(i, j, k, grid, eos, T, S)
+  @inbounds return Oceananigans.BuoyancyModels.thermal_expansionᶜᶜᶜ(i, j, k, grid, eos, T, S) * eos.reference_density / ρ₀
 end
 
 @inline function calculate_β(i, j, k, grid, T, S, eos)
-  @inbounds return Oceananigans.BuoyancyModels.haline_contractionᶜᶜᶜ(i, j, k, grid, eos, T, S)
+  @inbounds return Oceananigans.BuoyancyModels.haline_contractionᶜᶜᶜ(i, j, k, grid, eos, T, S) * eos.reference_density / ρ₀
 end
 
 @inline function calculate_α_face(i, j, k, grid, T, S, eos)
-  @inbounds return Oceananigans.BuoyancyModels.thermal_expansionᶜᶜᶠ(i, j, k, grid, eos, T, S)
+  @inbounds return Oceananigans.BuoyancyModels.thermal_expansionᶜᶜᶠ(i, j, k, grid, eos, T, S) * eos.reference_density / ρ₀
 end
 
 @inline function calculate_β_face(i, j, k, grid, T, S, eos)
-  @inbounds return Oceananigans.BuoyancyModels.haline_contractionᶜᶜᶠ(i, j, k, grid, eos, T, S)
+  @inbounds return Oceananigans.BuoyancyModels.haline_contractionᶜᶜᶠ(i, j, k, grid, eos, T, S) * eos.reference_density / ρ₀
 end
 
 α_op = KernelFunctionOperation{Center, Center, Center}(calculate_α, grid, T, S, eos)
@@ -302,36 +313,36 @@ compute!(b)
 ρ = Field(ρ_op)
 compute!(ρ)
 
-ubar = Average(u, dims=(1, 2))
-vbar = Average(v, dims=(1, 2))
-Tbar = Average(T, dims=(1, 2))
-Sbar = Average(S, dims=(1, 2))
-bbar = Average(b, dims=(1, 2))
-ρbar = Average(ρ, dims=(1, 2))
+ubar = Field(Average(u, dims=(1, 2)))
+vbar = Field(Average(v, dims=(1, 2)))
+Tbar = Field(Average(T, dims=(1, 2)))
+Sbar = Field(Average(S, dims=(1, 2)))
+bbar = Field(Average(b, dims=(1, 2)))
+ρbar = Field(Average(ρ, dims=(1, 2)))
 
-Tbar_face = Average(@at((Center, Center, Face), T), dims=(1, 2))
-Sbar_face = Average(@at((Center, Center, Face), S), dims=(1, 2))
+Tbar_face = Field(Average(@at((Center, Center, Face), T), dims=(1, 2)))
+Sbar_face = Field(Average(@at((Center, Center, Face), S), dims=(1, 2)))
 
-uw = Average(w * u, dims=(1, 2))
-vw = Average(w * v, dims=(1, 2))
-wb = Average(w * b, dims=(1, 2))
-wb′ = Average(w * g * (α*T - β*S), dims=(1, 2))
-wT = Average(w * T, dims=(1, 2))
-wS = Average(w * S, dims=(1, 2))
+uw = Field(Average(w * u, dims=(1, 2)))
+vw = Field(Average(w * v, dims=(1, 2)))
+wb = Field(Average(w * b, dims=(1, 2)))
+wb′ = Field(Average(w * g * (α*T - β*S), dims=(1, 2)))
+wT = Field(Average(w * T, dims=(1, 2)))
+wS = Field(Average(w * S, dims=(1, 2)))
 
 @inline function calculate_α_bulk(i, j, k, grid, Tbar, Sbar, eos)
-  @inbounds return Oceananigans.BuoyancyModels.thermal_expansionᶜᶜᶠ(i, j, k, grid, eos, Tbar, Sbar)
+  @inbounds return Oceananigans.BuoyancyModels.thermal_expansionᶜᶜᶜ(i, j, k, grid, eos, Tbar, Sbar) * eos.reference_density / ρ₀
 end
 
 @inline function calculate_β_bulk(i, j, k, grid, Tbar, Sbar, eos)
-  @inbounds return Oceananigans.BuoyancyModels.haline_contractionᶜᶜᶠ(i, j, k, grid, eos, Tbar, Sbar)
+  @inbounds return Oceananigans.BuoyancyModels.haline_contractionᶜᶜᶜ(i, j, k, grid, eos, Tbar, Sbar) * eos.reference_density / ρ₀
 end
 
-α_bulk_op = KernelFunctionOperation{Nothing, Nothing, Face}(calculate_α_bulk, grid, Field(Tbar_face), Field(Sbar_face), eos)
+α_bulk_op = KernelFunctionOperation{Nothing, Nothing, Center}(calculate_α_bulk, grid, Tbar, Sbar, eos)
 α_bulk = Field(α_bulk_op)
 compute!(α_bulk)
 
-β_bulk_op = KernelFunctionOperation{Nothing, Nothing, Face}(calculate_β_bulk, grid, Field(Tbar_face), Field(Sbar_face), eos)
+β_bulk_op = KernelFunctionOperation{Nothing, Nothing, Center}(calculate_β_bulk, grid, Tbar, Sbar, eos)
 β_bulk = Field(β_bulk_op)
 compute!(β_bulk)
 
@@ -340,14 +351,12 @@ compute!(β_bulk)
   return ρ
 end
 
-ρ_bulk_op = KernelFunctionOperation{Nothing, Nothing, Center}(get_bulk_density, model.grid, model.buoyancy, Field(Tbar), Field(Sbar))
+ρ_bulk_op = KernelFunctionOperation{Nothing, Nothing, Center}(get_bulk_density, model.grid, model.buoyancy, Tbar, Sbar)
 ρ_bulk = Field(ρ_bulk_op)
 compute!(ρ_bulk)
-ρ_bulk[:]
 
 ∂ρ_bulk∂z = Field(∂z(ρ_bulk))
 compute!(∂ρ_bulk∂z)
-∂ρ_bulk∂z[:]
 
 @inline function get_bulk_buoyancy(i, j, k, grid, b, Tbar, Sbar)
   @inbounds ρ = Oceananigans.BuoyancyModels.ρ′(i, j, k, grid, b.model.equation_of_state, Tbar, Sbar) + b.model.equation_of_state.reference_density
@@ -355,23 +364,25 @@ compute!(∂ρ_bulk∂z)
   return -g * ρ′ / ρ₀
 end
 
-b_bulk_op = KernelFunctionOperation{Nothing, Nothing, Center}(get_bulk_buoyancy, model.grid, model.buoyancy, Field(Tbar), Field(Sbar))
+b_bulk_op = KernelFunctionOperation{Nothing, Nothing, Center}(get_bulk_buoyancy, model.grid, model.buoyancy, Tbar, Sbar)
 b_bulk = Field(b_bulk_op)
 compute!(b_bulk)
+b_bulk[:]
 
 ∂b_bulk∂z = Field(∂z(b_bulk))
 compute!(∂b_bulk∂z)
+∂b_bulk∂z[:]
 
-∂Tbar∂z = Average(∂z(T), dims=(1, 2))
-∂Sbar∂z = Average(∂z(S), dims=(1, 2))
-∂bbar∂z = Average(∂z(b), dims=(1, 2))
-∂ρbar∂z = Average(∂z(ρ), dims=(1, 2))
+∂Tbar∂z = Field(Average(∂z(T), dims=(1, 2)))
+∂Sbar∂z = Field(Average(∂z(S), dims=(1, 2)))
+∂bbar∂z = Field(Average(∂z(b), dims=(1, 2)))
+∂ρbar∂z = Field(Average(∂z(ρ), dims=(1, 2)))
 
-α_bulk_∂Tbar∂z = α_bulk * Field(∂Tbar∂z)
-β_bulk_∂Sbar∂z = β_bulk * Field(∂Sbar∂z)
+α_bulk_∂Tbar∂z = Field(∂Tbar∂z * α_bulk)
+β_bulk_∂Sbar∂z = Field(∂Sbar∂z * β_bulk)
 
-α_∂T∂z_bar = Average(α_face * ∂z(T), dims=(1, 2))
-β_∂S∂z_bar = Average(β_face * ∂z(S), dims=(1, 2))
+α_∂T∂z_bar = Field(Average(∂z(T) * α, dims=(1, 2)))
+β_∂S∂z_bar = Field(Average(∂z(S) * β, dims=(1, 2)))
 
 field_outputs = merge(model.velocities, model.tracers)
 timeseries_outputs = (; ubar, vbar, Tbar, Sbar, bbar, ρbar,
@@ -462,13 +473,13 @@ wS_data = FieldTimeSeries("$(FILE_DIR)/instantaneous_timeseries.jld2", "wS")
 wb_data = FieldTimeSeries("$(FILE_DIR)/instantaneous_timeseries.jld2", "wb")
 wb′_data = FieldTimeSeries("$(FILE_DIR)/instantaneous_timeseries.jld2", "wb′")
 
-α_bulk_∂Tbar∂z_β_bulk_∂Sbar∂z_b_RHS_data = interior(α_bulk_∂Tbar∂z_data) .- interior(β_bulk_∂Sbar∂z_data)
-α_bulk_∂Tbar∂z_β_bulk_∂Sbar∂z_ρ_RHS_data = -interior(α_bulk_∂Tbar∂z_data) .+ interior(β_bulk_∂Sbar∂z_data)
-α_∂T∂z_bar_β_∂S∂z_bar_RHS_data = -interior(α_∂T∂z_bar_data) .+ interior(β_∂S∂z_bar_data)
+α_bulk_∂Tbar∂z_β_bulk_∂Sbar∂z_b_RHS_data = g .* (interior(α_bulk_∂Tbar∂z_data) .- interior(β_bulk_∂Sbar∂z_data))
+α_bulk_∂Tbar∂z_β_bulk_∂Sbar∂z_ρ_RHS_data = ρ₀ .* (-interior(α_bulk_∂Tbar∂z_data) .+ interior(β_bulk_∂Sbar∂z_data))
+α_∂T∂z_bar_β_∂S∂z_bar_RHS_data = ρ₀ .* (-interior(α_∂T∂z_bar_data) .+ interior(β_∂S∂z_bar_data))
 
 ∂ρbar∂z_RHS_data = -g / ρ₀ .* interior(∂ρbar∂z_data)
 
-∂ρ_bulk∂z_RHS_data = -g / ρ₀ * interior(∂ρ_bulk∂z_data)
+∂ρ_bulk∂z_RHS_data = -g / ρ₀ .* interior(∂ρ_bulk∂z_data)
 
 Nt = length(T_xy_data.times)
 
@@ -478,7 +489,7 @@ zC = T_xy_data.grid.zᵃᵃᶜ[1:Nz]
 
 zF = uw_data.grid.zᵃᵃᶠ[1:Nz+1]
 ##
-fig = Figure(resolution=(1800, 2100))
+fig = Figure(resolution=(3000, 1800))
 
 axT = Axis3(fig[1:2, 1:2], title="T", xlabel="x", ylabel="y", zlabel="z", viewmode=:fitzoom, aspect=:data)
 axS = Axis3(fig[1:2, 3:4], title="S", xlabel="x", ylabel="y", zlabel="z", viewmode=:fitzoom, aspect=:data)
@@ -488,15 +499,28 @@ axvbar = Axis(fig[3, 2], title="<v>", xlabel="m s⁻¹", ylabel="z")
 axTbar = Axis(fig[3, 3], title="<T>", xlabel="°C", ylabel="z")
 axSbar = Axis(fig[3, 4], title="<S>", xlabel="g kg⁻¹", ylabel="z")
 
+# axuw = Axis(fig[4, 1], limits=(nothing, nothing), title="uw", xlabel="m² s⁻²", ylabel="z")
+# axvw = Axis(fig[4, 2], limits=(nothing, nothing), title="vw", xlabel="m² s⁻²", ylabel="z")
+# axwT = Axis(fig[4, 3], limits=(nothing, nothing), title="wT", xlabel="m s⁻¹ °C", ylabel="z")
+# axwS = Axis(fig[4, 4], limits=(nothing, nothing), title="wS", xlabel="m s⁻¹ g kg⁻¹", ylabel="z")
+
+# axwb = Axis(fig[5, 1], limits=(nothing, nothing), title="wb", xlabel="m² s⁻³", ylabel="z")
+# axρ = Axis(fig[5, 2], limits=(nothing, nothing), title="ρ", xlabel="kg m⁻³", ylabel="z")
+# ax∂zb = Axis(fig[5, 3], limits=(nothing, nothing), title="∂z(b)", xlabel="s⁻²", ylabel="z")
+# ax∂zρ = Axis(fig[5, 4], limits=(nothing, nothing), title="∂z(ρ)", xlabel="kg m⁻⁴", ylabel="z")
+
 axuw = Axis(fig[4, 1], title="uw", xlabel="m² s⁻²", ylabel="z")
 axvw = Axis(fig[4, 2], title="vw", xlabel="m² s⁻²", ylabel="z")
 axwT = Axis(fig[4, 3], title="wT", xlabel="m s⁻¹ °C", ylabel="z")
 axwS = Axis(fig[4, 4], title="wS", xlabel="m s⁻¹ g kg⁻¹", ylabel="z")
 
-axwb = Axis(fig[5, 1], title="wb", xlabel="m² s⁻³", ylabel="z")
-axρ = Axis(fig[5, 2], title="ρ", xlabel="kg m⁻³", ylabel="z")
-ax∂zb = Axis(fig[5, 3], title="∂z(b)", xlabel="s⁻²", ylabel="z")
-ax∂zρ = Axis(fig[5, 4], title="∂z(ρ)", xlabel="kg m⁻⁴", ylabel="z")
+axwb = Axis(fig[1, 5], title="wb", xlabel="m² s⁻³", ylabel="z")
+axρ = Axis(fig[2, 5], title="ρ", xlabel="kg m⁻³", ylabel="z")
+
+ax∂zbb = Axis(fig[1, 6], title="∂z(b)", xlabel="s⁻²", ylabel="z")
+ax∂zbρ = Axis(fig[3, 6], title="∂z(b)", xlabel="s⁻²", ylabel="z")
+
+ax∂zρ = Axis(fig[3, 5], title="∂z(ρ)", xlabel="kg m⁻⁴", ylabel="z")
 
 xs_xy = xC
 ys_xy = yC
@@ -536,18 +560,29 @@ vbarlim = (minimum(vbar_data), maximum(vbar_data))
 Tbarlim = (minimum(Tbar_data), maximum(Tbar_data))
 Sbarlim = (minimum(Sbar_data), maximum(Sbar_data))
 
-startframe_lim = 20
+startframe_lim = 30
 uwlim = (minimum(uw_data[1, 1, :, startframe_lim:end]), maximum(uw_data[1, 1, :, startframe_lim:end]))
 vwlim = (minimum(vw_data[1, 1, :, startframe_lim:end]), maximum(vw_data[1, 1, :, startframe_lim:end]))
 wTlim = (minimum(wT_data[1, 1, :, startframe_lim:end]), maximum(wT_data[1, 1, :, startframe_lim:end]))
 wSlim = (minimum(wS_data[1, 1, :, startframe_lim:end]), maximum(wS_data[1, 1, :, startframe_lim:end]))
 
 wblim = (find_min(wb_data[1, 1, :, startframe_lim:end], wb′_data[1, 1, :, startframe_lim:end]), find_max(wb_data[1, 1, :, startframe_lim:end], wb′_data[1, 1, :, startframe_lim:end]))
-ρlim = (find_min(ρbar_data, ρ_bulk_data), find_max(ρbar_data, ρ_bulk_data))
-∂zblim = (find_min(∂bbar∂z_data, ∂ρ_bulk∂z_RHS_data, α_bulk_∂Tbar∂z_β_bulk_∂Sbar∂z_b_RHS_data, ∂b_bulk∂z_data, ∂ρbar∂z_RHS_data), 
-          find_max(∂bbar∂z_data, ∂ρ_bulk∂z_RHS_data, α_bulk_∂Tbar∂z_β_bulk_∂Sbar∂z_b_RHS_data, ∂b_bulk∂z_data, ∂ρbar∂z_RHS_data))
+
+# ρlim = (find_min(ρbar_data, ρ_bulk_data), 
+#         find_max(ρbar_data, ρ_bulk_data))
+# ∂zblim = (find_min(∂bbar∂z_data, ∂ρ_bulk∂z_RHS_data, α_bulk_∂Tbar∂z_β_bulk_∂Sbar∂z_b_RHS_data, ∂b_bulk∂z_data, ∂ρbar∂z_RHS_data), 
+#           find_max(∂bbar∂z_data, ∂ρ_bulk∂z_RHS_data, α_bulk_∂Tbar∂z_β_bulk_∂Sbar∂z_b_RHS_data, ∂b_bulk∂z_data, ∂ρbar∂z_RHS_data))
+# ∂zρlim = (find_min(∂ρbar∂z_data, α_bulk_∂Tbar∂z_β_bulk_∂Sbar∂z_ρ_RHS_data, α_∂T∂z_bar_β_∂S∂z_bar_RHS_data), 
+#           find_max(∂ρbar∂z_data, α_bulk_∂Tbar∂z_β_bulk_∂Sbar∂z_ρ_RHS_data, α_∂T∂z_bar_β_∂S∂z_bar_RHS_data))
+
+ρlim = (find_min(ρbar_data), find_max(ρbar_data))
+∂zblim = (find_min(∂bbar∂z_data, α_bulk_∂Tbar∂z_β_bulk_∂Sbar∂z_b_RHS_data, ∂b_bulk∂z_data, ∂ρbar∂z_RHS_data), 
+          find_max(∂bbar∂z_data, α_bulk_∂Tbar∂z_β_bulk_∂Sbar∂z_b_RHS_data, ∂b_bulk∂z_data, ∂ρbar∂z_RHS_data))
+
 ∂zρlim = (find_min(∂ρbar∂z_data, α_bulk_∂Tbar∂z_β_bulk_∂Sbar∂z_ρ_RHS_data, α_∂T∂z_bar_β_∂S∂z_bar_RHS_data), 
           find_max(∂ρbar∂z_data, α_bulk_∂Tbar∂z_β_bulk_∂Sbar∂z_ρ_RHS_data, α_∂T∂z_bar_β_∂S∂z_bar_RHS_data))
+# ∂zblim = (find_min(∂bbar∂z_data, ∂ρbar∂z_RHS_data), find_max(∂bbar∂z_data, ∂ρbar∂z_RHS_data))
+# ∂zρlim = (find_min(∂ρbar∂z_data, α_∂T∂z_bar_β_∂S∂z_bar_RHS_data), find_max(∂ρbar∂z_data, α_∂T∂z_bar_β_∂S∂z_bar_RHS_data))
 
 n = Observable(1)
 
@@ -605,25 +640,28 @@ lines!(axvw, vwₙ, zF)
 lines!(axwT, wTₙ, zF)
 lines!(axwS, wSₙ, zF)
 
-lines!(axwb, wbₙ, zF, label="<wb>")
-lines!(axwb, wb′ₙ, zF, label="g<αwT - βwS>")
+lines!(axwb, wb′ₙ, zF, label="g * <αwT - βwS>", linewidth=10, alpha=0.5)
+lines!(axwb, wbₙ, zF, label="<wb>", color=:black)
 axislegend(axwb, position=:rb)
 
-lines!(axρ, ρbarₙ, zC, label="<ρ(T, S)>")
-lines!(axρ, ρ_bulkₙ, zC, label="ρ(<T>, <S>)")
+lines!(axρ, ρ_bulkₙ, zC, label="ρ(<T>, <S>)", linewidth=10, alpha=0.5)
+lines!(axρ, ρbarₙ, zC, label="<ρ(T, S)>", color=:black)
 axislegend(axρ, position=:rb)
 
-lines!(ax∂zb, ∂bbar∂zₙ, zF, label="<∂z(b(T, S))>")
-lines!(ax∂zb, ∂ρ_bulk∂z_RHSₙ, zF, label="-g/ρ₀ * ∂z(ρ(<T>, <S>))")
-lines!(ax∂zb, α_bulk_∂Tbar∂z_β_bulk_∂Sbar∂z_b_RHSₙ, zF, label="g/ρ₀ * [α(<T>, <S>)*∂z(<T>) - β(<T>, <S>)*∂z(<S>)]")
-lines!(ax∂zb, ∂b_bulk∂zₙ, zF, label="∂z(b(<T>, <S>))")
-lines!(ax∂zb, ∂ρbar∂z_RHSₙ, zF, label="-g/ρ₀ * <∂z(ρ(T, S))>")
-axislegend(ax∂zb, position=:rb)
+lines!(ax∂zbb, ∂b_bulk∂zₙ, zF, label="∂z(b(<T>, <S>))", linewidth=10, alpha=0.5)
+lines!(ax∂zbb, α_bulk_∂Tbar∂z_β_bulk_∂Sbar∂z_b_RHSₙ, zF, label="g * [α(<T>, <S>)*∂z(<T>) - β(<T>, <S>)*∂z(<S>)]", linewidth=10, alpha=0.5)
+lines!(ax∂zbb, ∂bbar∂zₙ, zF, label="<∂z(b(T, S))>", color=:black)
+Legend(fig[2, 6], ax∂zbb)
 
-lines!(ax∂zρ, ∂ρbar∂zₙ, zF, label="<∂z(ρ(T, S))>")
-lines!(ax∂zρ, α_bulk_∂Tbar∂z_β_bulk_∂Sbar∂z_ρ_RHSₙ, zF, label="-α(<T>, <S>)*∂z(<T>) + β(<T>, <S>)*∂z(<S>)")
-lines!(ax∂zρ, α_∂T∂z_bar_β_∂S∂z_bar_RHSₙ, zF, label="<-α(T, S)*∂z(T)> + <β(T, S)*∂z(S)>")
-axislegend(ax∂zρ, position=:rb)
+lines!(ax∂zbρ, ∂ρ_bulk∂z_RHSₙ, zF, label="-g/ρ₀ * ∂z(ρ(<T>, <S>))", linewidth=10, alpha=0.5)
+lines!(ax∂zbρ, ∂ρbar∂z_RHSₙ, zF, label="-g/ρ₀ * <∂z(ρ(T, S))>", linewidth=10, alpha=0.5)
+lines!(ax∂zbρ, ∂bbar∂zₙ, zF, label="<∂z(b(T, S))>", color=:black)
+Legend(fig[4, 6], ax∂zbb)
+
+lines!(ax∂zρ, α_bulk_∂Tbar∂z_β_bulk_∂Sbar∂z_ρ_RHSₙ, zF, label="ρ₀ * [-α(<T>, <S>)*∂z(<T>) + β(<T>, <S>)*∂z(<S>)]", linewidth=10, alpha=0.5)
+lines!(ax∂zρ, α_∂T∂z_bar_β_∂S∂z_bar_RHSₙ, zF, label="ρ₀ * [<-α(T, S)*∂z(T)> + <β(T, S)*∂z(S)>]", linewidth=10, alpha=0.5)
+lines!(ax∂zρ, ∂ρbar∂zₙ, zF, label="<∂z(ρ(T, S))>", color=:black)
+Legend(fig[4, 5], ax∂zρ)
 
 xlims!(axubar, ubarlim)
 xlims!(axvbar, vbarlim)
@@ -637,7 +675,8 @@ xlims!(axwS, wSlim)
 
 xlims!(axwb, wblim)
 xlims!(axρ, ρlim)
-xlims!(ax∂zb, ∂zblim)
+xlims!(ax∂zbb, ∂zblim)
+xlims!(ax∂zbρ, ∂zblim)
 xlims!(ax∂zρ, ∂zρlim)
 
 trim!(fig.layout)

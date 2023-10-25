@@ -628,6 +628,7 @@ wb′ₙ = @lift interior(wb′_data[$n], 1, 1, :)
 ∂ρbar∂z_RHSₙ = @lift ∂ρbar∂z_RHS_data[1, 1, :, $n]
 
 ∂ρ_bulk∂z_RHSₙ = @lift ∂ρ_bulk∂z_RHS_data[1, 1, :, $n]
+∂ρ_bulk∂zₙ = @lift interior(∂ρ_bulk∂z_data[$n], 1, 1, :)
 ∂b_bulk∂zₙ = @lift interior(∂b_bulk∂z_data[$n], 1, 1, :)
 
 lines!(axubar, ubarₙ, zC)
@@ -640,26 +641,27 @@ lines!(axvw, vwₙ, zF)
 lines!(axwT, wTₙ, zF)
 lines!(axwS, wSₙ, zF)
 
-lines!(axwb, wb′ₙ, zF, label="g * <αwT - βwS>", linewidth=10, alpha=0.5)
+lines!(axwb, wb′ₙ, zF, label="g * <αwT - βwS>", linewidth=8, alpha=0.5)
 lines!(axwb, wbₙ, zF, label="<wb>", color=:black)
 axislegend(axwb, position=:rb)
 
-lines!(axρ, ρ_bulkₙ, zC, label="ρ(<T>, <S>)", linewidth=10, alpha=0.5)
+lines!(axρ, ρ_bulkₙ, zC, label="ρ(<T>, <S>)", linewidth=8, alpha=0.5)
 lines!(axρ, ρbarₙ, zC, label="<ρ(T, S)>", color=:black)
 axislegend(axρ, position=:rb)
 
-lines!(ax∂zbb, ∂b_bulk∂zₙ, zF, label="∂z(b(<T>, <S>))", linewidth=10, alpha=0.5)
-lines!(ax∂zbb, α_bulk_∂Tbar∂z_β_bulk_∂Sbar∂z_b_RHSₙ, zF, label="g * [α(<T>, <S>)*∂z(<T>) - β(<T>, <S>)*∂z(<S>)]", linewidth=10, alpha=0.5)
+lines!(ax∂zbb, ∂b_bulk∂zₙ, zF, label="∂z(b(<T>, <S>))", linewidth=8, alpha=0.5)
+lines!(ax∂zbb, α_bulk_∂Tbar∂z_β_bulk_∂Sbar∂z_b_RHSₙ, zF, label="g * [α(<T>, <S>)*∂z(<T>) - β(<T>, <S>)*∂z(<S>)]", linewidth=8, alpha=0.5)
 lines!(ax∂zbb, ∂bbar∂zₙ, zF, label="<∂z(b(T, S))>", color=:black)
 Legend(fig[2, 6], ax∂zbb)
 
-lines!(ax∂zbρ, ∂ρ_bulk∂z_RHSₙ, zF, label="-g/ρ₀ * ∂z(ρ(<T>, <S>))", linewidth=10, alpha=0.5)
-lines!(ax∂zbρ, ∂ρbar∂z_RHSₙ, zF, label="-g/ρ₀ * <∂z(ρ(T, S))>", linewidth=10, alpha=0.5)
+lines!(ax∂zbρ, ∂ρ_bulk∂z_RHSₙ, zF, label="-g/ρ₀ * ∂z(ρ(<T>, <S>))", linewidth=8, alpha=0.5)
+lines!(ax∂zbρ, ∂ρbar∂z_RHSₙ, zF, label="-g/ρ₀ * <∂z(ρ(T, S))>", linewidth=8, alpha=0.5)
 lines!(ax∂zbρ, ∂bbar∂zₙ, zF, label="<∂z(b(T, S))>", color=:black)
-Legend(fig[4, 6], ax∂zbb)
+Legend(fig[4, 6], ax∂zbρ)
 
-lines!(ax∂zρ, α_bulk_∂Tbar∂z_β_bulk_∂Sbar∂z_ρ_RHSₙ, zF, label="ρ₀ * [-α(<T>, <S>)*∂z(<T>) + β(<T>, <S>)*∂z(<S>)]", linewidth=10, alpha=0.5)
-lines!(ax∂zρ, α_∂T∂z_bar_β_∂S∂z_bar_RHSₙ, zF, label="ρ₀ * [<-α(T, S)*∂z(T)> + <β(T, S)*∂z(S)>]", linewidth=10, alpha=0.5)
+lines!(ax∂zρ, α_bulk_∂Tbar∂z_β_bulk_∂Sbar∂z_ρ_RHSₙ, zF, label="ρ₀ * [-α(<T>, <S>)*∂z(<T>) + β(<T>, <S>)*∂z(<S>)]", linewidth=8, alpha=0.5)
+lines!(ax∂zρ, α_∂T∂z_bar_β_∂S∂z_bar_RHSₙ, zF, label="ρ₀ * [<-α(T, S)*∂z(T)> + <β(T, S)*∂z(S)>]", linewidth=8, alpha=0.5)
+lines!(ax∂zρ, ∂ρ_bulk∂zₙ, zF, label="∂z(ρ(<T>, <S>))", linewidth=8, alpha=0.5)
 lines!(ax∂zρ, ∂ρbar∂zₙ, zF, label="<∂z(ρ(T, S))>", color=:black)
 Legend(fig[4, 5], ax∂zρ)
 

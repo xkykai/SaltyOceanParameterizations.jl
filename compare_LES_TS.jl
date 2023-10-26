@@ -5,10 +5,10 @@ using JLD2
 FILE_DIRS = [
     "./LES/QU_-0.0005_QT_5.0e-6_QS_-5.0e-5_Ttop_20.0_Stop_35.0_sponge_WENO9nu1e-5_Lz_256.0_Lx_64.0_Ly_64.0_Nz_128_Nx_32_Ny_32",
     "./LES/QU_-0.0005_QT_5.0e-6_QS_-5.0e-5_Ttop_20.0_Stop_35.0_sponge_AMD_Lz_256.0_Lx_64.0_Ly_64.0_Nz_128_Nx_32_Ny_32",
-    "./LES/QU_-0.0005_QT_5.0e-6_QS_-5.0e-5_Ttop_2.0_Stop_35.0_sponge_WENO9nu1e-5_Lz_256.0_Lx_64.0_Ly_64.0_Nz_256_Nx_64_Ny_64",
-    "./LES/QU_-0.0005_QT_5.0e-6_QS_-5.0e-5_Ttop_2.0_Stop_35.0_sponge_AMD_Lz_256.0_Lx_64.0_Ly_64.0_Nz_256_Nx_64_Ny_64",
-    "./LES/QU_-0.0005_QT_5.0e-6_QS_-5.0e-5_Ttop_2.0_Stop_35.0_sponge_WENO9nu1e-5_Lz_256.0_Lx_64.0_Ly_64.0_Nz_512_Nx_128_Ny_128",
-    "./LES/QU_-0.0005_QT_5.0e-6_QS_-5.0e-5_Ttop_2.0_Stop_35.0_sponge_AMD_Lz_256.0_Lx_64.0_Ly_64.0_Nz_512_Nx_128_Ny_128"
+    "./LES/QU_-0.0005_QT_5.0e-6_QS_-5.0e-5_Ttop_20.0_Stop_35.0_sponge_WENO9nu1e-5_Lz_256.0_Lx_64.0_Ly_64.0_Nz_256_Nx_64_Ny_64",
+    "./LES/QU_-0.0005_QT_5.0e-6_QS_-5.0e-5_Ttop_20.0_Stop_35.0_sponge_AMD_Lz_256.0_Lx_64.0_Ly_64.0_Nz_256_Nx_64_Ny_64",
+    "./LES/QU_-0.0005_QT_5.0e-6_QS_-5.0e-5_Ttop_20.0_Stop_35.0_sponge_WENO9nu1e-5_Lz_256.0_Lx_64.0_Ly_64.0_Nz_512_Nx_128_Ny_128",
+    "./LES/QU_-0.0005_QT_5.0e-6_QS_-5.0e-5_Ttop_20.0_Stop_35.0_sponge_AMD_Lz_256.0_Lx_64.0_Ly_64.0_Nz_512_Nx_128_Ny_128"
     # "./LES/QU_-0.0005_QT_5.0e-6_QS_-5.0e-5_Ttop_20.0_Stop_35.0_sponge_WENO9nu1e-5_Lz_256.0_Lx_128.0_Ly_128.0_Nz_128_Nx_64_Ny_64",
     # "./LES/QU_-0.0005_QT_5.0e-6_QS_-5.0e-5_Ttop_20.0_Stop_35.0_sponge_AMD_Lz_256.0_Lx_128.0_Ly_128.0_Nz_128_Nx_64_Ny_64",
     # "./LES/QU_-0.0005_QT_5.0e-6_QS_-5.0e-5_Ttop_20.0_Stop_35.0_sponge_WENO9nu1e-5_Lz_256.0_Lx_128.0_Ly_128.0_Nz_256_Nx_128_Ny_128",

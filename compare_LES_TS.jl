@@ -42,12 +42,12 @@ Qˢ = parameters["salinity_flux"]
 # T_top = parameters["surface_temperature"]
 # S_top = parameters["surface_salinity"]
 
-Nxs = [size(data.grid)[1] for data in u_datas]
-Nys = [size(data.grid)[2] for data in u_datas]
-Nzs = [size(data.grid)[3] for data in u_datas]
+Nxs = [size(data.grid)[1] for data in T_datas]
+Nys = [size(data.grid)[2] for data in T_datas]
+Nzs = [size(data.grid)[3] for data in T_datas]
 
-zCs = [data.grid.zᵃᵃᶜ[1:Nzs[i]] for (i, data) in enumerate(u_datas)]
-zFs = [data.grid.zᵃᵃᶠ[1:Nzs[i]+1] for (i, data) in enumerate(u_datas)]
+zCs = [data.grid.zᵃᵃᶜ[1:Nzs[i]] for (i, data) in enumerate(T_datas)]
+zFs = [data.grid.zᵃᵃᶠ[1:Nzs[i]+1] for (i, data) in enumerate(T_datas)]
 
 #%%
 fig = Figure(resolution = (2200, 1200))

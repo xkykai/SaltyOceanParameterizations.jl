@@ -127,6 +127,12 @@ if args["advection"] == "WENO9nu1e-5"
 elseif args["advection"] == "AMD"
     advection = CenteredSecondOrder()
     closure = AnisotropicMinimumDissipation()
+elseif args["advection"] == "WENOAMD"
+    advection = WENO(order=9)
+    closure = AnisotropicMinimumDissipation()
+elseif args["advection"] == "WENO9nu0"
+    advection = WENO(order=9)
+    closure = nothing
 end
 
 const f = args["f"]

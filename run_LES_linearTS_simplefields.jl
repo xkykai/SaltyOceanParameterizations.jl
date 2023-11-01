@@ -211,7 +211,7 @@ model = NonhydrostaticModel(;
             closure = closure,
             coriolis = FPlane(f=f),
             buoyancy = SeawaterBuoyancy(equation_of_state=eos),
-            tracers = (:T, :S, :b),
+            tracers = (:T, :S),
             timestepper = :RungeKutta3,
             advection = advection,
             forcing = (u=uvw_sponge, v=uvw_sponge, w=uvw_sponge, T=T_sponge, S=S_sponge),
@@ -223,6 +223,22 @@ set!(model, T=T_initial_noisy, S=S_initial_noisy)
 T = model.tracers.T
 S = model.tracers.S
 u, v, w = model.velocities
+
+const T₀ = mean(T)
+const S₀ = mean(S)
+const ρ₀ = TEOS10.ρ(T₀, S₀, 0, eos)
+const g = model.buoyancy.model.gravitational_acceleration
+
+@inline function get_buoyancy(i, j, k, grid, b, C)
+  T, S = Oceananigans.BuoyancyModels.get_temperature_and_salinity(b, C)
+  @inbounds ρ = Oceananigans.BuoyancyModels.ρ′(i, j, k, grid, b.model.equation_of_state, T, S) + b.model.equation_of_state.reference_density
+  ρ′ = ρ - ρ₀
+  return -g * ρ′ / ρ₀
+end
+
+b_op = KernelFunctionOperation{Center, Center, Center}(get_buoyancy, model.grid, model.buoyancy, model.tracers)
+b = Field(b_op)
+compute!(b)
 
 simulation = Simulation(model, Δt=args["dt"]second, stop_time=args["stop_time"]days)
 # simulation = Simulation(model, Δt=args["dt"]second, stop_time=100minutes)

@@ -132,7 +132,7 @@ elseif args["advection"] == "WENOAMD"
     closure = AnisotropicMinimumDissipation()
 elseif args["advection"] == "WENO9nu0"
     advection = WENO(order=9)
-    closure = nothing
+    closure = ScalarDiffusivity(ν=0, κ=0)
 end
 
 const f = args["f"]

@@ -361,7 +361,7 @@ wS = Field(Average(w * S, dims=(1, 2)))
 
 ∂wb∂z = Field(Average(∂z(w * b), dims=(1, 2)))
 ∂wb′∂z = Field(Average(∂z(w * g * (α*T - β*S)), dims=(1, 2)))
-∂wb′′∂z = Field(Average(α * ∂z(w*T) - β * ∂z(w*S), dims=(1, 2)))
+∂wb′′∂z = Field(Average(g * (α * ∂z(w*T) - β * ∂z(w*S)), dims=(1, 2)))
 
 @inline function calculate_α_bulk(i, j, k, grid, Tbar, Sbar, eos)
   @inbounds return Oceananigans.BuoyancyModels.thermal_expansionᶜᶜᶜ(i, j, k, grid, eos, Tbar, Sbar) * eos.reference_density / ρ₀

@@ -1,3 +1,6 @@
+using Pkg
+Pkg.activate("gsw")
+
 using Oceananigans
 using CairoMakie
 using JLD2

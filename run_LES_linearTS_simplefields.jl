@@ -109,6 +109,10 @@ function parse_commandline()
         help = "Advection scheme used"
         arg_type = String
         default = "WENO9nu1e-5"
+      "--file_location"
+        help = "Location to save files"
+        arg_type = String
+        default = "."
     end
     return parse_args(s)
 end
@@ -168,7 +172,7 @@ const S_surface = args["S_surface"]
 const pickup = args["pickup"]
 
 FILE_NAME = "linearTS_simplefields_dTdz_$(dTdz)_dSdz_$(dSdz)_QU_$(Qᵁ)_QT_$(Qᵀ)_QS_$(Qˢ)_T_$(T_surface)_S_$(S_surface)_$(args["advection"])_Lxz_$(Lx)_$(Lz)_Nxz_$(Nx)_$(Nz)"
-FILE_DIR = "LES/$(FILE_NAME)"
+FILE_DIR = "$(args["file_location"])/LES/$(FILE_NAME)"
 mkpath(FILE_DIR)
 
 size_halo = 5

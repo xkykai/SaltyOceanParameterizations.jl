@@ -107,6 +107,10 @@ function parse_commandline()
         help = "Advection scheme used"
         arg_type = String
         default = "WENO9nu1e-5"
+      "--pickup_interval"
+        help = "Interval of pickup writer (days)"
+        arg_type = Float64
+        default = 0.2
     end
     return parse_args(s)
 end
@@ -474,7 +478,7 @@ simulation.output_writers[:timeseries] = JLD2OutputWriter(model, timeseries_outp
                                                           with_halos = true,
                                                           init = init_save_some_metadata!)
 
-simulation.output_writers[:checkpointer] = Checkpointer(model, schedule=TimeInterval(1day), prefix="$(FILE_DIR)/model_checkpoint")
+simulation.output_writers[:checkpointer] = Checkpointer(model, schedule=TimeInterval(args["pickup_interval"]days), prefix="$(FILE_DIR)/model_checkpoint")
 
 if pickup
     files = readdir(FILE_DIR)

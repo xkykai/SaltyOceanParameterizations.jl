@@ -119,25 +119,25 @@ args = parse_commandline()
 # args["dTdz"] = 4 / 256 
 # args["dSdz"] = -1 / 256
 
-# Lz = args["Lz"]
-# Lx = args["Lx"]
-# Ly = args["Ly"]
+Lz = args["Lz"]
+Lx = args["Lx"]
+Ly = args["Ly"]
 
-# Nz = args["Nz"]
-# Nx = args["Nx"]
-# Ny = args["Ny"]
+Nz = args["Nz"]
+Nx = args["Nx"]
+Ny = args["Ny"]
 
-# Qᵁ = args["QU"]
-# Qᵀ = args["QT"]
-# Qˢ = args["QS"]
+Qᵁ = args["QU"]
+Qᵀ = args["QT"]
+Qˢ = args["QS"]
 
-# f = args["f"]
+f = args["f"]
 
-# dTdz = args["dTdz"]
-# dSdz = args["dSdz"]
+dTdz = args["dTdz"]
+dSdz = args["dSdz"]
 
-# T_surface = args["T_surface"]
-# S_surface = args["S_surface"]
+T_surface = args["T_surface"]
+S_surface = args["S_surface"]
 
 FILE_NAME = "linearTS_dTdz_$(dTdz)_dSdz_$(dSdz)_QU_$(Qᵁ)_QT_$(Qᵀ)_QS_$(Qˢ)_T_$(T_surface)_S_$(S_surface)_$(args["advection"])_Lxz_$(Lx)_$(Lz)_Nxz_$(Nx)_$(Nz)"
 FILE_DIR = "LES/$(FILE_NAME)"

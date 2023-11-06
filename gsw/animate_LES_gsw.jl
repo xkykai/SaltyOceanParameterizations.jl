@@ -101,40 +101,40 @@ end
 
 args = parse_commandline()
 
-args["Lx"] = 128.
-args["Ly"] = 128.
-args["Nx"] = 64
-args["Ny"] = 64
-args["Nz"] = 128
-args["QU"] = -1e-3
-args["QT"] = 5e-5
-args["QS"] = -1e-4
+# args["Lx"] = 128.
+# args["Ly"] = 128.
+# args["Nx"] = 64
+# args["Ny"] = 64
+# args["Nz"] = 128
+# args["QU"] = -1e-3
+# args["QT"] = 5e-5
+# args["QS"] = -1e-4
 
-args["T_surface"] = 4.1
-args["S_surface"] = 0.0
+# args["T_surface"] = 4.1
+# args["S_surface"] = 0.0
 
-args["dTdz"] = 4 / 256 
-args["dSdz"] = -1 / 256
+# args["dTdz"] = 4 / 256 
+# args["dSdz"] = -1 / 256
 
-Lz = args["Lz"]
-Lx = args["Lx"]
-Ly = args["Ly"]
+# Lz = args["Lz"]
+# Lx = args["Lx"]
+# Ly = args["Ly"]
 
-Nz = args["Nz"]
-Nx = args["Nx"]
-Ny = args["Ny"]
+# Nz = args["Nz"]
+# Nx = args["Nx"]
+# Ny = args["Ny"]
 
-Qᵁ = args["QU"]
-Qᵀ = args["QT"]
-Qˢ = args["QS"]
+# Qᵁ = args["QU"]
+# Qᵀ = args["QT"]
+# Qˢ = args["QS"]
 
-f = args["f"]
+# f = args["f"]
 
-dTdz = args["dTdz"]
-dSdz = args["dSdz"]
+# dTdz = args["dTdz"]
+# dSdz = args["dSdz"]
 
-T_surface = args["T_surface"]
-S_surface = args["S_surface"]
+# T_surface = args["T_surface"]
+# S_surface = args["S_surface"]
 
 FILE_NAME = "linearTS_dTdz_$(dTdz)_dSdz_$(dSdz)_QU_$(Qᵁ)_QT_$(Qᵀ)_QS_$(Qˢ)_T_$(T_surface)_S_$(S_surface)_$(args["advection"])_Lxz_$(Lx)_$(Lz)_Nxz_$(Nx)_$(Nz)"
 FILE_DIR = "LES/$(FILE_NAME)"
@@ -200,14 +200,7 @@ for l in axes(c_bulk, 4)
   c_bulk[1, 1, :, l] .= gsw_sound_speed.(Sbar_face_data[1, 1, 1:end, l], Tbar_face_data[1, 1, 1:end, l], -zF .* ρ₀ * g * 1e-4)
 end
 
-α_bulk_∂Tbar∂z_β_bulk_∂Sbar∂z_b_RHS_data = g .* (interior(α_bulk_∂Tbar∂z_data) .- interior(β_bulk_∂Sbar∂z_data) .+ g ./ c_bulk .^2)[:, :, 2:end-1, :]
-
 α_bulk_∂Tbar∂z_β_bulk_∂Sbar∂z_ρ_RHS_data = ρ₀ .* (-interior(α_bulk_∂Tbar∂z_data) .+ interior(β_bulk_∂Sbar∂z_data) .- g ./ c_bulk .^2)[:, :, 2:end-1, :]
-
-# α_∂T∂z_bar_β_∂S∂z_bar_b_RHS_data = ρ₀ .* (-interior(α_∂T∂z_bar_data) .+ interior(β_∂S∂z_bar_data))[:, :, 2:end-1, :]
-
-# α_∂T∂z_bar_β_∂S∂z_bar_RHS_data = ρ₀ .* (-interior(α_∂T∂z_bar_data) .+ interior(β_∂S∂z_bar_data))[:, :, 2:end-1, :]
-
 ∂ρbar∂z_RHS_data = -g / ρ₀ .* interior(∂ρbar∂z_data)[:, :, 2:end-1, :]
 ∂ρ_bulk∂z_RHS_data = -g / ρ₀ .* interior(∂ρ_bulk∂z_data)[:, :, 2:end-1, :]
 
@@ -216,54 +209,20 @@ Nt = length(T_xy_data.times)
 ##
 fig = Figure(resolution=(3000, 1800))
 
-axT = Axis3(fig[1:2, 1:2], title="T", xlabel="x", ylabel="y", zlabel="z", viewmode=:fitzoom, aspect=:data)
-axS = Axis3(fig[1:2, 3:4], title="S", xlabel="x", ylabel="y", zlabel="z", viewmode=:fitzoom, aspect=:data)
+axubar = Axis(fig[1, 1], title="<u>", xlabel="m s⁻¹", ylabel="z")
+axvbar = Axis(fig[1, 2], title="<v>", xlabel="m s⁻¹", ylabel="z")
+axTbar = Axis(fig[1, 3], title="<T>", xlabel="°C", ylabel="z")
+axSbar = Axis(fig[1, 4], title="<S>", xlabel="g kg⁻¹", ylabel="z")
 
-axubar = Axis(fig[3, 1], title="<u>", xlabel="m s⁻¹", ylabel="z")
-axvbar = Axis(fig[3, 2], title="<v>", xlabel="m s⁻¹", ylabel="z")
-axTbar = Axis(fig[3, 3], title="<T>", xlabel="°C", ylabel="z")
-axSbar = Axis(fig[3, 4], title="<S>", xlabel="g kg⁻¹", ylabel="z")
+axuw = Axis(fig[2, 1], title="uw", xlabel="m² s⁻²", ylabel="z")
+axvw = Axis(fig[2, 2], title="vw", xlabel="m² s⁻²", ylabel="z")
+axwT = Axis(fig[2, 3], title="wT", xlabel="m s⁻¹ °C", ylabel="z")
+axwS = Axis(fig[2, 4], title="wS", xlabel="m s⁻¹ g kg⁻¹", ylabel="z")
 
-# axuw = Axis(fig[4, 1], limits=(nothing, nothing), title="uw", xlabel="m² s⁻²", ylabel="z")
-# axvw = Axis(fig[4, 2], limits=(nothing, nothing), title="vw", xlabel="m² s⁻²", ylabel="z")
-# axwT = Axis(fig[4, 3], limits=(nothing, nothing), title="wT", xlabel="m s⁻¹ °C", ylabel="z")
-# axwS = Axis(fig[4, 4], limits=(nothing, nothing), title="wS", xlabel="m s⁻¹ g kg⁻¹", ylabel="z")
-
-# axwb = Axis(fig[5, 1], limits=(nothing, nothing), title="wb", xlabel="m² s⁻³", ylabel="z")
-# axρ = Axis(fig[5, 2], limits=(nothing, nothing), title="ρ", xlabel="kg m⁻³", ylabel="z")
-# ax∂zb = Axis(fig[5, 3], limits=(nothing, nothing), title="∂z(b)", xlabel="s⁻²", ylabel="z")
-# ax∂zρ = Axis(fig[5, 4], limits=(nothing, nothing), title="∂z(ρ)", xlabel="kg m⁻⁴", ylabel="z")
-
-axuw = Axis(fig[4, 1], title="uw", xlabel="m² s⁻²", ylabel="z")
-axvw = Axis(fig[4, 2], title="vw", xlabel="m² s⁻²", ylabel="z")
-axwT = Axis(fig[4, 3], title="wT", xlabel="m s⁻¹ °C", ylabel="z")
-axwS = Axis(fig[4, 4], title="wS", xlabel="m s⁻¹ g kg⁻¹", ylabel="z")
-
-axwb = Axis(fig[1, 5], title="wb", xlabel="m² s⁻³", ylabel="z")
-axρ = Axis(fig[2, 5], title="ρ", xlabel="kg m⁻³", ylabel="z")
-
-ax∂zbb = Axis(fig[1, 6], title="∂z(b)", xlabel="s⁻²", ylabel="z")
-ax∂zbρ = Axis(fig[3, 6], title="∂z(b)", xlabel="s⁻²", ylabel="z")
-
-ax∂zρ = Axis(fig[3, 5], title="∂z(ρ)", xlabel="kg m⁻⁴", ylabel="z")
-
-xs_xy = xC
-ys_xy = yC
-zs_xy = [zC[Nz] for x in xs_xy, y in ys_xy]
-
-ys_yz = yC
-xs_yz = range(xC[1], stop=xC[1], length=length(zC))
-zs_yz = zeros(length(xs_yz), length(ys_yz))
-for j in axes(zs_yz, 2)
-  zs_yz[:, j] .= zC
-end
-
-xs_xz = xC
-ys_xz = range(yC[1], stop=yC[1], length=length(zC))
-zs_xz = zeros(length(xs_xz), length(ys_xz))
-for i in axes(zs_xz, 1)
-  zs_xz[i, :] .= zC
-end
+axρ = Axis(fig[1:2, 5:6], title="ρ", xlabel="kg m⁻³", ylabel="z")
+axwb = Axis(fig[3:4, 1:2], title="wb", xlabel="m² s⁻³", ylabel="z")
+ax∂zwb = Axis(fig[3:4, 3:4], title="∂z(wb)", xlabel="m s⁻³", ylabel="z")
+ax∂zρ = Axis(fig[3:4, 5:6], title="∂z(ρ)", xlabel="kg m⁻⁴", ylabel="z")
 
 function find_min(a...)
     return minimum(minimum.([a...]))
@@ -272,13 +231,6 @@ end
 function find_max(a...)
     return maximum(maximum.([a...]))
 end
-
-Tlim = (find_min(T_xy_data, T_yz_data, T_xz_data), find_max(T_xy_data, T_yz_data, T_xz_data))
-Slim = (find_min(S_xy_data, S_yz_data, S_xz_data), find_max(S_xy_data, S_yz_data, S_xz_data))
-
-colormap = Reverse(:RdBu_10)
-T_color_range = Tlim
-S_color_range = Slim
 
 ubarlim = (minimum(ubar_data), maximum(ubar_data))
 vbarlim = (minimum(vbar_data), maximum(vbar_data))
@@ -295,22 +247,11 @@ wblim = (find_min(wb_data[1, 1, :, startframe_lim:end], wb′_data[1, 1, :, star
 
 ρlim = (find_min(ρbar_data, ρ_bulk_data), 
         find_max(ρbar_data, ρ_bulk_data))
-∂zblim = (find_min(∂bbar∂z_data[1, 1, 2:end-1, startframe_lim:end], ∂ρ_bulk∂z_RHS_data[:, :, :, startframe_lim:end], α_bulk_∂Tbar∂z_β_bulk_∂Sbar∂z_b_RHS_data[:, :, :, startframe_lim:end], ∂b_bulk∂z_data[1, 1, 2:end-1, startframe_lim:end], ∂ρbar∂z_RHS_data[:, :, :, startframe_lim:end]), 
-          find_max(∂bbar∂z_data[1, 1, 2:end-1, startframe_lim:end], ∂ρ_bulk∂z_RHS_data[:, :, :, startframe_lim:end], α_bulk_∂Tbar∂z_β_bulk_∂Sbar∂z_b_RHS_data[:, :, :, startframe_lim:end], ∂b_bulk∂z_data[1, 1, 2:end-1, startframe_lim:end], ∂ρbar∂z_RHS_data[:, :, :, startframe_lim:end]))
 ∂zρlim = (find_min(∂ρbar∂z_data[1, 1, 2:end-1, startframe_lim:end], α_bulk_∂Tbar∂z_β_bulk_∂Sbar∂z_ρ_RHS_data[:, :, :, startframe_lim:end]), 
           find_max(∂ρbar∂z_data[1, 1, 2:end-1, startframe_lim:end], α_bulk_∂Tbar∂z_β_bulk_∂Sbar∂z_ρ_RHS_data[:, :, :, startframe_lim:end]))
 
-          # ∂zρlim = (find_min(∂ρbar∂z_data[1, 1, 2:end-1, :], α_bulk_∂Tbar∂z_β_bulk_∂Sbar∂z_ρ_RHS_data, α_∂T∂z_bar_β_∂S∂z_bar_RHS_data), 
-#           find_max(∂ρbar∂z_data[1, 1, 2:end-1, :], α_bulk_∂Tbar∂z_β_bulk_∂Sbar∂z_ρ_RHS_data, α_∂T∂z_bar_β_∂S∂z_bar_RHS_data))
-
-# ρlim = (find_min(ρbar_data), find_max(ρbar_data))
-# ∂zblim = (find_min(∂bbar∂z_data, α_bulk_∂Tbar∂z_β_bulk_∂Sbar∂z_b_RHS_data, ∂b_bulk∂z_data, ∂ρbar∂z_RHS_data), 
-#           find_max(∂bbar∂z_data, α_bulk_∂Tbar∂z_β_bulk_∂Sbar∂z_b_RHS_data, ∂b_bulk∂z_data, ∂ρbar∂z_RHS_data))
-
-# ∂zρlim = (find_min(∂ρbar∂z_data, α_bulk_∂Tbar∂z_β_bulk_∂Sbar∂z_ρ_RHS_data, α_∂T∂z_bar_β_∂S∂z_bar_RHS_data), 
-#           find_max(∂ρbar∂z_data, α_bulk_∂Tbar∂z_β_bulk_∂Sbar∂z_ρ_RHS_data, α_∂T∂z_bar_β_∂S∂z_bar_RHS_data))
-# ∂zblim = (find_min(∂bbar∂z_data, ∂ρbar∂z_RHS_data), find_max(∂bbar∂z_data, ∂ρbar∂z_RHS_data))
-# ∂zρlim = (find_min(∂ρbar∂z_data, α_∂T∂z_bar_β_∂S∂z_bar_RHS_data), find_max(∂ρbar∂z_data, α_∂T∂z_bar_β_∂S∂z_bar_RHS_data))
+∂zwblim = (find_min(∂wb∂z_data[1, 1, 2:end-1, startframe_lim:end], ∂wb′∂z_data[1, 1, 2:end-1, startframe_lim:end], ∂wb′′∂z_data[1, 1, 2:end-1, startframe_lim:end]), 
+           find_max(∂wb∂z_data[1, 1, 2:end-1, startframe_lim:end], ∂wb′∂z_data[1, 1, 2:end-1, startframe_lim:end], ∂wb′′∂z_data[1, 1, 2:end-1, startframe_lim:end]))
 
 n = Observable(1)
 
@@ -324,14 +265,6 @@ Sₙ_xz = @lift interior(S_xz_data[$n], :, 1, :)
 
 time_str = @lift "Qᵁ = $(Qᵁ), Qᵀ = $(Qᵀ), Qˢ = $(Qˢ), Time = $(round(T_xy_data.times[$n]/24/60^2, digits=3)) days"
 title = Label(fig[0, :], time_str, font=:bold, tellwidth=false)
-
-T_xy_surface = surface!(axT, xs_xy, ys_xy, zs_xy, color=Tₙ_xy, colormap=colormap, colorrange = T_color_range)
-T_yz_surface = surface!(axT, xs_yz, ys_yz, zs_yz, color=Tₙ_yz, colormap=colormap, colorrange = T_color_range)
-T_xz_surface = surface!(axT, xs_xz, ys_xz, zs_xz, color=Tₙ_xz, colormap=colormap, colorrange = T_color_range)
-
-S_xy_surface = surface!(axS, xs_xy, ys_xy, zs_xy, color=Sₙ_xy, colormap=colormap, colorrange = S_color_range)
-S_yz_surface = surface!(axS, xs_yz, ys_yz, zs_yz, color=Sₙ_yz, colormap=colormap, colorrange = S_color_range)
-S_xz_surface = surface!(axS, xs_xz, ys_xz, zs_xz, color=Sₙ_xz, colormap=colormap, colorrange = S_color_range)
 
 ubarₙ = @lift interior(ubar_data[$n], 1, 1, :)
 vbarₙ = @lift interior(vbar_data[$n], 1, 1, :)
@@ -347,17 +280,16 @@ wbₙ = @lift interior(wb_data[$n], 1, 1, :)
 wb′ₙ = @lift interior(wb′_data[$n], 1, 1, :)
 
 ρ_bulkₙ = @lift interior(ρ_bulk_data[$n], 1, 1, :)
-α_bulk_∂Tbar∂z_β_bulk_∂Sbar∂z_b_RHSₙ = @lift α_bulk_∂Tbar∂z_β_bulk_∂Sbar∂z_b_RHS_data[1, 1, :, $n]
 α_bulk_∂Tbar∂z_β_bulk_∂Sbar∂z_ρ_RHSₙ = @lift α_bulk_∂Tbar∂z_β_bulk_∂Sbar∂z_ρ_RHS_data[1, 1, :, $n]
-# α_∂T∂z_bar_β_∂S∂z_bar_RHSₙ = @lift α_∂T∂z_bar_β_∂S∂z_bar_RHS_data[1, 1, :, $n]
 
-∂bbar∂zₙ = @lift interior(∂bbar∂z_data[$n], 1, 1, 2:Nz)
-∂ρbar∂zₙ = @lift interior(∂ρbar∂z_data[$n], 1, 1, 2:Nz)
-∂ρbar∂z_RHSₙ = @lift ∂ρbar∂z_RHS_data[1, 1, :, $n]
+∂wb∂zₙ = @lift interior(∂wb∂z_data[$n], 1, 1, :)
+∂wb′∂zₙ = @lift interior(∂wb′∂z_data[$n], 1, 1, :)
+∂wb′′∂zₙ = @lift interior(∂wb′′∂z_data[$n], 1, 1, :)
 
 ∂ρ_bulk∂z_RHSₙ = @lift ∂ρ_bulk∂z_RHS_data[1, 1, :, $n]
 ∂ρ_bulk∂zₙ = @lift interior(∂ρ_bulk∂z_data[$n], 1, 1, 2:Nz)
 ∂b_bulk∂zₙ = @lift interior(∂b_bulk∂z_data[$n], 1, 1, 2:Nz)
+∂ρbar∂zₙ = @lift interior(∂ρbar∂z_data[$n], 1, 1, 2:Nz)
 
 lines!(axubar, ubarₙ, zC)
 lines!(axvbar, vbarₙ, zC)
@@ -377,21 +309,17 @@ lines!(axρ, ρ_bulkₙ, zC, label="ρ(<T>, <S>)", linewidth=8, alpha=0.5)
 lines!(axρ, ρbarₙ, zC, label="<ρ(T, S)>", color=:black)
 axislegend(axρ, position=:rb)
 
-lines!(ax∂zbb, ∂b_bulk∂zₙ, zF[2:end-1], label="∂z(b(<T>, <S>))", linewidth=8, alpha=0.5)
-lines!(ax∂zbb, α_bulk_∂Tbar∂z_β_bulk_∂Sbar∂z_b_RHSₙ, zF[2:end-1], label="g * [α(<T>, <S>)*∂z(<T>) - β(<T>, <S>)*∂z(<S>) + g/c²(<T>, <S>, ρ₀)]", linewidth=8, alpha=0.5)
-lines!(ax∂zbb, ∂bbar∂zₙ, zF[2:end-1], label="<∂z(b(T, S))>", color=:black)
-Legend(fig[2, 6], ax∂zbb)
-
-lines!(ax∂zbρ, ∂ρ_bulk∂z_RHSₙ, zF[2:end-1], label="-g/ρ₀ * ∂z(ρ(<T>, <S>))", linewidth=8, alpha=0.5)
-lines!(ax∂zbρ, ∂ρbar∂z_RHSₙ, zF[2:end-1], label="-g/ρ₀ * <∂z(ρ(T, S))>", linewidth=8, alpha=0.5)
-lines!(ax∂zbρ, ∂bbar∂zₙ, zF[2:end-1], label="<∂z(b(T, S))>", color=:black)
-Legend(fig[4, 6], ax∂zbρ)
-
 lines!(ax∂zρ, α_bulk_∂Tbar∂z_β_bulk_∂Sbar∂z_ρ_RHSₙ, zF[2:end-1], label="ρ₀ * [-α(<T>, <S>)*∂z(<T>) + β(<T>, <S>)*∂z(<S>) - g/c²(<T>, <S>, ρ₀)]", linewidth=8, alpha=0.5)
 # lines!(ax∂zρ, α_∂T∂z_bar_β_∂S∂z_bar_RHSₙ, zF[2:end-1], label="ρ₀ * [<-α(T, S)*∂z(T)> + <β(T, S)*∂z(S)>]", linewidth=8, alpha=0.5)
 lines!(ax∂zρ, ∂ρ_bulk∂zₙ, zF[2:end-1], label="∂z(ρ(<T>, <S>))", linewidth=8, alpha=0.5)
 lines!(ax∂zρ, ∂ρbar∂zₙ, zF[2:end-1], label="<∂z(ρ(T, S))>", color=:black)
-Legend(fig[4, 5], ax∂zρ)
+axislegend(ax∂zρ, position=:rb)
+# Legend(fig[4, 5], ax∂zρ)
+
+lines!(ax∂zwb, ∂wb′∂zₙ, zC, label="g ∂z(<αwT - βwS>)", linewidth=8, alpha=0.5)
+lines!(ax∂zwb, ∂wb′′∂zₙ, zC, label="g <α ∂z(wT) - β ∂z(wS)>", linewidth=8, alpha=0.5)
+lines!(ax∂zwb, ∂wb∂zₙ, zC, label="g ∂z(<wb>)", color=:black)
+axislegend(ax∂zwb, position=:rb)
 
 xlims!(axubar, ubarlim)
 xlims!(axvbar, vbarlim)
@@ -405,9 +333,8 @@ xlims!(axwS, wSlim)
 
 xlims!(axwb, wblim)
 xlims!(axρ, ρlim)
-xlims!(ax∂zbb, ∂zblim)
-xlims!(ax∂zbρ, ∂zblim)
 xlims!(ax∂zρ, ∂zρlim)
+xlims!(ax∂zwb, ∂zwblim)
 
 trim!(fig.layout)
 

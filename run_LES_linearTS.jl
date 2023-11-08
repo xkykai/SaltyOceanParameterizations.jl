@@ -328,23 +328,14 @@ compute!(b)
 ρ = Field(ρ_op)
 compute!(ρ)
 
-# @inline function get_sound_speed(i, j, k, grid, T, S)
-#   @inbounds return gsw_sound_speed(S[i, j, k], T[i, j, k], -Zᶜᶜᶠ(i, j, k, grid) * ρ₀ * g * 1e-4)
-# end
+∂ρ∂z = Field(∂z(ρ))
+compute!(∂ρ∂z)
 
-# c_op = KernelFunctionOperation{Center, Center, Face}(get_sound_speed, grid, T, S)
-# c = Field(c_op)
-# compute!(c)
+c = Field(√(abs(ρ₀*g / ∂ρ∂z)))
+compute!(c)
 
-# @inline function calculate_p_sensitivity(i, j, k, grid, c)
-#   @inbounds return -ρ₀ * g / c[i, j, k]^2
-# end
-
-# p_sensitivity_op = KernelFunctionOperation{Center, Center, Face}(calculate_p_sensitivity, grid, c)
-# p_sensitivity = Field(p_sensitivity_op)
-# compute!(p_sensitivity)
-
-# p_sensitivity_bar = Field(Average(p_sensitivity, dims=(1, 2)))
+compressibility_flux = Field(w * g^2 / c^2)
+compute!(compressibility_flux)
 
 ubar = Field(Average(u, dims=(1, 2)))
 vbar = Field(Average(v, dims=(1, 2)))
@@ -365,7 +356,7 @@ wS = Field(Average(w * S, dims=(1, 2)))
 
 ∂wb∂z = Field(Average(∂z(w * b), dims=(1, 2)))
 ∂wb′∂z = Field(Average(∂z(w * g * (α*T - β*S)), dims=(1, 2)))
-∂wb′′∂z = Field(Average(g * (α * ∂z(w*T) - β * ∂z(w*S)), dims=(1, 2)))
+∂wb′′∂z = Field(@at((Nothing, Nothing, Center), Average(g * (α * ∂z(w*T) - β * ∂z(w*S)) + compressibility_flux, dims=(1, 2))))
 
 @inline function calculate_α_bulk(i, j, k, grid, Tbar, Sbar, eos)
   @inbounds return Oceananigans.BuoyancyModels.thermal_expansionᶜᶜᶜ(i, j, k, grid, eos, Tbar, Sbar) * eos.reference_density / ρ₀
@@ -431,7 +422,7 @@ compute!(∂b_bulk∂z)
 ∂Tbar∂z = Field(Average(∂z(T), dims=(1, 2)))
 ∂Sbar∂z = Field(Average(∂z(S), dims=(1, 2)))
 ∂bbar∂z = Field(Average(∂z(b), dims=(1, 2)))
-∂ρbar∂z = Field(Average(∂z(ρ), dims=(1, 2)))
+∂ρbar∂z = Field(Average(∂ρ∂z, dims=(1, 2)))
 
 α_bulk_∂Tbar∂z = Field(∂Tbar∂z * α_bulk)
 β_bulk_∂Sbar∂z = Field(∂Sbar∂z * β_bulk)

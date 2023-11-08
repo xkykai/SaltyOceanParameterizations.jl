@@ -17,7 +17,7 @@ using ArgParse
 using SeawaterPolynomials.TEOS10: ζ, r₀, r′, τ, s, R₀₀, R₀₁, R₀₂, R₀₃, R₀₄, R₀₅, r′₀, r′₁, r′₂, r′₃
 
 import Dates
-# using GibbsSeaWater
+using GibbsSeaWater
 
 function parse_commandline()
     s = ArgParseSettings()
@@ -230,6 +230,7 @@ const T₀ = mean(T)
 const S₀ = mean(S)
 const ρ₀ = TEOS10.ρ(T₀, S₀, 0, eos)
 const g = model.buoyancy.model.gravitational_acceleration
+const c₀ = gsw_sound_speed(T₀, S₀, 0)
 
 simulation = Simulation(model, Δt=args["dt"]second, stop_time=args["stop_time"]days)
 # simulation = Simulation(model, Δt=args["dt"]second, stop_time=100minutes)
@@ -331,7 +332,11 @@ compute!(ρ)
 ∂ρ∂z = Field(∂z(ρ))
 compute!(∂ρ∂z)
 
-c = Field(√(abs(ρ₀*g / ∂ρ∂z)))
+# @inline function get_sound_speed(i, j, k, grid, ∂ρ∂z)
+#   @inbounds √(-ρ₀*g / (∂ρ∂z[i, j, k] - eps(eltype(∂ρ∂z))))
+# end
+
+c = Field(√(-ρ₀*g / (∂ρ∂z - eps(eltype(∂ρ∂z)))))
 compute!(c)
 
 compressibility_flux = Field(w * g^2 / c^2)
@@ -356,7 +361,14 @@ wS = Field(Average(w * S, dims=(1, 2)))
 
 ∂wb∂z = Field(Average(∂z(w * b), dims=(1, 2)))
 ∂wb′∂z = Field(Average(∂z(w * g * (α*T - β*S)), dims=(1, 2)))
-∂wb′′∂z = Field(@at((Nothing, Nothing, Center), Average(g * (α * ∂z(w*T) - β * ∂z(w*S)) + compressibility_flux, dims=(1, 2))))
+
+∂wb′′∂z = Field(@at((Center, Center, Center), g * (α * ∂z(w*T) - β * ∂z(w*S))))
+compute!(∂wb′′∂z)
+
+∂wb′′∂z_compressibility = Field(@at((Center, Center, Center), ∂wb′′∂z + compressibility_flux))
+compute!(∂wb′′∂z_compressibility)
+
+∂wb′′∂z_bar = Field(Average(∂wb′′∂z_compressibility, dims=(1, 2)))
 
 @inline function calculate_α_bulk(i, j, k, grid, Tbar, Sbar, eos)
   @inbounds return Oceananigans.BuoyancyModels.thermal_expansionᶜᶜᶜ(i, j, k, grid, eos, Tbar, Sbar) * eos.reference_density / ρ₀
@@ -435,7 +447,7 @@ timeseries_outputs = (; ubar, vbar, Tbar, Sbar, bbar, ρbar,
                         Tbar_face, Sbar_face,
                         # uw, vw, wT, wS, wb, wb′, wg_c²,
                         uw, vw, wT, wS, wb, wb′,
-                        ∂wb∂z, ∂wb′∂z, ∂wb′′∂z,
+                        ∂wb∂z, ∂wb′∂z, ∂wb′′∂z_bar,
                         ρ_bulk, ∂ρ_bulk∂z, b_bulk, ∂b_bulk∂z,
                         ∂Tbar∂z, ∂Sbar∂z, ∂bbar∂z, ∂ρbar∂z,
                         α_bulk_∂Tbar∂z, β_bulk_∂Sbar∂z,

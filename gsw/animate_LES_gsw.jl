@@ -188,7 +188,7 @@ wb′_data = FieldTimeSeries("$(FILE_DIR)/instantaneous_timeseries.jld2", "wb′
 
 ∂wb∂z_data = FieldTimeSeries("$(FILE_DIR)/instantaneous_timeseries.jld2", "∂wb∂z")
 ∂wb′∂z_data = FieldTimeSeries("$(FILE_DIR)/instantaneous_timeseries.jld2", "∂wb′∂z")
-∂wb′′∂z_data = FieldTimeSeries("$(FILE_DIR)/instantaneous_timeseries.jld2", "∂wb′′∂z")
+∂wb′′∂z_data = FieldTimeSeries("$(FILE_DIR)/instantaneous_timeseries.jld2", "∂wb′′∂z_bar")
 
 xC = T_xy_data.grid.xᶜᵃᵃ[1:Nx]
 yC = T_xy_data.grid.yᵃᶜᵃ[1:Ny]

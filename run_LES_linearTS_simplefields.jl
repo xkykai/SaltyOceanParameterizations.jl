@@ -304,11 +304,12 @@ field_outputs = merge(model.velocities, model.tracers)
 timeseries_outputs = (; ubar, vbar, Tbar, Sbar, bbar,
                         uw, vw, wT, wS, wb)
 
-simulation.output_writers[:xz_jld2] = JLD2OutputWriter(model, field_outputs,
+simulation.output_writers[:jld2] = JLD2OutputWriter(model, field_outputs,
                                                           filename = "$(FILE_DIR)/instantaneous_fields.jld2",
                                                           schedule = TimeInterval(args["time_interval"]minutes),
                                                           with_halos = true,
-                                                          init = init_save_some_metadata!)
+                                                          init = init_save_some_metadata!,
+                                                          max_filesize=50e9)
 
 simulation.output_writers[:timeseries] = JLD2OutputWriter(model, timeseries_outputs,
                                                           filename = "$(FILE_DIR)/instantaneous_timeseries.jld2",

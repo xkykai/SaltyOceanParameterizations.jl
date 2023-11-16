@@ -33,7 +33,7 @@ function parse_commandline()
       "--dbdz"
         help = "Initial buoyancy gradient (s⁻²)"
         arg_type = Float64
-        default = 1e-2 / 256
+        default = 5e-3 / 256
       "--f"
         help = "Coriolis parameter (s⁻¹)"
         arg_type = Float64

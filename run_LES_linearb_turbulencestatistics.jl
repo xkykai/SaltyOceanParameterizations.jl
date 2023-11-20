@@ -106,6 +106,7 @@ args = parse_commandline()
 
 Random.seed!(123)
 
+const Pr = 1
 const Lz = args["Lz"]
 const Lx = args["Lx"]
 const Ly = args["Ly"]
@@ -116,19 +117,6 @@ const Ny = args["Ny"]
 
 const Qᵁ = args["QU"]
 const Qᴮ = args["QB"]
-
-# const Lz = 128
-# const Lx = 64
-# const Ly = 64
-
-# const Nz = 64
-# const Nx = 32
-# const Ny = 32
-
-# const Qᵁ = -4e-6
-# const Qᴮ = 0
-
-const Pr = 1
 
 if args["advection"] == "WENO9nu1e-5"
     advection = WENO(order=9)
@@ -147,6 +135,22 @@ elseif args["advection"] == "AMD"
     const ν, κ = 0, 0
     closure = AnisotropicMinimumDissipation()
 end
+
+# const Lz = 128
+# const Lx = 64
+# const Ly = 64
+
+# const Nz = 64
+# const Nx = 32
+# const Ny = 32
+
+# const Qᵁ = -4e-6
+# const Qᴮ = 0
+
+# advection = CenteredSecondOrder()
+# const ν, κ = 0, 0
+# closure = AnisotropicMinimumDissipation()
+
 
 const f = args["f"]
 
@@ -203,6 +207,25 @@ set!(model, b=b_initial_noisy)
 b = model.tracers.b
 u, v, w = model.velocities
 
+ubar = Field(Average(u, dims=(1, 2)))
+vbar = Field(Average(v, dims=(1, 2)))
+bbar = Field(Average(b, dims=(1, 2)))
+
+u′ = u - ubar
+v′ = v - vbar
+b′ = b - bbar
+w′ = w
+
+u′w′ = Field(Average(w′ * u′, dims=(1, 2)))
+v′w′ = Field(Average(w′ * v′, dims=(1, 2)))
+w′b′ = Field(Average(w′ * b′, dims=(1, 2)))
+w′² = Field(Average(w′^2, dims=(1, 2)))
+
+u′²w′ = Field(Average(w′ * u′^2, dims=(1, 2)))
+v′²w′ = Field(Average(w′ * v′^2, dims=(1, 2)))
+b′²w′ = Field(Average(w′ * b′^2, dims=(1, 2)))
+w′³ = Field(Average(w′ * w′^2, dims=(1, 2)))
+
 simulation = Simulation(model, Δt=args["dt"]second, stop_time=args["stop_time"]days)
 # simulation = Simulation(model, Δt=args["dt"]second, stop_time=100minutes)
 
@@ -241,64 +264,150 @@ function init_save_some_metadata!(file, model)
     return nothing
 end
 
-ubar = Field(Average(u, dims=(1, 2)))
-vbar = Field(Average(v, dims=(1, 2)))
-bbar = Field(Average(b, dims=(1, 2)))
-
-@inline function get_∂u²∂t(i, j, k, grid, u, v, w, pressures)
-  @inbounds begin
-    pressure = ∂xᶜᶜᶜ(i, j, k, grid, pressures.pNHS) + ∂xᶜᶜᶜ(i, j, k, grid, pressures.pHY′)
-    advection = u[i, j, k] * ∂xᶜᶜᶜ(i, j, k, grid, u) + v[i, j, k] * ∂yᶜᶜᶜ(i, j, k, grid, u) + w[i, j, k] * ∂zᶜᶜᶜ(i, j, k, grid, u)
-    coriolis = f * v[i, j, k]
-    dissipation = ν * ∇²ᶜᶜᶜ(i, j, k, grid, u)
-    return u[i, j, k] * (-advection - pressure + coriolis + dissipation)
-  end
-end
-
-@inline function get_∂v²∂t(i, j, k, grid, u, v, w)
-  @inbounds begin
-    pressure = ∂yᶜᶜᶜ(i, j, k, grid, pressures.pNHS) + ∂yᶜᶜᶜ(i, j, k, grid, pressures.pHY′)
-    advection = u[i, j, k] * ∂xᶜᶜᶜ(i, j, k, grid, v) + v[i, j, k] * ∂yᶜᶜᶜ(i, j, k, grid, v) + w[i, j, k] * ∂zᶜᶜᶜ(i, j, k, grid, v)
-    coriolis = f * u[i, j, k]
-    dissipation = ν * ∇²ᶜᶜᶜ(i, j, k, grid, v)
-    return v[i, j, k] * (-advection - pressure - coriolis + dissipation)
-  end
-end
-
-@inline function get_∂w²∂t(i, j, k, grid, u, v, w)
-  @inbounds begin
-    pressure = ∂zᶜᶜᶜ(i, j, k, grid, pressures.pNHS)
-    advection = u[i, j, k] * ∂xᶜᶜᶜ(i, j, k, grid, w) + v[i, j, k] * ∂yᶜᶜᶜ(i, j, k, grid, w) + w[i, j, k] * ∂zᶜᶜᶜ(i, j, k, grid, w)
-    dissipation = ν * ∇²ᶜᶜᶜ(i, j, k, grid, w)
-    return w[i, j, k] * (-advection - pressure + dissipation)
-  end
-end
-
-@inline function get_∂b²∂t(i, j, k, grid, u, v, w, b)
-  @inbounds begin
-    advection = u[i, j, k] * ∂xᶜᶜᶜ(i, j, k, grid, b) + v[i, j, k] * ∂yᶜᶜᶜ(i, j, k, grid, b) + w[i, j, k] * ∂zᶜᶜᶜ(i, j, k, grid, b)
-    dissipation = κ * ∇²ᶜᶜᶜ(i, j, k, grid, b)
-    return b[i, j, k] * (-advection + dissipation)
-  end
-end
-
-∂u²∂t_op = KernelFunctionOperation{Center, Center, Center}(get_∂u²∂t, grid, u, v, w, model.pressures)
-∂u²∂t = Average(Field(∂u²∂t_op), dims=(1, 2))
-∂v²∂t_op = KernelFunctionOperation{Center, Center, Center}(get_∂v²∂t, grid, u, v, w, model.pressures)
-∂v²∂t = Average(Field(∂v²∂t_op), dims=(1, 2))
-∂w²∂t_op = KernelFunctionOperation{Center, Center, Center}(get_∂w²∂t, grid, u, v, w, model.pressures)
-∂w²∂t = Average(Field(∂w²∂t_op), dims=(1, 2))
-∂b²∂t_op = KernelFunctionOperation{Center, Center, Center}(get_∂b²∂t, grid, u, v, w, b)
-∂b²∂t = Average(Field(∂b²∂t_op), dims=(1, 2))
-
 uw = Field(Average(w * u, dims=(1, 2)))
 vw = Field(Average(w * v, dims=(1, 2)))
 wb = Field(Average(w * b, dims=(1, 2)))
 
-field_outputs = merge(model.velocities, model.tracers)
+u∂u′w′∂z = ubar * ∂z(u′w′)
+v∂v′w′∂z = vbar * ∂z(v′w′)
+b∂w′b′∂z = bbar * ∂z(w′b′)
+
+u′w′∂u∂z = u′w′ * ∂z(ubar)
+v′w′∂v∂z = v′w′ * ∂z(vbar)
+w′b′∂b∂z = w′b′ * ∂z(bbar)
+
+∂u′²w′∂z = ∂z(u′²w′)
+∂v′²w′∂z = ∂z(v′²w′)
+∂b′²w′∂z = ∂z(b′²w′)
+∂w′³∂z = ∂z(w′³)
+
+u_udot∇u = Field(u∂u′w′∂z + u′w′∂u∂z + 0.5 * ∂u′²w′∂z)
+v_udot∇v = Field(v∂v′w′∂z + v′w′∂v∂z + 0.5 * ∂v′²w′∂z)
+b_udot∇b = Field(b∂w′b′∂z + w′b′∂b∂z + 0.5 * ∂b′²w′∂z)
+w_udot∇w = Field(0.5*∂w′³∂z)
+
+if closure == AnisotropicMinimumDissipation()
+  νₑ, κₑ = model.diffusivity_fields.νₑ, model.diffusivity_fields.κₑ.b
+else
+  νₑ, κₑ = ν, κ
+end
+
+∂zνₑ∂u²∂z = Field(Average(0.5 * ∂z(∂z(u^2) * νₑ), dims=(1, 2)))
+∂zνₑ∂v²∂z = Field(Average(0.5 * ∂z(∂z(v^2) * νₑ), dims=(1, 2)))
+∂zκₑ∂b²∂z = Field(Average(0.5 * ∂z(∂z(b^2) * κₑ), dims=(1, 2)))
+∂zνₑ∂w²∂z = Field(Average(0.5 * ∂z(∂z(w^2) * νₑ), dims=(1, 2)))
+
+@inline function get_νₑ∇u∇u(i, j, k, grid, νₑ, u)
+  @inbounds begin
+    return νₑ[i, j, k] * (∂xᶜᶜᶜ(i, j, k, grid, u)^2 + ∂yᶜᶜᶜ(i, j, k, grid, u)^2 + ∂zᶜᶜᶜ(i, j, k, grid, u)^2)
+  end
+end
+
+@inline function get_νₑ∇v∇v(i, j, k, grid, νₑ, v)
+  @inbounds begin
+    return νₑ[i, j, k] * (∂xᶜᶜᶜ(i, j, k, grid, v)^2 + ∂yᶜᶜᶜ(i, j, k, grid, v)^2 + ∂zᶜᶜᶜ(i, j, k, grid, v)^2)
+  end
+end
+
+@inline function get_κₑ∇b∇b(i, j, k, grid, κₑ, b)
+  @inbounds begin
+    return κₑ[i, j, k] * (∂xᶜᶜᶜ(i, j, k, grid, b)^2 + ∂yᶜᶜᶜ(i, j, k, grid, b)^2 + ∂zᶜᶜᶜ(i, j, k, grid, b)^2)
+  end
+end
+
+@inline function get_νₑ∇w∇w(i, j, k, grid, νₑ, w)
+  @inbounds begin
+    return νₑ[i, j, k] * (∂xᶜᶜᶜ(i, j, k, grid, w)^2 + ∂yᶜᶜᶜ(i, j, k, grid, w)^2 + ∂zᶜᶜᶜ(i, j, k, grid, w)^2)
+  end
+end
+
+νₑ∇u∇u_op = KernelFunctionOperation{Center, Center, Center}(get_νₑ∇u∇u, grid, νₑ, u)
+νₑ∇v∇v_op = KernelFunctionOperation{Center, Center, Center}(get_νₑ∇v∇v, grid, νₑ, v)
+κₑ∇b∇b_op = KernelFunctionOperation{Center, Center, Center}(get_κₑ∇b∇b, grid, κₑ, b)
+νₑ∇w∇w_op = KernelFunctionOperation{Center, Center, Center}(get_νₑ∇w∇w, grid, νₑ, w)
+
+νₑ∇u∇u = Field(Average(Field(νₑ∇u∇u_op), dims=(1, 2)))
+νₑ∇v∇v = Field(Average(Field(νₑ∇v∇v_op), dims=(1, 2)))
+κₑ∇b∇b = Field(Average(Field(κₑ∇b∇b_op), dims=(1, 2)))
+νₑ∇w∇w = Field(Average(Field(νₑ∇w∇w_op), dims=(1, 2)))
+
+u_∇dotνₑ∇u = Field(0.5 * ∂zνₑ∂u²∂z - νₑ∇u∇u)
+v_∇dotνₑ∇v = Field(0.5 * ∂zνₑ∂v²∂z - νₑ∇v∇v)
+b_∇dotκₑ∇b = Field(0.5 * ∂zκₑ∂b²∂z - κₑ∇b∇b)
+w_∇dotνₑ∇w = Field(@at (Nothing, Nothing, Center) 0.5 * ∂zνₑ∂w²∂z - νₑ∇w∇w)
+
+pNHS, pHY′ = model.pressures.pNHS, model.pressures.pHY′
+
+∂p∂x = Field(Average(∂x(pNHS + pHY′), dims=(1, 2)))
+∂p∂y = Field(Average(∂y(pNHS + pHY′), dims=(1, 2)))
+∂p∂z = Field(Average(∂z(pNHS), dims=(1, 2)))
+
+@inline function get_∂u²∂t_nodissipation(i, j, k, grid, u, v, w, pressures)
+  @inbounds begin
+    pressure = ∂xᶜᶜᶜ(i, j, k, grid, pressures.pNHS) + ∂xᶜᶜᶜ(i, j, k, grid, pressures.pHY′)
+    advection = u[i, j, k] * ∂xᶜᶜᶜ(i, j, k, grid, u) + v[i, j, k] * ∂yᶜᶜᶜ(i, j, k, grid, u) + w[i, j, k] * ∂zᶜᶜᶜ(i, j, k, grid, u)
+    coriolis = f * v[i, j, k]
+    return u[i, j, k] * (-advection - pressure + coriolis)
+  end
+end
+
+@inline function get_∂v²∂t_nodissipation(i, j, k, grid, u, v, w, pressures)
+  @inbounds begin
+    pressure = ∂yᶜᶜᶜ(i, j, k, grid, pressures.pNHS) + ∂yᶜᶜᶜ(i, j, k, grid, pressures.pHY′)
+    advection = u[i, j, k] * ∂xᶜᶜᶜ(i, j, k, grid, v) + v[i, j, k] * ∂yᶜᶜᶜ(i, j, k, grid, v) + w[i, j, k] * ∂zᶜᶜᶜ(i, j, k, grid, v)
+    coriolis = f * u[i, j, k]
+    return v[i, j, k] * (-advection - pressure - coriolis)
+  end
+end
+
+@inline function get_∂w²∂t_nodissipation(i, j, k, grid, u, v, w, pressures)
+  @inbounds begin
+    pressure = ∂zᶜᶜᶜ(i, j, k, grid, pressures.pNHS)
+    advection = u[i, j, k] * ∂xᶜᶜᶜ(i, j, k, grid, w) + v[i, j, k] * ∂yᶜᶜᶜ(i, j, k, grid, w) + w[i, j, k] * ∂zᶜᶜᶜ(i, j, k, grid, w)
+    return w[i, j, k] * (-advection - pressure)
+  end
+end
+
+@inline function get_∂b²∂t_nodissipation(i, j, k, grid, u, v, w, b)
+  @inbounds begin
+    advection = u[i, j, k] * ∂xᶜᶜᶜ(i, j, k, grid, b) + v[i, j, k] * ∂yᶜᶜᶜ(i, j, k, grid, b) + w[i, j, k] * ∂zᶜᶜᶜ(i, j, k, grid, b)
+    return b[i, j, k] * -advection
+  end
+end
+
+∂u²∂t_nodissipation_op = KernelFunctionOperation{Center, Center, Center}(get_∂u²∂t_nodissipation, grid, u, v, w, model.pressures)
+∂v²∂t_nodissipation_op = KernelFunctionOperation{Center, Center, Center}(get_∂v²∂t_nodissipation, grid, u, v, w, model.pressures)
+∂w²∂t_nodissipation_op = KernelFunctionOperation{Center, Center, Center}(get_∂w²∂t_nodissipation, grid, u, v, w, model.pressures)
+∂b²∂t_nodissipation_op = KernelFunctionOperation{Center, Center, Center}(get_∂b²∂t_nodissipation, grid, u, v, w, b)
+∂u²∂t_nodissipation = Field(Average(Field(∂u²∂t_nodissipation_op), dims=(1, 2)))
+∂v²∂t_nodissipation = Field(Average(Field(∂v²∂t_nodissipation_op), dims=(1, 2)))
+∂b²∂t_nodissipation = Field(Average(Field(∂b²∂t_nodissipation_op), dims=(1, 2)))
+∂w²∂t_nodissipation = Field(Average(Field(∂w²∂t_nodissipation_op), dims=(1, 2)))
+
+∂u²∂t = ∂u²∂t_nodissipation + u_∇dotνₑ∇u
+∂v²∂t = ∂v²∂t_nodissipation + v_∇dotνₑ∇v
+∂b²∂t = ∂b²∂t_nodissipation + b_∇dotκₑ∇b
+∂w²∂t = ∂w²∂t_nodissipation + w_∇dotνₑ∇w
+
+∂u²∂t′ = -u_udot∇u + u_∇dotνₑ∇u + f*v - ∂p∂x
+∂v²∂t′ = -v_udot∇v + v_∇dotνₑ∇v - f*u - ∂p∂y
+∂b²∂t′ = -b_udot∇b + b_∇dotκₑ∇b - ∂p∂z
+∂w²∂t′ = -w_udot∇w + w_∇dotνₑ∇w
+
+field_outputs = merge(model.velocities, model.tracers, model.pressures)
 timeseries_outputs = (; ubar, vbar, bbar,
                         uw, vw, wb,
-                        ∂b²∂t)
+                        ∂u²∂t, ∂v²∂t, ∂w²∂t, ∂b²∂t,
+                        ∂u²∂t′, ∂v²∂t′, ∂b²∂t′, ∂w²∂t′,
+                        u∂u′w′∂z, v∂v′w′∂z, b∂w′b′∂z,
+                        u′w′∂u∂z, v′w′∂v∂z, w′b′∂b∂z,
+                        ∂u′²w′∂z, ∂v′²w′∂z, ∂b′²w′∂z, ∂w′³∂z,
+                        u_udot∇u, v_udot∇v, b_udot∇b, w_udot∇w,
+                        ∂zνₑ∂u²∂z, ∂zνₑ∂v²∂z, ∂zκₑ∂b²∂z, ∂zνₑ∂w²∂z,
+                        νₑ∇u∇u, νₑ∇v∇v, κₑ∇b∇b, νₑ∇w∇w,
+                        u_∇dotνₑ∇u, v_∇dotνₑ∇v, b_∇dotκₑ∇b, w_∇dotνₑ∇w,
+                        u′w′, v′w′, w′b′, w′²,
+                        ∂p∂x, ∂p∂y, ∂p∂z)
                         # ∂u²∂t, ∂v²∂t, ∂w²∂t, ∂b²∂t)
 
 simulation.output_writers[:jld2] = JLD2OutputWriter(model, field_outputs,
@@ -330,6 +439,7 @@ else
     run!(simulation)
 end
 
+
 b_data = FieldTimeSeries("$(FILE_DIR)/instantaneous_fields.jld2", "b", backend=OnDisk())
 w_data = FieldTimeSeries("$(FILE_DIR)/instantaneous_fields.jld2", "w", backend=OnDisk())
 
@@ -345,7 +455,6 @@ wb_data = FieldTimeSeries("$(FILE_DIR)/instantaneous_timeseries.jld2", "wb")
 ∂v²∂t_data = FieldTimeSeries("$(FILE_DIR)/instantaneous_timeseries.jld2", "∂b²∂t")
 ∂w²∂t_data = FieldTimeSeries("$(FILE_DIR)/instantaneous_timeseries.jld2", "∂b²∂t")
 ∂b²∂t_data = FieldTimeSeries("$(FILE_DIR)/instantaneous_timeseries.jld2", "∂b²∂t")
-
 
 Nt = length(bbar_data.times)
 

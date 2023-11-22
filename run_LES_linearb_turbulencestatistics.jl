@@ -224,7 +224,7 @@ w′² = Field(Average(w′^2, dims=(1, 2)))
 u′²w′ = Field(Average(w′ * u′^2, dims=(1, 2)))
 v′²w′ = Field(Average(w′ * v′^2, dims=(1, 2)))
 b′²w′ = Field(Average(w′ * b′^2, dims=(1, 2)))
-w′³ = Field(Average(w′ * w′^2, dims=(1, 2)))
+w′³ = Field(Average(w′^3, dims=(1, 2)))
 
 simulation = Simulation(model, Δt=args["dt"]second, stop_time=args["stop_time"]days)
 # simulation = Simulation(model, Δt=args["dt"]second, stop_time=100minutes)
@@ -272,9 +272,9 @@ u∂u′w′∂z = ubar * ∂z(u′w′)
 v∂v′w′∂z = vbar * ∂z(v′w′)
 b∂w′b′∂z = bbar * ∂z(w′b′)
 
-u′w′∂u∂z = u′w′ * ∂z(ubar)
-v′w′∂v∂z = v′w′ * ∂z(vbar)
-w′b′∂b∂z = w′b′ * ∂z(bbar)
+u′w′∂u∂z = @at (Nothing, Nothing, Center) u′w′ * ∂z(ubar)
+v′w′∂v∂z = @at (Nothing, Nothing, Center) v′w′ * ∂z(vbar)
+w′b′∂b∂z = @at (Nothing, Nothing, Center) w′b′ * ∂z(bbar)
 
 ∂u′²w′∂z = ∂z(u′²w′)
 ∂v′²w′∂z = ∂z(v′²w′)
@@ -292,10 +292,10 @@ else
   νₑ, κₑ = ν, κ
 end
 
-∂zνₑ∂u²∂z = Field(Average(0.5 * ∂z(∂z(u^2) * νₑ), dims=(1, 2)))
-∂zνₑ∂v²∂z = Field(Average(0.5 * ∂z(∂z(v^2) * νₑ), dims=(1, 2)))
-∂zκₑ∂b²∂z = Field(Average(0.5 * ∂z(∂z(b^2) * κₑ), dims=(1, 2)))
-∂zνₑ∂w²∂z = Field(Average(0.5 * ∂z(∂z(w^2) * νₑ), dims=(1, 2)))
+∂zνₑ∂u²∂z = Field(Average(∂z(∂z(u^2) * νₑ), dims=(1, 2)))
+∂zνₑ∂v²∂z = Field(Average(∂z(∂z(v^2) * νₑ), dims=(1, 2)))
+∂zκₑ∂b²∂z = Field(Average(∂z(∂z(b^2) * κₑ), dims=(1, 2)))
+∂zνₑ∂w²∂z = @at (Nothing, Nothing, Center) Field(Average(∂z(∂z(w^2) * νₑ), dims=(1, 2)))
 
 @inline function get_νₑ∇u∇u(i, j, k, grid, νₑ, u)
   @inbounds begin
@@ -347,7 +347,7 @@ pNHS, pHY′ = model.pressures.pNHS, model.pressures.pHY′
     pressure = ∂xᶜᶜᶜ(i, j, k, grid, pressures.pNHS) + ∂xᶜᶜᶜ(i, j, k, grid, pressures.pHY′)
     advection = u[i, j, k] * ∂xᶜᶜᶜ(i, j, k, grid, u) + v[i, j, k] * ∂yᶜᶜᶜ(i, j, k, grid, u) + w[i, j, k] * ∂zᶜᶜᶜ(i, j, k, grid, u)
     coriolis = f * v[i, j, k]
-    return u[i, j, k] * (-advection - pressure + coriolis)
+    return 2 * u[i, j, k] * (-advection - pressure + coriolis)
   end
 end
 
@@ -356,28 +356,29 @@ end
     pressure = ∂yᶜᶜᶜ(i, j, k, grid, pressures.pNHS) + ∂yᶜᶜᶜ(i, j, k, grid, pressures.pHY′)
     advection = u[i, j, k] * ∂xᶜᶜᶜ(i, j, k, grid, v) + v[i, j, k] * ∂yᶜᶜᶜ(i, j, k, grid, v) + w[i, j, k] * ∂zᶜᶜᶜ(i, j, k, grid, v)
     coriolis = f * u[i, j, k]
-    return v[i, j, k] * (-advection - pressure - coriolis)
+    return 2 * v[i, j, k] * (-advection - pressure - coriolis)
   end
 end
 
-@inline function get_∂w²∂t_nodissipation(i, j, k, grid, u, v, w, pressures)
+@inline function get_∂w²∂t_nodissipation(i, j, k, grid, u, v, w, pressures, b)
   @inbounds begin
     pressure = ∂zᶜᶜᶜ(i, j, k, grid, pressures.pNHS)
     advection = u[i, j, k] * ∂xᶜᶜᶜ(i, j, k, grid, w) + v[i, j, k] * ∂yᶜᶜᶜ(i, j, k, grid, w) + w[i, j, k] * ∂zᶜᶜᶜ(i, j, k, grid, w)
-    return w[i, j, k] * (-advection - pressure)
+    buoyancy = b[i, j, k]
+    return 2 * w[i, j, k] * (-advection - pressure + buoyancy)
   end
 end
 
 @inline function get_∂b²∂t_nodissipation(i, j, k, grid, u, v, w, b)
   @inbounds begin
     advection = u[i, j, k] * ∂xᶜᶜᶜ(i, j, k, grid, b) + v[i, j, k] * ∂yᶜᶜᶜ(i, j, k, grid, b) + w[i, j, k] * ∂zᶜᶜᶜ(i, j, k, grid, b)
-    return b[i, j, k] * -advection
+    return 2 * b[i, j, k] * -advection
   end
 end
 
 ∂u²∂t_nodissipation_op = KernelFunctionOperation{Center, Center, Center}(get_∂u²∂t_nodissipation, grid, u, v, w, model.pressures)
 ∂v²∂t_nodissipation_op = KernelFunctionOperation{Center, Center, Center}(get_∂v²∂t_nodissipation, grid, u, v, w, model.pressures)
-∂w²∂t_nodissipation_op = KernelFunctionOperation{Center, Center, Center}(get_∂w²∂t_nodissipation, grid, u, v, w, model.pressures)
+∂w²∂t_nodissipation_op = KernelFunctionOperation{Center, Center, Center}(get_∂w²∂t_nodissipation, grid, u, v, w, model.pressures, b)
 ∂b²∂t_nodissipation_op = KernelFunctionOperation{Center, Center, Center}(get_∂b²∂t_nodissipation, grid, u, v, w, b)
 ∂u²∂t_nodissipation = Field(Average(Field(∂u²∂t_nodissipation_op), dims=(1, 2)))
 ∂v²∂t_nodissipation = Field(Average(Field(∂v²∂t_nodissipation_op), dims=(1, 2)))
@@ -389,10 +390,10 @@ end
 ∂b²∂t = ∂b²∂t_nodissipation + b_∇dotκₑ∇b
 ∂w²∂t = ∂w²∂t_nodissipation + w_∇dotνₑ∇w
 
-∂u²∂t′ = -u_udot∇u + u_∇dotνₑ∇u + f*v - ∂p∂x
-∂v²∂t′ = -v_udot∇v + v_∇dotνₑ∇v - f*u - ∂p∂y
-∂b²∂t′ = -b_udot∇b + b_∇dotκₑ∇b - ∂p∂z
-∂w²∂t′ = -w_udot∇w + w_∇dotνₑ∇w
+∂u²∂t′ = 2 * (-u_udot∇u + u_∇dotνₑ∇u + f*v - ∂p∂x)
+∂v²∂t′ = 2 * (-v_udot∇v + v_∇dotνₑ∇v - f*u - ∂p∂y)
+∂b²∂t′ = 2 * (-b_udot∇b + b_∇dotκₑ∇b)
+∂w²∂t′ = 2 * (-w_udot∇w + w_∇dotνₑ∇w - ∂p∂z + bbar)
 
 field_outputs = merge(model.velocities, model.tracers, model.pressures)
 timeseries_outputs = (; ubar, vbar, bbar,
@@ -455,6 +456,11 @@ wb_data = FieldTimeSeries("$(FILE_DIR)/instantaneous_timeseries.jld2", "wb")
 ∂w²∂t_data = FieldTimeSeries("$(FILE_DIR)/instantaneous_timeseries.jld2", "∂w²∂t")
 ∂b²∂t_data = FieldTimeSeries("$(FILE_DIR)/instantaneous_timeseries.jld2", "∂b²∂t")
 
+∂u²∂t′_data = FieldTimeSeries("$(FILE_DIR)/instantaneous_timeseries.jld2", "∂u²∂t′")
+∂v²∂t′_data = FieldTimeSeries("$(FILE_DIR)/instantaneous_timeseries.jld2", "∂v²∂t′")
+∂w²∂t′_data = FieldTimeSeries("$(FILE_DIR)/instantaneous_timeseries.jld2", "∂w²∂t′")
+∂b²∂t′_data = FieldTimeSeries("$(FILE_DIR)/instantaneous_timeseries.jld2", "∂b²∂t′")
+
 Nt = length(bbar_data.times)
 
 xC = bbar_data.grid.xᶜᵃᵃ[1:Nx]
@@ -476,7 +482,7 @@ axuw = Axis(fig[4, 1], title="uw", xlabel="m² s⁻²", ylabel="z")
 axvw = Axis(fig[4, 2], title="vw", xlabel="m² s⁻²", ylabel="z")
 axwb = Axis(fig[4, 3], title="wb", xlabel="m² s⁻³", ylabel="z")
 
-ax∂TKE∂tbar = Axis(fig[3, 4], title="<∂(u² + v² + w²)/∂t>", xlabel="m² s⁻³", ylabel="z")
+ax∂TKE∂tbar = Axis(fig[3, 4], title="0.5 <∂(u² + v² + w²)/∂t>", xlabel="m² s⁻³", ylabel="z")
 ax∂b²∂tbar = Axis(fig[4, 4], title="<∂b²/∂t>", xlabel="m² s⁻⁵", ylabel="z")
 
 xCs_xy = xC
@@ -534,8 +540,10 @@ ubarlim = (minimum(ubar_data), maximum(ubar_data))
 vbarlim = (minimum(vbar_data), maximum(vbar_data))
 bbarlim = (minimum(bbar_data), maximum(bbar_data))
 
-∂b²∂tlim = (minimum(∂b²∂t_data), maximum(∂b²∂t_data))
-∂TKE∂tlim = (minimum(∂u²∂t_data .+ ∂v²∂t_data .+ ∂w²∂t_data), maximum(∂u²∂t_data .+ ∂v²∂t_data .+ ∂w²∂t_data))
+∂b²∂tlim = (find_min(∂b²∂t_data, ∂b²∂t′_data), 
+            find_max(∂b²∂t_data, ∂b²∂t′_data))
+∂TKE∂tlim = (find_min(0.5 .* (∂u²∂t_data .+ ∂v²∂t_data .+ ∂w²∂t_data), 0.5 .* (∂u²∂t′_data .+ ∂v²∂t′_data .+ ∂w²∂t′_data)), 
+             find_max(0.5 .* (∂u²∂t_data .+ ∂v²∂t_data .+ ∂w²∂t_data), 0.5 .* (∂u²∂t′_data .+ ∂v²∂t′_data .+ ∂w²∂t′_data)))
 
 startframe_lim = 30
 uwlim = (minimum(uw_data[1, 1, :, startframe_lim:end]), maximum(uw_data[1, 1, :, startframe_lim:end]))
@@ -571,8 +579,11 @@ uwₙ = @lift interior(uw_data[$n], 1, 1, :)
 vwₙ = @lift interior(vw_data[$n], 1, 1, :)
 wbₙ = @lift interior(wb_data[$n], 1, 1, :)
 
-∂TKE∂tbarₙ = @lift interior(∂u²∂t_data[$n], 1, 1, :) .+ interior(∂v²∂t_data[$n], 1, 1, :) .+ interior(∂w²∂t_data[$n], 1, 1, :)
+∂TKE∂tbarₙ = @lift 0.5 .* (interior(∂u²∂t_data[$n], 1, 1, :) .+ interior(∂v²∂t_data[$n], 1, 1, :) .+ interior(∂w²∂t_data[$n], 1, 1, :))
+∂TKE∂t′barₙ = @lift 0.5 .* (interior(∂u²∂t′_data[$n], 1, 1, :) .+ interior(∂v²∂t′_data[$n], 1, 1, :) .+ interior(∂w²∂t′_data[$n], 1, 1, :))
+
 ∂b²∂tbarₙ = @lift interior(∂b²∂t_data[$n], 1, 1, :)
+∂b²∂t′barₙ = @lift interior(∂b²∂t′_data[$n], 1, 1, :)
 
 lines!(axubar, ubarₙ, zC)
 lines!(axvbar, vbarₙ, zC)
@@ -582,8 +593,14 @@ lines!(axuw, uwₙ, zF)
 lines!(axvw, vwₙ, zF)
 lines!(axwb, wbₙ, zF)
 
-lines!(ax∂TKE∂tbar, ∂TKE∂tbarₙ, zC)
-lines!(ax∂b²∂tbar, ∂b²∂tbarₙ, zC)
+lines!(ax∂TKE∂tbar, ∂TKE∂tbarₙ, zC, label="Total")
+lines!(ax∂TKE∂tbar, ∂TKE∂t′barₙ, zC, label="Sum of components")
+axislegend(ax∂TKE∂tbar, position=:rb)
+
+lines!(ax∂b²∂tbar, ∂b²∂tbarₙ, zC, label="Total")
+lines!(ax∂b²∂tbar, ∂b²∂t′barₙ, zC, label="Sum of components")
+axislegend(ax∂b²∂tbar, position=:rb)
+
 
 xlims!(axubar, ubarlim)
 xlims!(axvbar, vbarlim)

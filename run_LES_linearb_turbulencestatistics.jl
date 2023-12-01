@@ -108,53 +108,53 @@ Random.seed!(123)
 
 const Pr = 1
 
-# const Lz = args["Lz"]
-# const Lx = args["Lx"]
-# const Ly = args["Ly"]
+const Lz = args["Lz"]
+const Lx = args["Lx"]
+const Ly = args["Ly"]
 
-# const Nz = args["Nz"]
-# const Nx = args["Nx"]
-# const Ny = args["Ny"]
+const Nz = args["Nz"]
+const Nx = args["Nx"]
+const Ny = args["Ny"]
 
-# const Qᵁ = args["QU"]
-# const Qᴮ = args["QB"]
+const Qᵁ = args["QU"]
+const Qᴮ = args["QB"]
 
-# if args["advection"] == "WENO9nu1e-5"
-#     advection = WENO(order=9)
-#     const ν, κ = 1e-5, 1e-5/Pr
-#     closure = ScalarDiffusivity(ν=ν, κ=κ)
-# elseif args["advection"] == "WENO9nu0"
-#     advection = WENO(order=9)
-#     const ν, κ = 0, 0
-#     closure = nothing
-# elseif args["advection"] == "WENO9AMD"
-#     advection = WENO(order=9)
-#     const ν, κ = 0, 0
-#     closure = AnisotropicMinimumDissipation()
-# elseif args["advection"] == "AMD"
-#     advection = CenteredSecondOrder()
-#     const ν, κ = 0, 0
-#     closure = AnisotropicMinimumDissipation()
-# end
+if args["advection"] == "WENO9nu1e-5"
+    advection = WENO(order=9)
+    const ν, κ = 1e-5, 1e-5/Pr
+    closure = ScalarDiffusivity(ν=ν, κ=κ)
+elseif args["advection"] == "WENO9nu0"
+    advection = WENO(order=9)
+    const ν, κ = 0, 0
+    closure = nothing
+elseif args["advection"] == "WENO9AMD"
+    advection = WENO(order=9)
+    const ν, κ = 0, 0
+    closure = AnisotropicMinimumDissipation()
+elseif args["advection"] == "AMD"
+    advection = CenteredSecondOrder()
+    const ν, κ = 0, 0
+    closure = AnisotropicMinimumDissipation()
+end
 
-const Lz = 128
-const Lx = 64
-const Ly = 64
+# const Lz = 128
+# const Lx = 64
+# const Ly = 64
 
-# const Nz = 64
-# const Nx = 32
-# const Ny = 32
+# # const Nz = 64
+# # const Nx = 32
+# # const Ny = 32
 
-const Nz = 8
-const Nx = 4
-const Ny = 4
+# const Nz = 8
+# const Nx = 4
+# const Ny = 4
 
-const Qᵁ = -4e-6
-const Qᴮ = 0
+# const Qᵁ = -4e-6
+# const Qᴮ = 0
 
-advection = WENO(order=9)
-const ν, κ = 1e-5, 1e-5/Pr
-closure = ScalarDiffusivity(ν=ν, κ=κ)
+# advection = WENO(order=9)
+# const ν, κ = 1e-5, 1e-5/Pr
+# closure = ScalarDiffusivity(ν=ν, κ=κ)
 
 const f = args["f"]
 
@@ -163,8 +163,9 @@ const b_surface = args["b_surface"]
 
 const pickup = args["pickup"]
 
-FILE_NAME = "linearb_turbulencestatistics_dbdz_$(dbdz)_QU_$(Qᵁ)_QB_$(Qᴮ)_b_$(b_surface)_$(args["advection"])_Lxz_$(Lx)_$(Lz)_Nxz_$(Nx)_$(Nz)"
+FILE_NAME = "linearb_turbulencestatistics_dbdz_$(dbdz)_QU_$(Qᵁ)_QB_$(Qᴮ)_b_$(b_surface)_$(args["advection"])_Lxz_$(Lx)_$(Lz)_Nxz_$(Nx)_$(Nz)_f"
 FILE_DIR = "$(args["file_location"])/LES/$(FILE_NAME)"
+# FILE_DIR = "/storage6/xinkai/LES/$(FILE_NAME)"
 mkpath(FILE_DIR)
 
 size_halo = 5
@@ -462,12 +463,45 @@ timeseries_outputs = (; ubar, vbar, bbar,
                         # u′w′, v′w′, w′b′, w′²,
                         # ∂p∂x, ∂p∂y, ∂p∂z)
 
-simulation.output_writers[:jld2] = JLD2OutputWriter(model, field_outputs,
-                                                          filename = "$(FILE_DIR)/instantaneous_fields.jld2",
-                                                          schedule = TimeInterval(args["time_interval"]minutes),
+simulation.output_writers[:u] = JLD2OutputWriter(model, (; model.velocities.u),
+                                                          filename = "$(FILE_DIR)/instantaneous_fields_u.jld2",
+                                                          schedule = TimeInterval(1hour),
                                                           with_halos = true,
-                                                          init = init_save_some_metadata!,
-                                                          max_filesize=50e9)
+                                                          init = init_save_some_metadata!)
+
+simulation.output_writers[:v] = JLD2OutputWriter(model, (; model.velocities.v),
+                                                          filename = "$(FILE_DIR)/instantaneous_fields_v.jld2",
+                                                          schedule = TimeInterval(1hour),
+                                                          with_halos = true,
+                                                          init = init_save_some_metadata!)
+                                                          # max_filesize=50e9)
+
+simulation.output_writers[:w] = JLD2OutputWriter(model, (; model.velocities.w),
+                                                          filename = "$(FILE_DIR)/instantaneous_fields_w.jld2",
+                                                          schedule = TimeInterval(1hour),
+                                                          with_halos = true,
+                                                          init = init_save_some_metadata!)
+                                                          # max_filesize=50e9)
+
+simulation.output_writers[:b] = JLD2OutputWriter(model, (; model.tracers.b),
+                                                          filename = "$(FILE_DIR)/instantaneous_fields_b.jld2",
+                                                          schedule = TimeInterval(1hour),
+                                                          with_halos = true,
+                                                          init = init_save_some_metadata!)
+
+simulation.output_writers[:pHY] = JLD2OutputWriter(model, (; model.pressures.pHY′),
+                                                          filename = "$(FILE_DIR)/instantaneous_fields_pHY.jld2",
+                                                          schedule = TimeInterval(1hour),
+                                                          with_halos = true,
+                                                          init = init_save_some_metadata!)
+                                                          # max_filesize=50e9)
+
+simulation.output_writers[:pNHS] = JLD2OutputWriter(model, (; model.pressures.pNHS),
+                                                          filename = "$(FILE_DIR)/instantaneous_fields_pNHS.jld2",
+                                                          schedule = TimeInterval(1hour),
+                                                          with_halos = true,
+                                                          init = init_save_some_metadata!)
+                                                          # max_filesize=50e9)
 
 simulation.output_writers[:timeseries] = JLD2OutputWriter(model, timeseries_outputs,
                                                           filename = "$(FILE_DIR)/instantaneous_timeseries.jld2",
@@ -490,7 +524,6 @@ if pickup
 else
     run!(simulation)
 end
-
 
 ubar_data = FieldTimeSeries("$(FILE_DIR)/instantaneous_timeseries.jld2", "ubar")
 vbar_data = FieldTimeSeries("$(FILE_DIR)/instantaneous_timeseries.jld2", "vbar")
@@ -681,10 +714,10 @@ xlims!(axvadvection, v_udot∇vlim)
 xlims!(axbadvection, b_udot∇blim)
 xlims!(axwadvection, w_udot∇wlim)
 
-xlims!(axudissipation, u_∇dotνₑ∇ulim)
-xlims!(axvdissipation, v_∇dotνₑ∇vlim)
-xlims!(axbdissipation, b_∇dotκₑ∇blim)
-xlims!(axwdissipation, w_∇dotνₑ∇wlim)
+u_∇dotνₑ∇ulim != (0, 0) && xlims!(axudissipation, u_∇dotνₑ∇ulim)
+v_∇dotνₑ∇vlim != (0, 0) && xlims!(axvdissipation, v_∇dotνₑ∇vlim)
+b_∇dotκₑ∇blim != (0, 0) && xlims!(axbdissipation, b_∇dotκₑ∇blim)
+w_∇dotνₑ∇wlim != (0, 0) && xlims!(axwdissipation, w_∇dotνₑ∇wlim)
 
 xlims!(ax∂TKE∂t, ∂TKE∂tlim)
 xlims!(ax∂b²∂t, ∂b²∂tlim)
@@ -698,7 +731,7 @@ end
 
 @info "Animation completed"
 #%%
-
+#=
 b_data = FieldTimeSeries("$(FILE_DIR)/instantaneous_fields.jld2", "b", backend=OnDisk())
 w_data = FieldTimeSeries("$(FILE_DIR)/instantaneous_fields.jld2", "w", backend=OnDisk())
 
@@ -882,3 +915,4 @@ end
 
 @info "Animation completed"
 #%%
+=#

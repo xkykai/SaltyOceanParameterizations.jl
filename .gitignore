@@ -3,6 +3,7 @@
 ./Data
 ./batch_scripts
 ./logs
+./ARGO
 
 *.pdf
 *.png

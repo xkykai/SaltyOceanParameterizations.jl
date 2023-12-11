@@ -4,44 +4,55 @@ using JLD2
 
 FILE_DIRS = [
     # "./LES/linearb_turbulencestatistics_dbdz_1.953125e-5_QU_-0.001_QB_1.0e-7_b_0.0_AMD_Lxz_64.0_128.0_Nxz_32_64_f",
-    "./LES/linearb_turbulencestatistics_dbdz_1.953125e-5_QU_-0.001_QB_1.0e-7_b_0.0_WENO9nu0_Lxz_64.0_128.0_Nxz_32_64_f",
+    # "./LES/linearb_turbulencestatistics_dbdz_1.953125e-5_QU_-0.001_QB_1.0e-7_b_0.0_WENO9nu0_Lxz_64.0_128.0_Nxz_32_64_f",
     # "./LES/linearb_turbulencestatistics_dbdz_1.953125e-5_QU_-0.001_QB_1.0e-7_b_0.0_WENO9nu1e-5_Lxz_64.0_128.0_Nxz_32_64_f",
+    # "./LES/linearb_turbulencestatistics_dbdz_1.953125e-5_QU_-0.001_QB_1.0e-7_b_0.0_WENO9AMD_Lxz_64.0_128.0_Nxz_32_64_f",
 
-    "./LES/linearb_turbulencestatistics_dbdz_1.953125e-5_QU_-0.001_QB_1.0e-7_b_0.0_AMD_Lxz_64.0_128.0_Nxz_64_128_f",
-    "./LES/linearb_turbulencestatistics_dbdz_1.953125e-5_QU_-0.001_QB_1.0e-7_b_0.0_WENO9nu0_Lxz_64.0_128.0_Nxz_64_128_f",
+    # "./LES/linearb_turbulencestatistics_dbdz_1.953125e-5_QU_-0.001_QB_1.0e-7_b_0.0_AMD_Lxz_64.0_128.0_Nxz_64_128_f",
+    # "./LES/linearb_turbulencestatistics_dbdz_1.953125e-5_QU_-0.001_QB_1.0e-7_b_0.0_WENO9nu0_Lxz_64.0_128.0_Nxz_64_128_f",
     # "./LES/linearb_turbulencestatistics_dbdz_1.953125e-5_QU_-0.001_QB_1.0e-7_b_0.0_WENO9nu1e-5_Lxz_64.0_128.0_Nxz_64_128_f",
+    # "./LES/linearb_turbulencestatistics_dbdz_1.953125e-5_QU_-0.001_QB_1.0e-7_b_0.0_WENO9AMD_Lxz_64.0_128.0_Nxz_64_128_f",
 
-    "./LES/linearb_turbulencestatistics_dbdz_1.953125e-5_QU_-0.001_QB_1.0e-7_b_0.0_AMD_Lxz_64.0_128.0_Nxz_128_256_f",
-    "./LES/linearb_turbulencestatistics_dbdz_1.953125e-5_QU_-0.001_QB_1.0e-7_b_0.0_WENO9nu0_Lxz_64.0_128.0_Nxz_128_256_f",
+    # "./LES/linearb_turbulencestatistics_dbdz_1.953125e-5_QU_-0.001_QB_1.0e-7_b_0.0_AMD_Lxz_64.0_128.0_Nxz_128_256_f",
+    # "./LES/linearb_turbulencestatistics_dbdz_1.953125e-5_QU_-0.001_QB_1.0e-7_b_0.0_WENO9nu0_Lxz_64.0_128.0_Nxz_128_256_f",
     # "./LES/linearb_turbulencestatistics_dbdz_1.953125e-5_QU_-0.001_QB_1.0e-7_b_0.0_WENO9nu1e-5_Lxz_64.0_128.0_Nxz_128_256_f",
+    # "./LES/linearb_turbulencestatistics_dbdz_1.953125e-5_QU_-0.001_QB_1.0e-7_b_0.0_WENO9AMD_Lxz_64.0_128.0_Nxz_128_256_f",
 
-    "./LES/linearb_turbulencestatistics_dbdz_1.953125e-5_QU_-0.001_QB_1.0e-7_b_0.0_AMD_Lxz_64.0_128.0_Nxz_256_512_f",
+    # "./LES/linearb_turbulencestatistics_dbdz_1.953125e-5_QU_-0.001_QB_1.0e-7_b_0.0_AMD_Lxz_64.0_128.0_Nxz_256_512_f",
 
-    # # "./LES/linearb_turbulencestatistics_dbdz_1.953125e-5_QU_-5e-4_QB_1.0e-7_b_0.0_AMD_Lxz_64.0_128.0_Nxz_32_64_f",
+    "./LES/linearb_turbulencestatistics_dbdz_1.953125e-5_QU_-5e-4_QB_1.0e-7_b_0.0_AMD_Lxz_64.0_128.0_Nxz_32_64_f",
     # "./LES/linearb_turbulencestatistics_dbdz_1.953125e-5_QU_-5e-4_QB_1.0e-7_b_0.0_WENO9nu0_Lxz_64.0_128.0_Nxz_32_64_f",
     # # "./LES/linearb_turbulencestatistics_dbdz_1.953125e-5_QU_-5e-4_QB_1.0e-7_b_0.0_WENO9nu1e-5_Lxz_64.0_128.0_Nxz_32_64_f",
+    # # "./LES/linearb_turbulencestatistics_dbdz_1.953125e-5_QU_-5e-4_QB_1.0e-7_b_0.0_WENO9AMD_Lxz_64.0_128.0_Nxz_32_64_f",
 
-    # "./LES/linearb_turbulencestatistics_dbdz_1.953125e-5_QU_-5e-4_QB_1.0e-7_b_0.0_AMD_Lxz_64.0_128.0_Nxz_64_128_f",
+    "./LES/linearb_turbulencestatistics_dbdz_1.953125e-5_QU_-5e-4_QB_1.0e-7_b_0.0_AMD_Lxz_64.0_128.0_Nxz_64_128_f",
     # "./LES/linearb_turbulencestatistics_dbdz_1.953125e-5_QU_-5e-4_QB_1.0e-7_b_0.0_WENO9nu0_Lxz_64.0_128.0_Nxz_64_128_f",
     # # "./LES/linearb_turbulencestatistics_dbdz_1.953125e-5_QU_-5e-4_QB_1.0e-7_b_0.0_WENO9nu1e-5_Lxz_64.0_128.0_Nxz_64_128_f",
+    # # "./LES/linearb_turbulencestatistics_dbdz_1.953125e-5_QU_-5e-4_QB_1.0e-7_b_0.0_WENO9AMD_Lxz_64.0_128.0_Nxz_64_128_f",
 
-    # "./LES/linearb_turbulencestatistics_dbdz_1.953125e-5_QU_-5e-4_QB_1.0e-7_b_0.0_AMD_Lxz_64.0_128.0_Nxz_128_256_f",
+    "./LES/linearb_turbulencestatistics_dbdz_1.953125e-5_QU_-5e-4_QB_1.0e-7_b_0.0_AMD_Lxz_64.0_128.0_Nxz_128_256_f",
     # "./LES/linearb_turbulencestatistics_dbdz_1.953125e-5_QU_-5e-4_QB_1.0e-7_b_0.0_WENO9nu0_Lxz_64.0_128.0_Nxz_128_256_f",
     # # "./LES/linearb_turbulencestatistics_dbdz_1.953125e-5_QU_-5e-4_QB_1.0e-7_b_0.0_WENO9nu1e-5_Lxz_64.0_128.0_Nxz_128_256_f",
+    # # "./LES/linearb_turbulencestatistics_dbdz_1.953125e-5_QU_-5e-4_QB_1.0e-7_b_0.0_WENO9AMD_Lxz_64.0_128.0_Nxz_128_256_f",
+
+    "./LES/linearb_turbulencestatistics_dbdz_1.953125e-5_QU_-0.0005_QB_1.0e-7_b_0.0_AMD_Lxz_64.0_128.0_Nxz_256_512_f",
 ]
 
 labels = [
-    # "AMD, 2m resolution",
-    "WENO(9), ν = κ = 0, 2m resolution",
+    "AMD, 2m resolution",
+    # "WENO(9), ν = κ = 0, 2m resolution",
     # "WENO(9), ν = κ = 1e-5, 2m resolution",
+    # "WENO(9) + AMD, 2m resolution",
 
     "AMD, 1m resolution",
-    "WENO(9), ν = κ = 0, 1m resolution",
+    # "WENO(9), ν = κ = 0, 1m resolution",
     # "WENO(9), ν = κ = 1e-5, 1m resolution",
+    # "WENO(9) + AMD, 1m resolution",
 
     "AMD, 0.5m resolution",
-    "WENO(9), ν = κ = 0, 0.5m resolution",
+    # "WENO(9), ν = κ = 0, 0.5m resolution",
     # "WENO(9), ν = κ = 1e-5, 0.5m resolution",
+    # "WENO(9) + AMD, 0.5m resolution",
 
     "AMD, 0.25m resolution"
 ]
@@ -53,7 +64,7 @@ end
 Qᴮ = parameters["buoyancy_flux"]
 Qᵁ = parameters["momentum_flux"]
 
-video_name = "./Data/QU_$(Qᵁ)_QB_$(Qᴮ)_btop_0_AMD_WENO_resolution.mp4"
+video_name = "./Data/QU_$(Qᵁ)_QB_$(Qᴮ)_btop_0_AMD_resolution.mp4"
 
 b_datas = [FieldTimeSeries("$(FILE_DIR)/instantaneous_timeseries.jld2", "bbar") for FILE_DIR in FILE_DIRS]
 
@@ -98,6 +109,8 @@ Legend(fig[2, :], axb, tellwidth=false, orientation=:horizontal)
 xlims!(axb, blim)
 
 trim!(fig.layout)
+# display(fig)
+# save("./Data/QU_$(Qᵁ)_QB_$(Qᴮ)_btop_0_AMD_resolution.png", fig, px_per_unit=4)
 
 record(fig, video_name, 1:Nt, framerate=15) do nn
     n[] = nn

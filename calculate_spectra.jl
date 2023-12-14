@@ -38,7 +38,8 @@ FILE_DIRs = [
 
     # "./LES/linearb_turbulencestatistics_dbdz_1.953125e-5_QU_-0.001_QB_1.0e-7_b_0.0_AMD_Lxz_64.0_128.0_Nxz_256_512_f",
 
-    "./LES/linearb_turbulencestatistics_dbdz_1.953125e-5_QU_-0.0005_QB_1.0e-7_b_0.0_AMD_Lxz_64.0_128.0_Nxz_256_512_f"
+    # "./LES/linearb_turbulencestatistics_dbdz_1.953125e-5_QU_-0.0005_QB_1.0e-7_b_0.0_AMD_Lxz_64.0_128.0_Nxz_256_512_f"
+    "./LES/linearb_turbulencestatistics_dbdz_1.953125e-5_QU_-0.0005_QB_1.0e-7_b_0.0_WENO9nu0_Lxz_64.0_128.0_Nxz_256_512_f"
 ]
 
 function calculate_spectra(data::FieldTimeSeries)
@@ -90,8 +91,10 @@ function calculate_spectra(FILE_DIRs::Vector{String})
 
         w_center_data = zeros(size(u_data))
 
-        for i in axes(w_center_data, 1), j in axes(w_center_data, 2), l in axes(w_center_data, 4)
-            w_center_data[i, j, :, l] .= face_to_center * interior(w_data[l], i, j, :)
+        Threads.@threads for l in axes(w_center_data, 4)
+            for i in axes(w_center_data, 1), j in axes(w_center_data, 2)
+                w_center_data[i, j, :, l] .= face_to_center * interior(w_data[l], i, j, :)
+            end
         end
 
         b_spectras = calculate_spectra(b_data)

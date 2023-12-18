@@ -149,9 +149,9 @@ end
 # const Qᵁ = -4e-6
 # const Qᴮ = 0
 
-advection = WENO(order=9)
-const ν, κ = 1e-5, 1e-5/Pr
-closure = ScalarDiffusivity(ν=ν, κ=κ)
+# advection = WENO(order=9)
+# const ν, κ = 1e-5, 1e-5/Pr
+# closure = ScalarDiffusivity(ν=ν, κ=κ)
 
 const f = args["f"]
 

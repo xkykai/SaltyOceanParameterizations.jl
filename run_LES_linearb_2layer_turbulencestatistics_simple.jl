@@ -8,6 +8,7 @@ using Oceananigans.Grids: halo_size
 using Oceananigans.Operators
 using Oceananigans.AbstractOperations: KernelFunctionOperation
 using Oceananigans.BuoyancyModels
+using Oceananigans.Utils: ConsecutiveIterations
 using Random
 using Statistics
 using ArgParse
@@ -24,10 +25,6 @@ function parse_commandline()
         default = 0.
       "--QB"
         help = "surface buoyancy flux (m²/s³)"
-        arg_type = Float64
-        default = 0.
-      "--b_surface"
-        help = "surface buoyancy (m/s²)"
         arg_type = Float64
         default = 0.
       "--dbdz"
@@ -152,18 +149,17 @@ end
 # const Qᵁ = -4e-6
 # const Qᴮ = 0
 
-# advection = WENO(order=9)
-# const ν, κ = 1e-5, 1e-5/Pr
-# closure = ScalarDiffusivity(ν=ν, κ=κ)
+advection = WENO(order=9)
+const ν, κ = 1e-5, 1e-5/Pr
+closure = ScalarDiffusivity(ν=ν, κ=κ)
 
 const f = args["f"]
 
 const dbdz = args["dbdz"]
-const b_surface = args["b_surface"]
 
 const pickup = args["pickup"]
 
-FILE_NAME = "linearb_turbulencestatistics_dbdz_$(dbdz)_QU_$(Qᵁ)_QB_$(Qᴮ)_b_$(b_surface)_$(args["advection"])_Lxz_$(Lx)_$(Lz)_Nxz_$(Nx)_$(Nz)_f"
+FILE_NAME = "linearb_2layer_turbulencestatistics_dbdz_$(dbdz)_QU_$(Qᵁ)_QB_$(Qᴮ)_$(args["advection"])_Lxz_$(Lx)_$(Lz)_Nxz_$(Nx)_$(Nz)_f"
 FILE_DIR = "$(args["file_location"])/LES/$(FILE_NAME)"
 # FILE_DIR = "/storage6/xinkai/LES/$(FILE_NAME)"
 mkpath(FILE_DIR)
@@ -180,7 +176,17 @@ grid = RectilinearGrid(GPU(), Float64,
 
 noise(x, y, z) = rand() * exp(z / 8)
 
-b_initial(x, y, z) = dbdz * z + b_surface
+const z_surface = -20
+const b_surface = dbdz * z_surface
+
+@inline function b_initial(x, y, z)
+    if z >= z_surface
+        return b_surface
+    else
+        return dbdz * z
+    end
+end
+
 b_initial_noisy(x, y, z) = b_initial(x, y, z) + 1e-6 * noise(x, y, z)
 
 b_bcs = FieldBoundaryConditions(top=FluxBoundaryCondition(Qᴮ), bottom=GradientBoundaryCondition(dbdz))
@@ -211,6 +217,7 @@ set!(model, b=b_initial_noisy)
 
 b = model.tracers.b
 u, v, w = model.velocities
+w_center = @at (Center, Center, Center) w
 
 ubar = Field(Average(u, dims=(1, 2)))
 vbar = Field(Average(v, dims=(1, 2)))
@@ -250,6 +257,7 @@ function init_save_some_metadata!(file, model)
     file["metadata/parameters/momentum_flux"] = Qᵁ
     file["metadata/parameters/buoyancy_flux"] = Qᴮ
     file["metadata/parameters/surface_buoyancy"] = b_surface
+    file["metadata/parameters/mixed_layer_depth"] = z_surface
     file["metadata/parameters/buoyancy_gradient"] = dbdz
     return nothing
 end
@@ -281,9 +289,46 @@ simulation.output_writers[:w] = JLD2OutputWriter(model, (; model.velocities.w),
                                                           init = init_save_some_metadata!)
                                                           # max_filesize=50e9)
 
+simulation.output_writers[:w_center] = JLD2OutputWriter(model, (; w_center),
+                                                          filename = "$(FILE_DIR)/instantaneous_fields_w_center.jld2",
+                                                          schedule = TimeInterval(1hour),
+                                                          with_halos = true,
+                                                          init = init_save_some_metadata!)
+                                                          # max_filesize=50e9)
+
 simulation.output_writers[:b] = JLD2OutputWriter(model, (; model.tracers.b),
                                                           filename = "$(FILE_DIR)/instantaneous_fields_b.jld2",
                                                           schedule = TimeInterval(1hour),
+                                                          with_halos = true,
+                                                          init = init_save_some_metadata!)
+
+simulation.output_writers[:u_consecutive] = JLD2OutputWriter(model, (; model.velocities.u),
+                                                          filename = "$(FILE_DIR)/instantaneous_fields_u_consecutive.jld2",
+                                                          schedule = ConsecutiveIterations(TimeInterval(1hour)),
+                                                          with_halos = true,
+                                                          init = init_save_some_metadata!)
+
+simulation.output_writers[:v_consecutive] = JLD2OutputWriter(model, (; model.velocities.v),
+                                                          filename = "$(FILE_DIR)/instantaneous_fields_v_consecutive.jld2",
+                                                          schedule = ConsecutiveIterations(TimeInterval(1hour)),
+                                                          with_halos = true,
+                                                          init = init_save_some_metadata!)
+
+simulation.output_writers[:w_consecutive] = JLD2OutputWriter(model, (; model.velocities.w),
+                                                          filename = "$(FILE_DIR)/instantaneous_fields_w_consecutive.jld2",
+                                                          schedule = ConsecutiveIterations(TimeInterval(1hour)),
+                                                          with_halos = true,
+                                                          init = init_save_some_metadata!)
+
+simulation.output_writers[:w_center_consecutive] = JLD2OutputWriter(model, (; w_center),
+                                                          filename = "$(FILE_DIR)/instantaneous_fields_w_center_consecutive.jld2",
+                                                          schedule = ConsecutiveIterations(TimeInterval(1hour)),
+                                                          with_halos = true,
+                                                          init = init_save_some_metadata!)
+
+simulation.output_writers[:b_consecutive] = JLD2OutputWriter(model, (; model.tracers.b),
+                                                          filename = "$(FILE_DIR)/instantaneous_fields_b_consecutive.jld2",
+                                                          schedule = ConsecutiveIterations(TimeInterval(1hour)),
                                                           with_halos = true,
                                                           init = init_save_some_metadata!)
 

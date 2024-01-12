@@ -21,7 +21,7 @@ parameters = jldopen("$(FILE_DIRS[1])/instantaneous_timeseries.jld2", "r") do fi
 end 
 
 Qᴮ = parameters["buoyancy_flux"]
-dbdz = parameters["dbdz"]
+dbdz = parameters["buoyancy_gradient"]
 
 video_name = "./Data/freeconvection_QB_$(Qᴮ)_dbdz_$(dbdz).mp4"
 

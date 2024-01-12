@@ -48,7 +48,7 @@ times = b_datas[1].times
 Nt = length(times)
 
 function wind_mixing_MLD_scaling(Qᵁ, dbdz, t)
-    ustar = √(Qᵁ)
+    ustar = √(abs(Qᵁ))
     return -ustar * (15*t / dbdz)^(1/3)
 end
 

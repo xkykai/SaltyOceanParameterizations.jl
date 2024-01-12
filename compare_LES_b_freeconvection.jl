@@ -60,7 +60,7 @@ with_theme(theme_latexfonts()) do
 
     n = Observable(1)
     
-    time_str = @lift "Free convection, Qᴮ = $(Qᴮ), Time = $(round(times[$n]/24/60^2, digits=3)) days"
+    time_str = @lift "Free convection, Qᴮ = $(Qᴮ), Time = $(round(times[$n], digits=1)) s"
     title = Label(fig[0, :], time_str, font=:bold, tellwidth=false)
     
     bₙs = [@lift interior(data[findfirst(x -> x≈times[$n], data.times)], 1, 1, :) for data in b_datas]

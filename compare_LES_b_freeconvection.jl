@@ -48,10 +48,10 @@ times = b_datas[1].times
 Nt = length(times)
 
 function free_convection_MLD_scaling(Qᴮ, dbdz, t)
-    return -√(2 * Qᴮ / dbdz * t)
+    return -√(3 * Qᴮ / dbdz * t)
 end
 
-MLD_theory = [-free_convection_MLD_scaling(Qᴮ, dbdz, t) for t in times]
+MLD_theory = [free_convection_MLD_scaling(Qᴮ, dbdz, t) for t in times]
 
 #%%
 with_theme(theme_latexfonts()) do
@@ -65,16 +65,17 @@ with_theme(theme_latexfonts()) do
     
     bₙs = [@lift interior(data[findfirst(x -> x≈times[$n], data.times)], 1, 1, :) for data in b_datas]
 
-    MLD_theoryₙ = @lift MLD_theory[$n]
+    MLD_theoryₙ = @lift [MLD_theory[$n]]
     
     for i in 1:length(FILE_DIRS)
         lines!(axb, bₙs[i], zCs[i], label=labels[i])
     end
 
-    vlines!(axb, [MLD_theoryₙ], color=:black, linestyle=:dash, linewidth=2, label="Theoretical MLD")
+    hlines!(axb, MLD_theoryₙ, color=:black, linestyle=:dash, linewidth=2, label="Theoretical MLD")
+    # lines!(axb, MLD_theoryₙ, label="Theoretical MLD")
     
     # make a legend
-    Legend(fig[2, :], axb, tellwidth=false, orientation=:horizontal)
+    Legend(fig[2, :], axb, tellwidth=false, orientation=:horizontal, nbanks=2)
     
     xlims!(axb, blim)
     

@@ -1,7 +1,10 @@
+authors = ["Xin Kai Lee <xinkai@mit.edu> and contributors"]
 name = "SaltyOceanParameterizations"
 uuid = "bbc636ea-587e-4636-9413-c9e8b6dd1a8f"
-authors = ["Xin Kai Lee <xinkai@mit.edu> and contributors"]
 version = "1.0.0-DEV"
+
+[compat]
+julia = "1"
 
 [deps]
 ArgParse = "c7e460c6-2fb9-53a9-8c5b-16f535851c63"
@@ -23,10 +26,8 @@ Roots = "f2b01f46-fcfa-551c-844a-d8ac1e96c665"
 SeawaterPolynomials = "d496a93d-167e-4197-9f49-d3af4ff8fe40"
 Zygote = "e88e6eb3-aa80-5325-afca-941959d7151f"
 
-[compat]
-julia = "1"
-
 [extras]
+CUDA_Runtime_jll = "76a88914-d11a-5bdc-97e0-2f5a05c973a2"
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 
 [targets]

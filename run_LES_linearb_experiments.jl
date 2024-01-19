@@ -41,15 +41,15 @@ function parse_commandline()
       "--Nz"
         help = "Number of grid points in z-direction"
         arg_type = Int64
-        default = 128
+        default = 32
       "--Nx"
         help = "Number of grid points in x-direction"
         arg_type = Int64
-        default = 256
+        default = 64
       "--Ny"
         help = "Number of grid points in y-direction"
         arg_type = Int64
-        default = 256
+        default = 64
       "--Lz"
         help = "Domain depth"
         arg_type = Float64
@@ -175,7 +175,7 @@ damping_rate = 1seconds
 
 b_target(x, y, z, t) = b_initial(x, y, z)
 
-bottom_mask = GaussianMask{:z}(center=-grid.Lz, width=grid.Lz/10)
+bottom_mask = GaussianMask{:z}(center=-grid.Lz, width=grid.Lz/50)
 
 uvw_sponge = Relaxation(rate=damping_rate, mask=bottom_mask)
 b_sponge = Relaxation(rate=damping_rate, mask=bottom_mask, target=b_target)
@@ -216,10 +216,10 @@ function print_progress(sim)
             sim.model.clock.iteration,
             prettytime(sim.model.clock.time),
             prettytime(1e-9 * (time_ns() - wall_clock[1])),
-            maximum(abs, sim.model.velocities.u),
-            maximum(abs, sim.model.velocities.v),
-            maximum(abs, sim.model.velocities.w),
-            maximum(abs, sim.model.tracers.b),
+            maximum(sim.model.velocities.u),
+            maximum(sim.model.velocities.v),
+            maximum(sim.model.velocities.w),
+            maximum(sim.model.tracers.b),
             prettytime(sim.Δt))
 
     wall_clock[1] = time_ns()

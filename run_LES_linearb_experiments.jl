@@ -175,7 +175,7 @@ damping_rate = 1/2minute
 
 b_target(x, y, z, t) = b_initial(x, y, z)
 
-bottom_mask = GaussianMask{:z}(center=-grid.Lz, width=grid.Lz/50)
+bottom_mask = GaussianMask{:z}(center=-grid.Lz, width=grid.Lz/25)
 
 uvw_sponge = Relaxation(rate=damping_rate, mask=bottom_mask)
 b_sponge = Relaxation(rate=damping_rate, mask=bottom_mask, target=b_target)

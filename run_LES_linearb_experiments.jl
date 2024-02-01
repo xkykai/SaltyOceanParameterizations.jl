@@ -171,7 +171,7 @@ b_initial_noisy(x, y, z) = b_initial(x, y, z) + 1e-6 * noise(x, y, z)
 b_bcs = FieldBoundaryConditions(top=FluxBoundaryCondition(Qᴮ), bottom=GradientBoundaryCondition(dbdz))
 u_bcs = FieldBoundaryConditions(top=FluxBoundaryCondition(Qᵁ))
 
-damping_rate = 1seconds
+damping_rate = 1/5minute
 
 b_target(x, y, z, t) = b_initial(x, y, z)
 
@@ -202,9 +202,8 @@ vbar = Field(Average(v, dims=(1, 2)))
 bbar = Field(Average(b, dims=(1, 2)))
 
 simulation = Simulation(model, Δt=args["dt"]second, stop_time=args["stop_time"]days)
-# simulation = Simulation(model, Δt=args["dt"]second, stop_time=100minutes)
 
-wizard = TimeStepWizard(max_change=1.05, max_Δt=args["max_dt"]minutes, cfl=0.6)
+wizard = TimeStepWizard(max_change=1.05, max_Δt=args["max_dt"]second, cfl=0.6)
 simulation.callbacks[:wizard] = Callback(wizard, IterationInterval(10))
 
 wall_clock = [time_ns()]

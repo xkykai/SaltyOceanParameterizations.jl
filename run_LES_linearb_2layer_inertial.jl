@@ -224,8 +224,6 @@ simulation.callbacks[:print_progress] = Callback(print_progress, IterationInterv
 function init_save_some_metadata!(file, model)
     file["metadata/author"] = "Xin Kai Lee"
     file["metadata/parameters/coriolis_parameter"] = f
-    file["metadata/parameters/momentum_flux"] = Qᵁ
-    file["metadata/parameters/buoyancy_flux"] = Qᴮ
     file["metadata/parameters/surface_buoyancy"] = b_surface
     file["metadata/parameters/buoyancy_gradient"] = dbdz
     return nothing

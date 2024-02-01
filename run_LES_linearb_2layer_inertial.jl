@@ -331,7 +331,7 @@ wblim = (minimum(wb_data[1, 1, :, startframe_lim:end]), maximum(wb_data[1, 1, :,
 
 n = Observable(1)
 
-time_str = @lift "Qᵁ = $(Qᵁ), Qᴮ = $(Qᴮ), Time = $(round(bbar_data.times[$n]/24/60^2, digits=3)) days"
+time_str = @lift "U₀ = $(U₀) m s⁻¹, f = $(f) s⁻², Time = $(round(bbar_data.times[$n]/24/60^2, digits=3)) days"
 title = Label(fig[0, :], time_str, font=:bold, tellwidth=false)
 
 ubarₙ = @lift interior(ubar_data[$n], 1, 1, :)

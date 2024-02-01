@@ -8,6 +8,7 @@ using Glob
 import Dates
 using Statistics
 using ArgParse
+using JLD2
 
 function parse_commandline()
     s = ArgParseSettings()
@@ -49,6 +50,9 @@ maxlat = args["maxlat"]
 s_ds = NCDataset(glob("ARGO/field/*/*_PSAL.nc", "/storage6/xinkai"))
 T_ds = NCDataset(glob("ARGO/field/*/*_TEMP.nc", "/storage6/xinkai"))
 
+# s_ds = NCDataset(glob("ARGO/field/*/*_PSAL.nc"))
+# T_ds = NCDataset(glob("ARGO/field/*/*_TEMP.nc"))
+
 times = collect(s_ds["time"])
 lats = collect(s_ds["latitude"])
 lons = collect(s_ds["longitude"])
@@ -63,10 +67,28 @@ end
 lat_indices = findall(x -> x >= minlat && x <= maxlat, lats)
 lon_indices = findall(x -> x >= minlon && x <= maxlon, lons)
 
-sbar = mean(s_ds["PSAL"][lon_indices, lat_indices, :, month_indices], dims=(1, 2))
-Tbar = mean(T_ds["TEMP"][lon_indices, lat_indices, :, month_indices], dims=(1, 2))
+# sbar = mean(s_ds["PSAL"][lon_indices, lat_indices, :, month_indices], dims=(1, 2))
+# Tbar = mean(T_ds["TEMP"][lon_indices, lat_indices, :, month_indices], dims=(1, 2))
 
-jldopen("./Data/lon_$(minlon)_$(maxlon)_lat_$(minlat)_$(maxlat)_month_$(args["month"]).jld2", "w") do file
+s = s_ds["PSAL"][lon_indices, lat_indices, :, month_indices]
+T = T_ds["TEMP"][lon_indices, lat_indices, :, month_indices]
+
+sbar = zeros(1, 1, size(s)[3:end]...)
+Tbar = zeros(1, 1, size(T)[3:end]...)
+
+Threads.@threads for k in axes(sbar, 3)
+    for l in axes(sbar, 4)
+        sbar[1, 1, k, l] = mean(skipmissing(s[:, :, k, l]))
+    end
+end
+
+Threads.@threads for k in axes(Tbar, 3)
+    for l in axes(Tbar, 4)
+        Tbar[1, 1, k, l] = mean(skipmissing(T[:, :, k, l]))
+    end
+end
+
+jldopen("./Data/lon_$(minlon)_$(maxlon)_lat_$(minlat)_$(maxlat)_month_$(args["month"])_skipmissing.jld2", "w") do file
     file["S"] = sbar
     file["T"] = Tbar
 end

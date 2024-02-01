@@ -367,7 +367,7 @@ xlims!(axwb, wblim)
 
 trim!(fig.layout)
 
-record(fig, "$(FILE_DIR)/$(FILE_NAME).mp4", 1:Nt, framerate=15) do nn
+record(fig, "$(FILE_DIR)/$(FILE_NAME).mp4", 1:Nt, framerate=args["fps"]) do nn
     n[] = nn
 end
 

@@ -88,8 +88,8 @@ function parse_commandline()
         default = 1.
       "--fps"
         help = "Frames per second of animation"
-        arg_type = Float64
-        default = 15.
+        arg_type = Int64
+        default = 15
       "--pickup"
         help = "Whether to pickup from latest checkpoint"
         arg_type = Bool
@@ -171,7 +171,7 @@ b_initial_noisy(x, y, z) = b_initial(x, y, z) + 1e-6 * noise(x, y, z)
 b_bcs = FieldBoundaryConditions(top=FluxBoundaryCondition(Qᴮ), bottom=GradientBoundaryCondition(dbdz))
 u_bcs = FieldBoundaryConditions(top=FluxBoundaryCondition(Qᵁ))
 
-damping_rate = 1/5minute
+damping_rate = 1/2minute
 
 b_target(x, y, z, t) = b_initial(x, y, z)
 

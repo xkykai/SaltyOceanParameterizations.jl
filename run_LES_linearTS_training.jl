@@ -205,6 +205,7 @@ u_bcs = FieldBoundaryConditions(top=FluxBoundaryCondition(Qᵁ))
 
 const eos = TEOS10EquationOfState()
 const ρ₀ = eos.reference_density
+const g = model.buoyancy.model.gravitational_acceleration
 
 damping_rate = 1/5minute
 

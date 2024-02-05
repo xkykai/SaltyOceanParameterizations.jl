@@ -204,6 +204,7 @@ S_bcs = FieldBoundaryConditions(top=FluxBoundaryCondition(Qˢ), bottom=GradientB
 u_bcs = FieldBoundaryConditions(top=FluxBoundaryCondition(Qᵁ))
 
 const eos = TEOS10EquationOfState()
+const ρ₀ = eos.reference_density
 
 damping_rate = 1/5minute
 

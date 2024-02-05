@@ -177,6 +177,8 @@ const S_surface = args["S_surface"]
 
 const pickup = args["pickup"]
 
+const eos = TEOS10EquationOfState()
+
 FILE_NAME = "linearTS_dTdz_$(dTdz)_dSdz_$(dSdz)_QU_$(Qᵁ)_QT_$(Qᵀ)_QS_$(Qˢ)_T_$(T_surface)_S_$(S_surface)_$(args["advection"])_Lxz_$(Lx)_$(Lz)_Nxz_$(Nx)_$(Nz)"
 FILE_DIR = "$(args["file_location"])/LES/$(FILE_NAME)"
 mkpath(FILE_DIR)
@@ -203,10 +205,6 @@ T_bcs = FieldBoundaryConditions(top=FluxBoundaryCondition(Qᵀ), bottom=Gradient
 S_bcs = FieldBoundaryConditions(top=FluxBoundaryCondition(Qˢ), bottom=GradientBoundaryCondition(dSdz))
 u_bcs = FieldBoundaryConditions(top=FluxBoundaryCondition(Qᵁ))
 
-const eos = TEOS10EquationOfState()
-const ρ₀ = eos.reference_density
-const g = model.buoyancy.model.gravitational_acceleration
-
 damping_rate = 1/5minute
 
 T_target(x, y, z, t) = T_initial(x, y, z)
@@ -219,15 +217,18 @@ T_sponge = Relaxation(rate=damping_rate, mask=bottom_mask, target=T_target)
 S_sponge = Relaxation(rate=damping_rate, mask=bottom_mask, target=S_target)
 
 model = NonhydrostaticModel(; 
-            grid = grid,
-            closure = closure,
-            coriolis = FPlane(f=f),
-            buoyancy = SeawaterBuoyancy(equation_of_state=eos),
-            tracers = (:T, :S),
-            timestepper = :RungeKutta3,
-            advection = advection,
-            forcing = (u=uvw_sponge, v=uvw_sponge, w=uvw_sponge, T=T_sponge, S=S_sponge),
-            boundary_conditions = (T=T_bcs, S=S_bcs, u=u_bcs))
+grid = grid,
+closure = closure,
+coriolis = FPlane(f=f),
+buoyancy = SeawaterBuoyancy(equation_of_state=eos),
+tracers = (:T, :S),
+timestepper = :RungeKutta3,
+advection = advection,
+forcing = (u=uvw_sponge, v=uvw_sponge, w=uvw_sponge, T=T_sponge, S=S_sponge),
+boundary_conditions = (T=T_bcs, S=S_bcs, u=u_bcs))
+
+const ρ₀ = eos.reference_density
+const g = model.buoyancy.model.gravitational_acceleration
 
 set!(model, T=T_initial_noisy, S=S_initial_noisy)
 

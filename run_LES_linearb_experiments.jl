@@ -148,7 +148,7 @@ const b_surface = args["b_surface"]
 
 const pickup = args["pickup"]
 
-FILE_NAME = "linearb_damp5min_experiments_dbdz_$(dbdz)_QU_$(Qᵁ)_QB_$(Qᴮ)_b_$(b_surface)_$(args["advection"])_Lxz_$(Lx)_$(Lz)_Nxz_$(Nx)_$(Nz)"
+FILE_NAME = "linearb_experiments_dbdz_$(dbdz)_QU_$(Qᵁ)_QB_$(Qᴮ)_b_$(b_surface)_$(args["advection"])_Lxz_$(Lx)_$(Lz)_Nxz_$(Nx)_$(Nz)"
 FILE_DIR = "$(args["file_location"])/LES/$(FILE_NAME)"
 # FILE_DIR = "/storage6/xinkai/LES/$(FILE_NAME)"
 mkpath(FILE_DIR)

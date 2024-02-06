@@ -148,7 +148,7 @@ const b_surface = args["b_surface"]
 
 const pickup = args["pickup"]
 
-FILE_NAME = "linearb_experiments_dbdz_$(dbdz)_QU_$(Qᵁ)_QB_$(Qᴮ)_b_$(b_surface)_$(args["advection"])_Lxz_$(Lx)_$(Lz)_Nxz_$(Nx)_$(Nz)"
+FILE_NAME = "linearb_damp5min_experiments_dbdz_$(dbdz)_QU_$(Qᵁ)_QB_$(Qᴮ)_b_$(b_surface)_$(args["advection"])_Lxz_$(Lx)_$(Lz)_Nxz_$(Nx)_$(Nz)"
 FILE_DIR = "$(args["file_location"])/LES/$(FILE_NAME)"
 # FILE_DIR = "/storage6/xinkai/LES/$(FILE_NAME)"
 mkpath(FILE_DIR)
@@ -171,11 +171,12 @@ b_initial_noisy(x, y, z) = b_initial(x, y, z) + 1e-6 * noise(x, y, z)
 b_bcs = FieldBoundaryConditions(top=FluxBoundaryCondition(Qᴮ), bottom=GradientBoundaryCondition(dbdz))
 u_bcs = FieldBoundaryConditions(top=FluxBoundaryCondition(Qᵁ))
 
-damping_rate = 1/2minute
+damping_rate = 1/5minute
+damping_width = Lz/10
 
 b_target(x, y, z, t) = b_initial(x, y, z)
 
-bottom_mask = GaussianMask{:z}(center=-grid.Lz, width=grid.Lz/25)
+bottom_mask = GaussianMask{:z}(center=-grid.Lz, width=damping_width)
 
 uvw_sponge = Relaxation(rate=damping_rate, mask=bottom_mask)
 b_sponge = Relaxation(rate=damping_rate, mask=bottom_mask, target=b_target)
@@ -230,11 +231,13 @@ simulation.callbacks[:print_progress] = Callback(print_progress, IterationInterv
 
 function init_save_some_metadata!(file, model)
     file["metadata/author"] = "Xin Kai Lee"
-    file["metadata/parameters/coriolis_parameter"] = f
-    file["metadata/parameters/momentum_flux"] = Qᵁ
-    file["metadata/parameters/buoyancy_flux"] = Qᴮ
-    file["metadata/parameters/surface_buoyancy"] = b_surface
-    file["metadata/parameters/buoyancy_gradient"] = dbdz
+    file["metadata/coriolis_parameter"] = f
+    file["metadata/momentum_flux"] = Qᵁ
+    file["metadata/buoyancy_flux"] = Qᴮ
+    file["metadata/surface_buoyancy"] = b_surface
+    file["metadata/buoyancy_gradient"] = dbdz
+    file["metadata/damping_rate"] = damping_rate
+    file["metadata/damping_width"] = damping_width
     return nothing
 end
 

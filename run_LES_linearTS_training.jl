@@ -266,20 +266,17 @@ simulation.callbacks[:print_progress] = Callback(print_progress, IterationInterv
 
 function init_save_some_metadata!(file, model)
     file["metadata/author"] = "Xin Kai Lee"
-    file["metadata/parameters/coriolis_parameter"] = f
-    file["metadata/parameters/momentum_flux"] = Qᵁ
-    file["metadata/parameters/temperature_flux"] = Qᵀ
-    file["metadata/parameters/salinity_flux"] = Qˢ
-    file["metadata/parameters/surface_temperature"] = T_surface
-    file["metadata/parameters/surface_salinity"] = S_surface
-    file["metadata/parameters/temperature_gradient"] = dTdz
-    file["metadata/parameters/salinity_gradient"] = dSdz
-    file["metadata/parameters/equation_of_state"] = eos
-    file["metadata/parameters/gravitational_acceleration"] = g
-    file["metadata/parameters/reference_density"] = ρ₀
-    file["metadata/parameters/reference_sound_speed"] = c₀
-    file["metadata/parameters/reference_temperature"] = T₀
-    file["metadata/parameters/reference_salinity"] = S₀
+    file["metadata/coriolis_parameter"] = f
+    file["metadata/momentum_flux"] = Qᵁ
+    file["metadata/temperature_flux"] = Qᵀ
+    file["metadata/salinity_flux"] = Qˢ
+    file["metadata/surface_temperature"] = T_surface
+    file["metadata/surface_salinity"] = S_surface
+    file["metadata/temperature_gradient"] = dTdz
+    file["metadata/salinity_gradient"] = dSdz
+    file["metadata/equation_of_state"] = eos
+    file["metadata/gravitational_acceleration"] = g
+    file["metadata/reference_density"] = ρ₀
     return nothing
 end
 
@@ -387,9 +384,6 @@ else
 end
 
 #%%
-b_data = FieldTimeSeries("$(FILE_DIR)/instantaneous_fields_b.jld2", "b", backend=OnDisk())
-w_data = FieldTimeSeries("$(FILE_DIR)/instantaneous_fields_w.jld2", "w", backend=OnDisk())
-
 ubar_data = FieldTimeSeries("$(FILE_DIR)/instantaneous_timeseries.jld2", "ubar")
 vbar_data = FieldTimeSeries("$(FILE_DIR)/instantaneous_timeseries.jld2", "vbar")
 Tbar_data = FieldTimeSeries("$(FILE_DIR)/instantaneous_timeseries.jld2", "Tbar")
@@ -409,6 +403,8 @@ yC = Tbar_data.grid.yᵃᶜᵃ[1:Ny]
 zC = Tbar_data.grid.zᵃᵃᶜ[1:Nz]
 
 zF = uw_data.grid.zᵃᵃᶠ[1:Nz+1]
+
+Nt = length(Tbar_data.times)
 
 ##
 fig = Figure(size=(2500, 1800))
@@ -507,11 +503,14 @@ record(fig, "$(FILE_DIR)/$(FILE_NAME)_timeseries.mp4", 1:Nt, framerate=15) do nn
 end
 
 @info "Timeseries animation completed"
-#%%
-b_data = FieldTimeSeries("$(FILE_DIR)/instantaneous_fields.jld2", "b", backend=OnDisk())
-w_data = FieldTimeSeries("$(FILE_DIR)/instantaneous_fields.jld2", "w", backend=OnDisk())
 
-Nt = length(T_data.times)
+#%%
+w_data = FieldTimeSeries("$(FILE_DIR)/instantaneous_fields_w.jld2", "w", backend=OnDisk())
+b_data = FieldTimeSeries("$(FILE_DIR)/instantaneous_fields_b.jld2", "b", backend=OnDisk())
+T_data = FieldTimeSeries("$(FILE_DIR)/instantaneous_fields_T.jld2", "T", backend=OnDisk())
+S_data = FieldTimeSeries("$(FILE_DIR)/instantaneous_fields_S.jld2", "S", backend=OnDisk())
+
+Nt = length(b_data.times)
 
 xC = T_data.grid.xᶜᵃᵃ[1:Nx]
 yC = T_data.grid.yᵃᶜᵃ[1:Ny]
@@ -586,7 +585,7 @@ Sₙ_xy = @lift interior(S_data[$n], :, :, Nz)
 Sₙ_yz = @lift transpose(interior(S_data[$n], 1, :, :))
 Sₙ_xz = @lift interior(S_data[$n], :, 1, :)
 
-time_str = @lift "Qᵁ = $(Qᵁ), Qᴮ = $(Qᴮ), Time = $(round(T_data.times[$n]/24/60^2, digits=3)) days"
+time_str = @lift "Qᵁ = $(Qᵁ), Qᵀ = $(Qᵀ), Qˢ = $(Qˢ), Time = $(round(T_data.times[$n]/24/60^2, digits=3)) days"
 title = Label(fig[0, :], time_str, font=:bold, tellwidth=false)
 
 w_xy_surface = surface!(axw, xFs_xy, yFs_xy, zFs_xy, color=wₙ_xy, colormap=colormap)

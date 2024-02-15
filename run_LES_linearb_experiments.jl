@@ -136,12 +136,12 @@ if args["advection"] == "WENOnu1e-5"
     const ν, κ = 1e-5, 1e-5/Pr
     closure = ScalarDiffusivity(ν=ν, κ=κ)
     advection_str = "WENO$(args["WENO_order"])nu1e-5"
-elseif args["advection"] == "WENO9nu0"
+elseif args["advection"] == "WENOnu0"
     advection = WENO(order=args["WENO_order"])
     const ν, κ = 0, 0
     closure = nothing
     advection_str = "WENO$(args["WENO_order"])nu0"
-elseif args["advection"] == "WENO9AMD"
+elseif args["advection"] == "WENOAMD"
     advection = WENO(order=9)
     const ν, κ = 0, 0
     closure = AnisotropicMinimumDissipation(C=args["AMD_C2_coefficient"])

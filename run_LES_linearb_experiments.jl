@@ -151,6 +151,11 @@ elseif args["advection"] == "AMD"
     const ν, κ = 0, 0
     closure = AnisotropicMinimumDissipation(C=args["AMD_C2_coefficient"])
     advection_str = "$(args["advection"])_C2_$(args["AMD_C2_coefficient"])"
+elseif args["advection"] == "AMDC4O"
+    advection = CenteredFourthOrder()
+    const ν, κ = 0, 0
+    closure = AnisotropicMinimumDissipation(C=args["AMD_C2_coefficient"])
+    advection_str = "$(args["advection"])_C2_$(args["AMD_C2_coefficient"])"
 elseif args["advection"] == "SmagorinskyLilly"
     advection = CenteredSecondOrder()
     closure = SmagorinskyLilly()

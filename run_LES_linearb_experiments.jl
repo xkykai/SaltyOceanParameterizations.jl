@@ -62,6 +62,14 @@ function parse_commandline()
         help = "Domain width in y-direction"
         arg_type = Float64
         default = 512.
+      "--AMD_C2_coefficient"
+        help = "Poincare Coefficient for AMD (C²)"
+        arg_type = Float64
+        default = 1/12
+      "--WENO_order"
+        help = "Order of WENO scheme"
+        arg_type = Int64
+        default = 9
       "--dt"
         help = "Initial timestep to take (seconds)"
         arg_type = Float64
@@ -123,22 +131,26 @@ const Ny = args["Ny"]
 const Qᵁ = args["QU"]
 const Qᴮ = args["QB"]
 
-if args["advection"] == "WENO9nu1e-5"
-    advection = WENO(order=9)
+if args["advection"] == "WENOnu1e-5"
+    advection = WENO(order=args["WENO_order"])
     const ν, κ = 1e-5, 1e-5/Pr
     closure = ScalarDiffusivity(ν=ν, κ=κ)
+    advection_str = "WENO$(args["WENO_order"])nu1e-5"
 elseif args["advection"] == "WENO9nu0"
-    advection = WENO(order=9)
+    advection = WENO(order=args["WENO_order"])
     const ν, κ = 0, 0
     closure = nothing
+    advection_str = "WENO$(args["WENO_order"])nu0"
 elseif args["advection"] == "WENO9AMD"
     advection = WENO(order=9)
     const ν, κ = 0, 0
-    closure = AnisotropicMinimumDissipation()
+    closure = AnisotropicMinimumDissipation(C=args["AMD_C2_coefficient"])
+    advection_str = "$(args["advection"])_C2_$(args["AMD_C2_coefficient"])"
 elseif args["advection"] == "AMD"
     advection = CenteredSecondOrder()
     const ν, κ = 0, 0
-    closure = AnisotropicMinimumDissipation()
+    closure = AnisotropicMinimumDissipation(C=args["AMD_C2_coefficient"])
+    advection_str = "$(args["advection"])_C2_$(args["AMD_C2_coefficient"])"
 end
 
 const f = args["f"]
@@ -148,7 +160,7 @@ const b_surface = args["b_surface"]
 
 const pickup = args["pickup"]
 
-FILE_NAME = "linearb_experiments_dbdz_$(dbdz)_QU_$(Qᵁ)_QB_$(Qᴮ)_b_$(b_surface)_f_$(f)_$(args["advection"])_Lxz_$(Lx)_$(Lz)_Nxz_$(Nx)_$(Nz)"
+FILE_NAME = "linearb_experiments_dbdz_$(dbdz)_QU_$(Qᵁ)_QB_$(Qᴮ)_b_$(b_surface)_f_$(f)_$(advection_str)_Lxz_$(Lx)_$(Lz)_Nxz_$(Nx)_$(Nz)"
 FILE_DIR = "$(args["file_location"])/LES/$(FILE_NAME)"
 # FILE_DIR = "/storage6/xinkai/LES/$(FILE_NAME)"
 mkpath(FILE_DIR)

@@ -162,11 +162,13 @@ const b_surface = dbdz * z_surface
 
 @inline function b_initial(x, y, z)
     if z >= z_surface
-        return b_surface
+        return b_surface + 1e-6 * rand()
     else
-        return dbdz * z
+        return dbdz * z + 1e-6 * rand()
     end
 end
+
+# @inline b_initial(x, y, z) = dbdz * z + 1e-6 * rand()
 
 @inline function u_initial(x, y, z)
     if z >= z_surface

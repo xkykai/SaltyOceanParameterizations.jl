@@ -11,6 +11,7 @@ using Oceananigans.Fields
 using Random
 using Statistics
 using ArgParse
+using Glob
 include("compute_implicit_dissipation.jl")
 
 import Dates
@@ -334,6 +335,11 @@ if pickup
     end
 else
     run!(simulation)
+end
+
+checkpointers = glob("$(FILE_DIR)/model_checkpoint_iteration*.jld2")
+if !isempty(checkpointers)
+    rm.(checkpointers)
 end
 
 ubar_data = FieldTimeSeries("$(FILE_DIR)/instantaneous_timeseries.jld2", "ubar")

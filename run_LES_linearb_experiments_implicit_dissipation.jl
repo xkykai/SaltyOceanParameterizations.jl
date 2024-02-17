@@ -11,6 +11,7 @@ using Oceananigans.Fields
 using Random
 using Statistics
 using ArgParse
+include("compute_implicit_dissipation.jl")
 
 import Dates
 
@@ -105,7 +106,7 @@ function parse_commandline()
       "--advection"
         help = "Advection scheme used"
         arg_type = String
-        default = "AMD"
+        default = "WENOnu1e-5"
       "--file_location"
         help = "Location to save files"
         arg_type = String
@@ -202,6 +203,16 @@ bottom_mask = GaussianMask{:z}(center=-grid.Lz, width=damping_width)
 uvw_sponge = Relaxation(rate=damping_rate, mask=bottom_mask)
 b_sponge = Relaxation(rate=damping_rate, mask=bottom_mask, target=b_target)
 
+χᵁ   = XFaceField(grid)
+χⱽ   = YFaceField(grid)
+χᵂ   = ZFaceField(grid)
+
+bⁿ⁻¹ = CenterField(grid)
+Uⁿ⁻¹ = XFaceField(grid)
+Vⁿ⁻¹ = YFaceField(grid)
+Wⁿ⁻¹ = ZFaceField(grid)
+
+
 model = NonhydrostaticModel(; 
             grid = grid,
             closure = closure,
@@ -212,6 +223,7 @@ model = NonhydrostaticModel(;
             advection = advection,
             forcing = (u=uvw_sponge, v=uvw_sponge, w=uvw_sponge, b=b_sponge),
             boundary_conditions = (b=b_bcs, u=u_bcs),
+            auxiliary_fields = (; χᵁ, χⱽ, χᵂ, bⁿ⁻¹, Uⁿ⁻¹, Vⁿ⁻¹, Wⁿ⁻¹)
             )
 
 set!(model, b=b_initial_noisy)
@@ -266,18 +278,11 @@ uw = Field(Average(w * u, dims=(1, 2)))
 vw = Field(Average(w * v, dims=(1, 2)))
 wb = Field(Average(w * b, dims=(1, 2)))
 
-if closure == AnisotropicMinimumDissipation()
-  νₑ, κₑ = model.diffusivity_fields.νₑ, model.diffusivity_fields.κₑ.b
-else
-  νₑ, κₑ = ν, κ
-end
-
-νₑbar = Field(Average(νₑ, dims=(1, 2)))
-κₑbar = Field(Average(κₑ, dims=(1, 2)))
-
 timeseries_outputs = (; ubar, vbar, bbar,
-                        uw, vw, wb,
-                        νₑbar, κₑbar)
+                        uw, vw, wb)
+
+simulation.callbacks[:compute_χ]     = Callback(compute_χ_values,       TimeInterval(args["field_time_interval"]seconds))
+simulation.callbacks[:update_values] = Callback(update_previous_values, IterationInterval(1))
 
 simulation.output_writers[:u] = JLD2OutputWriter(model, (; model.velocities.u),
                                                           filename = "$(FILE_DIR)/instantaneous_fields_u.jld2",
@@ -309,6 +314,12 @@ simulation.output_writers[:timeseries] = JLD2OutputWriter(model, timeseries_outp
                                                           with_halos = true,
                                                           init = init_save_some_metadata!)
 
+simulation.output_writers[:dissipation] = JLD2OutputWriter(model, (χᵁ=model.auxiliary_fields.χᵁ, χⱽ=model.auxiliary_fields.χⱽ, χᵂ=model.auxiliary_fields.χᵂ),
+                                                          filename = "$(FILE_DIR)/instantaneous_dissipation.jld2",
+                                                          schedule = TimeInterval(args["field_time_interval"]seconds),
+                                                          with_halos = true,
+                                                          init = init_save_some_metadata!)
+
 simulation.output_writers[:checkpointer] = Checkpointer(model, schedule=TimeInterval(args["checkpoint_interval"]days), prefix="$(FILE_DIR)/model_checkpoint")
 
 if pickup
@@ -333,9 +344,6 @@ uw_data = FieldTimeSeries("$(FILE_DIR)/instantaneous_timeseries.jld2", "uw")
 vw_data = FieldTimeSeries("$(FILE_DIR)/instantaneous_timeseries.jld2", "vw")
 wb_data = FieldTimeSeries("$(FILE_DIR)/instantaneous_timeseries.jld2", "wb")
 
-νₑbar_data = FieldTimeSeries("$(FILE_DIR)/instantaneous_timeseries.jld2", "νₑbar")
-κₑbar_data = FieldTimeSeries("$(FILE_DIR)/instantaneous_timeseries.jld2", "κₑbar")
-
 Nt = length(bbar_data.times)
 
 xC = bbar_data.grid.xᶜᵃᵃ[1:Nx]
@@ -344,12 +352,11 @@ zC = bbar_data.grid.zᵃᵃᶜ[1:Nz]
 
 zF = uw_data.grid.zᵃᵃᶠ[1:Nz+1]
 ##
-fig = Figure(size=(1900, 900))
+fig = Figure(size=(2100, 2100))
 
 axubar = Axis(fig[1, 1], title="<u>", xlabel="m s⁻¹", ylabel="z")
 axvbar = Axis(fig[1, 2], title="<v>", xlabel="m s⁻¹", ylabel="z")
 axbbar = Axis(fig[1, 3], title="<b>", xlabel="m s⁻²", ylabel="z")
-axdiffusivity = Axis(fig[1, 4], title="<νₑ>, <κₑ>", xlabel="m² s⁻¹", ylabel="z")
 
 axuw = Axis(fig[2, 1], title="uw", xlabel="m² s⁻²", ylabel="z")
 axvw = Axis(fig[2, 2], title="vw", xlabel="m² s⁻²", ylabel="z")
@@ -366,7 +373,6 @@ end
 ubarlim = (minimum(ubar_data), maximum(ubar_data))
 vbarlim = (minimum(vbar_data), maximum(vbar_data))
 bbarlim = (minimum(bbar_data), maximum(bbar_data))
-diffusivitylim = (find_min(νₑbar_data, κₑbar_data), find_max(νₑbar_data, κₑbar_data))
 
 startframe_lim = 30
 uwlim = (minimum(uw_data[1, 1, :, startframe_lim:end]), maximum(uw_data[1, 1, :, startframe_lim:end]))
@@ -381,8 +387,6 @@ title = Label(fig[0, :], time_str, font=:bold, tellwidth=false)
 ubarₙ = @lift interior(ubar_data[$n], 1, 1, :)
 vbarₙ = @lift interior(vbar_data[$n], 1, 1, :)
 bbarₙ = @lift interior(bbar_data[$n], 1, 1, :)
-νₑbarₙ = @lift interior(νₑbar_data[$n], 1, 1, :)
-κₑbarₙ = @lift interior(κₑbar_data[$n], 1, 1, :)
 
 uwₙ = @lift interior(uw_data[$n], 1, 1, :)
 vwₙ = @lift interior(vw_data[$n], 1, 1, :)
@@ -391,8 +395,6 @@ wbₙ = @lift interior(wb_data[$n], 1, 1, :)
 lines!(axubar, ubarₙ, zC)
 lines!(axvbar, vbarₙ, zC)
 lines!(axbbar, bbarₙ, zC)
-lines!(axdiffusivity, νₑbarₙ, zC, label="νₑ")
-lines!(axdiffusivity, κₑbarₙ, zC, label="κₑ")
 
 lines!(axuw, uwₙ, zF)
 lines!(axvw, vwₙ, zF)
@@ -405,8 +407,6 @@ xlims!(axbbar, bbarlim)
 xlims!(axuw, uwlim)
 xlims!(axvw, vwlim)
 xlims!(axwb, wblim)
-
-axislegend(axdiffusivity, position=:rt)
 
 trim!(fig.layout)
 

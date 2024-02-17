@@ -1,42 +1,43 @@
 using Oceananigans
 using Oceananigans.Advection: _advective_tracer_flux_x, _advective_tracer_flux_y, _advective_tracer_flux_z
 using Oceananigans.Operators
+using Oceananigans: architecture
+using Oceananigans.Utils: launch!
 using KernelAbstractions
 
 function compute_χ_values(simulation)
     model = simulation.model
-    advection = model.advection.b
+    advection = model.advection
     grid = model.grid
     arch = architecture(grid)
     b = model.tracers.b
-    χ, bⁿ⁻¹, Uⁿ⁻¹ = simulation.model.auxiliary_fields
+    χᵁ, χⱽ, χᵂ, bⁿ⁻¹, Uⁿ⁻¹, Vⁿ⁻¹, Wⁿ⁻¹ = simulation.model.auxiliary_fields
 
-    launch!(arch, grid, :xyz, _compute_dissipation!, χ, grid, advection, 
-            Uⁿ⁻¹, b, bⁿ⁻¹)
+    launch!(arch, grid, :xyz, _compute_dissipation!, χᵁ, χⱽ, χᵂ, grid, advection, 
+            Uⁿ⁻¹, Vⁿ⁻¹, Wⁿ⁻¹, b, bⁿ⁻¹)
 
     return nothing
 end
 
 function update_previous_values(simulation)
     u, v, w = simulation.model.velocities
-    b = simulation.model.tracers
+    b = simulation.model.tracers.b
 
-    _, bⁿ⁻¹, Uⁿ⁻¹ = simulation.model.auxiliary_fields
-    set!(bⁿ⁻¹,   b)
-    set!(Uⁿ⁻¹.u, u)
-    set!(Uⁿ⁻¹.v, v)
-    set!(Uⁿ⁻¹.w, w)
+    set!(simulation.model.auxiliary_fields.bⁿ⁻¹, b)
+    set!(simulation.model.auxiliary_fields.Uⁿ⁻¹, u)
+    set!(simulation.model.auxiliary_fields.Vⁿ⁻¹, v)
+    set!(simulation.model.auxiliary_fields.Wⁿ⁻¹, w)
 
     return nothing
 end
 
 
-@kernel function _compute_dissipation!(χ, grid, advection, Uⁿ⁻¹, b, bⁿ⁻¹)
+@kernel function _compute_dissipation!(χᵁ, χⱽ, χᵂ, grid, advection, Uⁿ⁻¹, Vⁿ⁻¹, Wⁿ⁻¹, b, bⁿ⁻¹)
     i, j, k = @index(Global, NTuple)
 
-    @inbounds χ.u[i, j, k] = compute_χᵁ(i, j, k, grid, advection, Uⁿ⁻¹.u, b, bⁿ⁻¹)
-    @inbounds χ.v[i, j, k] = compute_χⱽ(i, j, k, grid, advection, Uⁿ⁻¹.v, b, bⁿ⁻¹)
-    @inbounds χ.w[i, j, k] = compute_χᵂ(i, j, k, grid, advection, Uⁿ⁻¹.w, b, bⁿ⁻¹)
+    @inbounds χᵁ[i, j, k] = compute_χᵁ(i, j, k, grid, advection, Uⁿ⁻¹, b, bⁿ⁻¹)
+    @inbounds χⱽ[i, j, k] = compute_χⱽ(i, j, k, grid, advection, Vⁿ⁻¹, b, bⁿ⁻¹)
+    @inbounds χᵂ[i, j, k] = compute_χᵂ(i, j, k, grid, advection, Wⁿ⁻¹, b, bⁿ⁻¹)
 end
 
 @inline b★(i, j, k, grid, bⁿ, bⁿ⁻¹) = @inbounds (bⁿ[i, j, k] + bⁿ⁻¹[i, j, k]) / 2

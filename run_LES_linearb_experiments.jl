@@ -7,10 +7,11 @@ using CairoMakie
 using Oceananigans.Grids: halo_size
 using Oceananigans.Operators
 using Oceananigans.AbstractOperations: KernelFunctionOperation
-using Oceananigans.BuoyancyModels
+using Oceananigans.Fields
 using Random
 using Statistics
 using ArgParse
+include("compute_dissipation.jl")
 
 import Dates
 
@@ -41,15 +42,15 @@ function parse_commandline()
       "--Nz"
         help = "Number of grid points in z-direction"
         arg_type = Int64
-        default = 32
+        default = 4
       "--Nx"
         help = "Number of grid points in x-direction"
         arg_type = Int64
-        default = 64
+        default = 4
       "--Ny"
         help = "Number of grid points in y-direction"
         arg_type = Int64
-        default = 64
+        default = 4
       "--Lz"
         help = "Domain depth"
         arg_type = Float64
@@ -105,7 +106,7 @@ function parse_commandline()
       "--advection"
         help = "Advection scheme used"
         arg_type = String
-        default = "WENO9nu1e-5"
+        default = "WENOnu1e-5"
       "--file_location"
         help = "Location to save files"
         arg_type = String
@@ -176,7 +177,7 @@ mkpath(FILE_DIR)
 
 size_halo = 5
 
-grid = RectilinearGrid(GPU(), Float64,
+grid = RectilinearGrid(Oceananigans.GPU(), Float64,
                        size = (Nx, Ny, Nz),
                        halo = (size_halo, size_halo, size_halo),
                        x = (0, Lx),
@@ -202,6 +203,18 @@ bottom_mask = GaussianMask{:z}(center=-grid.Lz, width=damping_width)
 uvw_sponge = Relaxation(rate=damping_rate, mask=bottom_mask)
 b_sponge = Relaxation(rate=damping_rate, mask=bottom_mask, target=b_target)
 
+# χ    = VelocityFields(grid)
+χᵁ   = XFaceField(grid)
+χⱽ   = YFaceField(grid)
+χᵂ   = ZFaceField(grid)
+
+bⁿ⁻¹ = CenterField(grid)
+# Uⁿ⁻¹ = VelocityFields(grid)
+Uⁿ⁻¹ = XFaceField(grid)
+Vⁿ⁻¹ = YFaceField(grid)
+Wⁿ⁻¹ = ZFaceField(grid)
+
+
 model = NonhydrostaticModel(; 
             grid = grid,
             closure = closure,
@@ -211,7 +224,9 @@ model = NonhydrostaticModel(;
             timestepper = :RungeKutta3,
             advection = advection,
             forcing = (u=uvw_sponge, v=uvw_sponge, w=uvw_sponge, b=b_sponge),
-            boundary_conditions = (b=b_bcs, u=u_bcs)
+            boundary_conditions = (b=b_bcs, u=u_bcs),
+            # auxiliary_fields = (; χ, bⁿ⁻¹, Uⁿ⁻¹)
+            auxiliary_fields = (; χᵁ, χⱽ, χᵂ, bⁿ⁻¹, Uⁿ⁻¹, Vⁿ⁻¹, Wⁿ⁻¹)
             )
 
 set!(model, b=b_initial_noisy)
@@ -269,6 +284,9 @@ wb = Field(Average(w * b, dims=(1, 2)))
 timeseries_outputs = (; ubar, vbar, bbar,
                         uw, vw, wb)
 
+simulation.callbacks[:compute_χ]     = Callback(compute_χ_values,       TimeInterval(args["field_time_interval"]seconds))
+simulation.callbacks[:update_values] = Callback(update_previous_values, IterationInterval(1))
+
 simulation.output_writers[:u] = JLD2OutputWriter(model, (; model.velocities.u),
                                                           filename = "$(FILE_DIR)/instantaneous_fields_u.jld2",
                                                           schedule = TimeInterval(args["field_time_interval"]seconds),
@@ -280,14 +298,12 @@ simulation.output_writers[:v] = JLD2OutputWriter(model, (; model.velocities.v),
                                                           schedule = TimeInterval(args["field_time_interval"]seconds),
                                                           with_halos = true,
                                                           init = init_save_some_metadata!)
-                                                          # max_filesize=50e9)
 
 simulation.output_writers[:w] = JLD2OutputWriter(model, (; model.velocities.w),
                                                           filename = "$(FILE_DIR)/instantaneous_fields_w.jld2",
                                                           schedule = TimeInterval(args["field_time_interval"]seconds),
                                                           with_halos = true,
                                                           init = init_save_some_metadata!)
-                                                          # max_filesize=50e9)
 
 simulation.output_writers[:b] = JLD2OutputWriter(model, (; model.tracers.b),
                                                           filename = "$(FILE_DIR)/instantaneous_fields_b.jld2",
@@ -298,6 +314,12 @@ simulation.output_writers[:b] = JLD2OutputWriter(model, (; model.tracers.b),
 simulation.output_writers[:timeseries] = JLD2OutputWriter(model, timeseries_outputs,
                                                           filename = "$(FILE_DIR)/instantaneous_timeseries.jld2",
                                                           schedule = TimeInterval(args["time_interval"]seconds),
+                                                          with_halos = true,
+                                                          init = init_save_some_metadata!)
+
+simulation.output_writers[:dissipation] = JLD2OutputWriter(model, (χᵁ=model.auxiliary_fields.χᵁ, χⱽ=model.auxiliary_fields.χⱽ, χᵂ=model.auxiliary_fields.χᵂ),
+                                                          filename = "$(FILE_DIR)/instantaneous_dissipation.jld2",
+                                                          schedule = TimeInterval(args["field_time_interval"]seconds),
                                                           with_halos = true,
                                                           init = init_save_some_metadata!)
 

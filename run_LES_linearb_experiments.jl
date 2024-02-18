@@ -267,11 +267,7 @@ uw = Field(Average(w * u, dims=(1, 2)))
 vw = Field(Average(w * v, dims=(1, 2)))
 wb = Field(Average(w * b, dims=(1, 2)))
 
-if closure == AnisotropicMinimumDissipation()
-  νₑ, κₑ = model.diffusivity_fields.νₑ, model.diffusivity_fields.κₑ.b
-else
-  νₑ, κₑ = ν, κ
-end
+νₑ, κₑ = model.diffusivity_fields.νₑ, model.diffusivity_fields.κₑ.b
 
 νₑbar = Field(Average(νₑ, dims=(1, 2)))
 κₑbar = Field(Average(κₑ, dims=(1, 2)))

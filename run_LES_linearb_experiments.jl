@@ -267,7 +267,11 @@ uw = Field(Average(w * u, dims=(1, 2)))
 vw = Field(Average(w * v, dims=(1, 2)))
 wb = Field(Average(w * b, dims=(1, 2)))
 
-νₑ, κₑ = model.diffusivity_fields.νₑ, model.diffusivity_fields.κₑ.b
+if closure isa SmagorinskyLilly
+    νₑ, κₑ = model.diffusivity_fields.νₑ, model.diffusivity_fields.νₑ / closure.Pr
+else
+    νₑ, κₑ = model.diffusivity_fields.νₑ, model.diffusivity_fields.κₑ.b
+end
 
 νₑbar = Field(Average(νₑ, dims=(1, 2)))
 κₑbar = Field(Average(κₑ, dims=(1, 2)))

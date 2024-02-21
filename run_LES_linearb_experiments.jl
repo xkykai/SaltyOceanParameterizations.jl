@@ -407,6 +407,7 @@ lines!(axwb, wbₙ, zF)
 xlims!(axubar, ubarlim)
 xlims!(axvbar, vbarlim)
 xlims!(axbbar, bbarlim)
+xlims!(axdiffusivity, diffusivitylim)
 
 xlims!(axuw, uwlim)
 xlims!(axvw, vwlim)

@@ -113,6 +113,8 @@ f = parameters["coriolis_parameter"]
 video_name = "./Data/freeconvection_AMD_C2_2.8_QB_$(Qᴮ)_QU_$(Qᵁ)_dbdz_$(dbdz)_f_$(f)_convergence.mp4"
 
 b_datas = [FieldTimeSeries("$(FILE_DIR)/instantaneous_timeseries.jld2", "bbar") for FILE_DIR in FILE_DIRS]
+νₑbar_datas = [FieldTimeSeries("$(FILE_DIR)/instantaneous_timeseries.jld2", "νₑbar") for FILE_DIR in FILE_DIRS]
+κₑbar_datas = [FieldTimeSeries("$(FILE_DIR)/instantaneous_timeseries.jld2", "κₑbar") for FILE_DIR in FILE_DIRS]
 wb_datas = [FieldTimeSeries("$(FILE_DIR)/instantaneous_timeseries.jld2", "wb") for FILE_DIR in FILE_DIRS]
 
 Nxs = [size(data.grid)[1] for data in b_datas]
@@ -152,11 +154,14 @@ MLD_theory = [free_convection_MLD_scaling(Qᴮ, dbdz, t) for t in times]
 # hs = [[zF[h_index[1, 1, 1, i][3]] for i in axes(h_index, 4)] for (zF, h_index) in zip(zFs, h_indices)]
 # rmse_hs = [sqrt(mean((h[2:end] .- MLD_theory[2:end]).^2)) for h in hs]
 
+colors = Makie.wong_colors()
+
 #%%
 with_theme(theme_latexfonts()) do
-    fig = Figure(size = (1200, 800))
-    axb = Axis(fig[1, 1], title="b", ylabel="z")
-    axwb = Axis(fig[1, 2], title="wb", ylabel="z")
+    fig = Figure(size = (1600, 500))
+    axb = Axis(fig[1, 1], title="Buoyancy", xlabel="b (m s⁻²)", ylabel="z")
+    axwb = Axis(fig[1, 2], title="Buoyancy", xlabel="wb (m² s⁻³)", ylabel="z")
+    axdiffusivity = Axis(fig[1, 3], title="Viscosity (Solid), Diffusivity (Dashed)", xlabel="m² s⁻¹", ylabel="z")
 
     n = Observable(1)
     
@@ -164,13 +169,17 @@ with_theme(theme_latexfonts()) do
     title = Label(fig[0, :], time_str, font=:bold, tellwidth=false)
     
     bₙs = [@lift interior(data[findfirst(x -> x≈times[$n], data.times)], 1, 1, :) for data in b_datas]
+    νₑₙs = [@lift interior(data[findfirst(x -> x≈times[$n], data.times)], 1, 1, :) for data in νₑbar_datas]
+    κₑₙs = [@lift interior(data[findfirst(x -> x≈times[$n], data.times)], 1, 1, :) for data in κₑbar_datas]
     wbₙs = [@lift interior(data[findfirst(x -> x≈times[$n], data.times)], 1, 1, :) for data in wb_datas]
 
     MLD_theoryₙ = @lift [MLD_theory[$n]]
     
     for i in 1:length(FILE_DIRS)
-        lines!(axb, bₙs[i], zCs[i], label=labels[i])
-        lines!(axwb, wbₙs[i], zFs[i], label=labels[i])
+        lines!(axb, bₙs[i], zCs[i], label=labels[i], color=colors[mod1(i, length(colors))])
+        lines!(axdiffusivity, νₑₙs[i], zCs[i], label=labels[i], color=colors[mod1(i, length(colors))])
+        lines!(axdiffusivity, κₑₙs[i], zCs[i], label=labels[i], linestyle=:dash, color=colors[mod1(i, length(colors))])
+        lines!(axwb, wbₙs[i], zFs[i], label=labels[i], color=colors[mod1(i, length(colors))])
     end
 
     hlines!(axb, MLD_theoryₙ, color=:black, linestyle=:dash, linewidth=2, label="Theoretical MLD")

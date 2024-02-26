@@ -1,4 +1,4 @@
-using Oceananigans: FieldDataset, interior
+using Oceananigans: FieldDataset, interior, Face, Center
 
 struct LESDataset{D}
     data :: D
@@ -99,32 +99,59 @@ end
 
 get_surface_fluxes(surface_flux::Number) = surface_flux
 
-function LESData(data::FieldDataset, scalings, timeframes)
-    u = hcat([interior(data["ubar"][i], 1, 1, :) for i in eachindex(timeframes)]...)
-    v = hcat([interior(data["vbar"][i], 1, 1, :) for i in eachindex(timeframes)]...)
-    T = hcat([interior(data["Tbar"][i], 1, 1, :) for i in eachindex(timeframes)]...)
-    S = hcat([interior(data["Sbar"][i], 1, 1, :) for i in eachindex(timeframes)]...)
+function LESData(data::FieldDataset, scalings::NamedTuple, timeframes, coarse_size=32)
+    u = hcat([coarse_grain(interior(data["ubar"][i], 1, 1, :), coarse_size, Center) for i in eachindex(timeframes)]...)
+    v = hcat([coarse_grain(interior(data["vbar"][i], 1, 1, :), coarse_size, Center) for i in eachindex(timeframes)]...)
+    T = hcat([coarse_grain(interior(data["Tbar"][i], 1, 1, :), coarse_size, Center) for i in eachindex(timeframes)]...)
+    S = hcat([coarse_grain(interior(data["Sbar"][i], 1, 1, :), coarse_size, Center) for i in eachindex(timeframes)]...)
     
-    uw = hcat([interior(data["uw"][i], 1, 1, :) for i in eachindex(timeframes)]...)
-    vw = hcat([interior(data["vw"][i], 1, 1, :) for i in eachindex(timeframes)]...)
-    wT = hcat([interior(data["wT"][i], 1, 1, :) for i in eachindex(timeframes)]...)
-    wS = hcat([interior(data["wS"][i], 1, 1, :) for i in eachindex(timeframes)]...)
+    uw = hcat([coarse_grain(interior(data["uw"][i], 1, 1, :), coarse_size+1, Face) for i in eachindex(timeframes)]...)
+    vw = hcat([coarse_grain(interior(data["vw"][i], 1, 1, :), coarse_size+1, Face) for i in eachindex(timeframes)]...)
+    wT = hcat([coarse_grain(interior(data["wT"][i], 1, 1, :), coarse_size+1, Face) for i in eachindex(timeframes)]...)
+    wS = hcat([coarse_grain(interior(data["wS"][i], 1, 1, :), coarse_size+1, Face) for i in eachindex(timeframes)]...)
     
-    # uw_surface = get_surface_fluxes(data.metadata["momentum_flux"])
-    # wT_surface = get_surface_fluxes(data.metadata["temperature_flux"])
-    # wS_surface = get_surface_fluxes(data.metadata["salinity_flux"])
+    uw_surface = get_surface_fluxes(data.metadata["momentum_flux"])
+    wT_surface = get_surface_fluxes(data.metadata["temperature_flux"])
+    wS_surface = get_surface_fluxes(data.metadata["salinity_flux"])
     
-    uw_surface = 0
-    wT_surface = 0
-    wS_surface = 0
+    # uw_surface = 0
+    # wT_surface = 0
+    # wS_surface = 0
     vw_surface = 0
 
     profile = Profiles(u, v, T, S, scalings.u, scalings.v, scalings.T, scalings.S)
     flux = Fluxes(uw, vw, wT, wS, uw_surface, vw_surface, wT_surface, wS_surface, scalings.uw, scalings.vw, scalings.wT, scalings.wS)
 
     metadata = data.metadata
-    metadata["grid"] = data["ubar"].grid
+    metadata["original_grid"] = data["ubar"].grid
+    metadata["Nz"] = coarse_size
+    metadata["zC"] = coarse_grain(data["ubar"].grid.zᵃᵃᶜ[1:data["ubar"].grid.Nz], coarse_size, Center)
+    metadata["zF"] = coarse_grain(data["ubar"].grid.zᵃᵃᶠ[1:data["ubar"].grid.Nz+1], coarse_size+1, Face)
     metadata["times"] = data["ubar"].times
 
     return LESData(metadata, data["ubar"].times[timeframes], profile, flux)
 end
+
+struct LESDatasets{D}
+    data :: D
+end
+
+"""
+    Construct a `LESDatasets` object from a list of `LESData` objects. `scaling` is applied to all `LESData` objects in `datasets`. `tim`
+"""
+function LESDatasets(datasets::Vector, scaling::Type{<:AbstractFeatureScaling}, timeframes::Vector, coarse_size=32)
+    u = [hcat([coarse_grain(interior(data["ubar"][i], 1, 1, :), coarse_size, Center) for i in eachindex(timeframe)]...) for (data, timeframe) in zip(datasets, timeframes)]
+    v = [hcat([coarse_grain(interior(data["vbar"][i], 1, 1, :), coarse_size, Center) for i in eachindex(timeframe)]...) for (data, timeframe) in zip(datasets, timeframes)]
+    T = [hcat([coarse_grain(interior(data["Tbar"][i], 1, 1, :), coarse_size, Center) for i in eachindex(timeframe)]...) for (data, timeframe) in zip(datasets, timeframes)]
+    S = [hcat([coarse_grain(interior(data["Sbar"][i], 1, 1, :), coarse_size, Center) for i in eachindex(timeframe)]...) for (data, timeframe) in zip(datasets, timeframes)]
+    
+    uw = [hcat([coarse_grain(interior(data["uw"][i], 1, 1, :), coarse_size+1, Face) for i in eachindex(timeframe)]...) for (data, timeframe) in zip(datasets, timeframes)]
+    vw = [hcat([coarse_grain(interior(data["vw"][i], 1, 1, :), coarse_size+1, Face) for i in eachindex(timeframe)]...) for (data, timeframe) in zip(datasets, timeframes)]
+    wT = [hcat([coarse_grain(interior(data["wT"][i], 1, 1, :), coarse_size+1, Face) for i in eachindex(timeframe)]...) for (data, timeframe) in zip(datasets, timeframes)]
+    wS = [hcat([coarse_grain(interior(data["wS"][i], 1, 1, :), coarse_size+1, Face) for i in eachindex(timeframe)]...) for (data, timeframe) in zip(datasets, timeframes)]
+
+    scalings = (u=scaling([(u...)...]), v=scaling([(v...)...]), T=scaling([(T...)...]), S=scaling([(S...)...]), uw=scaling([(uw...)...]), vw=scaling([(vw...)...]), wT=scaling([(wT...)...]), wS=scaling([(wS...)...]))
+
+    return LESDatasets([LESData(data, scalings, timeframe, coarse_size) for (data, timeframe) in zip(datasets, timeframes)])
+end
+

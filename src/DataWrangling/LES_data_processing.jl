@@ -17,19 +17,21 @@ function Profile(data, scaling::AbstractFeatureScaling)
     return Profile(scaling, scaled, data)
 end
 
-struct Profiles{UU, VV, TT, SS}
+struct Profiles{UU, VV, TT, SS, ΡΡ}
     u :: UU
     v :: VV
     T :: TT
     S :: SS
+    ρ :: ΡΡ
 end
 
-function Profiles(u_data, v_data, T_data, S_data, u_scaling::AbstractFeatureScaling, v_scaling::AbstractFeatureScaling, T_scaling::AbstractFeatureScaling, S_scaling::AbstractFeatureScaling)
+function Profiles(u_data, v_data, T_data, S_data, ρ_data, u_scaling::AbstractFeatureScaling, v_scaling::AbstractFeatureScaling, T_scaling::AbstractFeatureScaling, S_scaling::AbstractFeatureScaling, ρ_scaling::AbstractFeatureScaling)
     u = Profile(u_data, u_scaling)
     v = Profile(v_data, v_scaling)
     T = Profile(T_data, T_scaling)
     S = Profile(S_data, S_scaling)
-    return Profiles(u, v, T, S)
+    ρ = Profile(ρ_data, ρ_scaling)
+    return Profiles(u, v, T, S, ρ)
 end
 
 abstract type AbstractColumnFlux end
@@ -104,6 +106,7 @@ function LESData(data::FieldDataset, scalings::NamedTuple, timeframes, coarse_si
     v = hcat([coarse_grain(interior(data["vbar"][i], 1, 1, :), coarse_size, Center) for i in eachindex(timeframes)]...)
     T = hcat([coarse_grain(interior(data["Tbar"][i], 1, 1, :), coarse_size, Center) for i in eachindex(timeframes)]...)
     S = hcat([coarse_grain(interior(data["Sbar"][i], 1, 1, :), coarse_size, Center) for i in eachindex(timeframes)]...)
+    ρ = hcat([coarse_grain(interior(data["ρbar"][i], 1, 1, :), coarse_size, Center) for i in eachindex(timeframes)]...)
     
     uw = hcat([coarse_grain(interior(data["uw"][i], 1, 1, :), coarse_size+1, Face) for i in eachindex(timeframes)]...)
     vw = hcat([coarse_grain(interior(data["vw"][i], 1, 1, :), coarse_size+1, Face) for i in eachindex(timeframes)]...)
@@ -119,7 +122,7 @@ function LESData(data::FieldDataset, scalings::NamedTuple, timeframes, coarse_si
     # wS_surface = 0
     vw_surface = 0
 
-    profile = Profiles(u, v, T, S, scalings.u, scalings.v, scalings.T, scalings.S)
+    profile = Profiles(u, v, T, S, ρ, scalings.u, scalings.v, scalings.T, scalings.S, scalings.ρ)
     flux = Fluxes(uw, vw, wT, wS, uw_surface, vw_surface, wT_surface, wS_surface, scalings.uw, scalings.vw, scalings.wT, scalings.wS)
 
     metadata = data.metadata
@@ -144,13 +147,14 @@ function LESDatasets(datasets::Vector, scaling::Type{<:AbstractFeatureScaling}, 
     v = [hcat([coarse_grain(interior(data["vbar"][i], 1, 1, :), coarse_size, Center) for i in eachindex(timeframe)]...) for (data, timeframe) in zip(datasets, timeframes)]
     T = [hcat([coarse_grain(interior(data["Tbar"][i], 1, 1, :), coarse_size, Center) for i in eachindex(timeframe)]...) for (data, timeframe) in zip(datasets, timeframes)]
     S = [hcat([coarse_grain(interior(data["Sbar"][i], 1, 1, :), coarse_size, Center) for i in eachindex(timeframe)]...) for (data, timeframe) in zip(datasets, timeframes)]
+    ρ = [hcat([coarse_grain(interior(data["ρbar"][i], 1, 1, :), coarse_size, Center) for i in eachindex(timeframe)]...) for (data, timeframe) in zip(datasets, timeframes)]
     
     uw = [hcat([coarse_grain(interior(data["uw"][i], 1, 1, :), coarse_size+1, Face) for i in eachindex(timeframe)]...) for (data, timeframe) in zip(datasets, timeframes)]
     vw = [hcat([coarse_grain(interior(data["vw"][i], 1, 1, :), coarse_size+1, Face) for i in eachindex(timeframe)]...) for (data, timeframe) in zip(datasets, timeframes)]
     wT = [hcat([coarse_grain(interior(data["wT"][i], 1, 1, :), coarse_size+1, Face) for i in eachindex(timeframe)]...) for (data, timeframe) in zip(datasets, timeframes)]
     wS = [hcat([coarse_grain(interior(data["wS"][i], 1, 1, :), coarse_size+1, Face) for i in eachindex(timeframe)]...) for (data, timeframe) in zip(datasets, timeframes)]
 
-    scalings = (u=scaling([(u...)...]), v=scaling([(v...)...]), T=scaling([(T...)...]), S=scaling([(S...)...]), uw=scaling([(uw...)...]), vw=scaling([(vw...)...]), wT=scaling([(wT...)...]), wS=scaling([(wS...)...]))
+    scalings = (u=scaling([(u...)...]), v=scaling([(v...)...]), T=scaling([(T...)...]), S=scaling([(S...)...]), ρ=scaling([(ρ...)...]), uw=scaling([(uw...)...]), vw=scaling([(vw...)...]), wT=scaling([(wT...)...]), wS=scaling([(wS...)...]))
 
     return LESDatasets([LESData(data, scalings, timeframe, coarse_size) for (data, timeframe) in zip(datasets, timeframes)])
 end

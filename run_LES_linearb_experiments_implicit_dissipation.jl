@@ -12,7 +12,7 @@ using Random
 using Statistics
 using ArgParse
 using Glob
-include("compute_implicit_dissipation.jl")
+include("compute_dissipation.jl")
 
 import Dates
 
@@ -279,8 +279,17 @@ uw = Field(Average(w * u, dims=(1, 2)))
 vw = Field(Average(w * v, dims=(1, 2)))
 wb = Field(Average(w * b, dims=(1, 2)))
 
+χᵁ = model.auxiliary_fields.χᵁ
+χⱽ = model.auxiliary_fields.χⱽ
+χᵂ = model.auxiliary_fields.χᵂ
+
+χᵁbar = Field(Average(χᵁ, dims=(1, 2)))
+χⱽbar = Field(Average(χⱽ, dims=(1, 2)))
+χᵂbar = Field(Average(@at((Center, Center, Center), χᵂ), dims=(1, 2)))
+
 timeseries_outputs = (; ubar, vbar, bbar,
-                        uw, vw, wb)
+                        uw, vw, wb,
+                        χᵁbar, χⱽbar, χᵂbar)
 
 simulation.callbacks[:compute_χ]     = Callback(compute_χ_values,       TimeInterval(args["field_time_interval"]seconds))
 simulation.callbacks[:update_values] = Callback(update_previous_values, IterationInterval(1))
@@ -303,11 +312,11 @@ simulation.callbacks[:update_values] = Callback(update_previous_values, Iteratio
 #                                                           with_halos = true,
 #                                                           init = init_save_some_metadata!)
 
-simulation.output_writers[:b] = JLD2OutputWriter(model, (; model.tracers.b),
-                                                          filename = "$(FILE_DIR)/instantaneous_fields_b.jld2",
-                                                          schedule = TimeInterval(args["field_time_interval"]seconds),
-                                                          with_halos = true,
-                                                          init = init_save_some_metadata!)
+# simulation.output_writers[:b] = JLD2OutputWriter(model, (; model.tracers.b),
+#                                                           filename = "$(FILE_DIR)/instantaneous_fields_b.jld2",
+#                                                           schedule = TimeInterval(args["field_time_interval"]seconds),
+#                                                           with_halos = true,
+#                                                           init = init_save_some_metadata!)
 
 simulation.output_writers[:timeseries] = JLD2OutputWriter(model, timeseries_outputs,
                                                           filename = "$(FILE_DIR)/instantaneous_timeseries.jld2",
@@ -315,11 +324,11 @@ simulation.output_writers[:timeseries] = JLD2OutputWriter(model, timeseries_outp
                                                           with_halos = true,
                                                           init = init_save_some_metadata!)
 
-simulation.output_writers[:dissipation] = JLD2OutputWriter(model, (χᵁ=model.auxiliary_fields.χᵁ, χⱽ=model.auxiliary_fields.χⱽ, χᵂ=model.auxiliary_fields.χᵂ),
-                                                          filename = "$(FILE_DIR)/instantaneous_dissipation.jld2",
-                                                          schedule = TimeInterval(args["field_time_interval"]seconds),
-                                                          with_halos = true,
-                                                          init = init_save_some_metadata!)
+# simulation.output_writers[:dissipation] = JLD2OutputWriter(model, (χᵁ=model.auxiliary_fields.χᵁ, χⱽ=model.auxiliary_fields.χⱽ, χᵂ=model.auxiliary_fields.χᵂ),
+#                                                           filename = "$(FILE_DIR)/instantaneous_dissipation.jld2",
+#                                                           schedule = TimeInterval(args["field_time_interval"]seconds),
+#                                                           with_halos = true,
+#                                                           init = init_save_some_metadata!)
 
 simulation.output_writers[:checkpointer] = Checkpointer(model, schedule=TimeInterval(args["checkpoint_interval"]days), prefix="$(FILE_DIR)/model_checkpoint")
 
@@ -350,6 +359,10 @@ uw_data = FieldTimeSeries("$(FILE_DIR)/instantaneous_timeseries.jld2", "uw")
 vw_data = FieldTimeSeries("$(FILE_DIR)/instantaneous_timeseries.jld2", "vw")
 wb_data = FieldTimeSeries("$(FILE_DIR)/instantaneous_timeseries.jld2", "wb")
 
+χᵁbar_data = FieldTimeSeries("$(FILE_DIR)/instantaneous_timeseries.jld2", "χᵁbar")
+χⱽbar_data = FieldTimeSeries("$(FILE_DIR)/instantaneous_timeseries.jld2", "χⱽbar")
+χᵂbar_data = FieldTimeSeries("$(FILE_DIR)/instantaneous_timeseries.jld2", "χᵂbar")
+
 Nt = length(bbar_data.times)
 
 xC = bbar_data.grid.xᶜᵃᵃ[1:Nx]
@@ -368,6 +381,10 @@ axuw = Axis(fig[2, 1], title="uw", xlabel="m² s⁻²", ylabel="z")
 axvw = Axis(fig[2, 2], title="vw", xlabel="m² s⁻²", ylabel="z")
 axwb = Axis(fig[2, 3], title="wb", xlabel="m² s⁻³", ylabel="z")
 
+axχᵁbar = Axis(fig[3, 1], title="<κ (∂x(b))²>", xlabel="m² s⁻⁵", ylabel="z")
+axχⱽbar = Axis(fig[3, 2], title="<κ (∂y(b))²>", xlabel="m² s⁻⁵", ylabel="z")
+axχᵂbar = Axis(fig[3, 3], title="<κ (∂z(b))²>", xlabel="m² s⁻⁵", ylabel="z")
+
 function find_min(a...)
     return minimum(minimum.([a...]))
 end
@@ -379,6 +396,10 @@ end
 ubarlim = (minimum(ubar_data), maximum(ubar_data))
 vbarlim = (minimum(vbar_data), maximum(vbar_data))
 bbarlim = (minimum(bbar_data), maximum(bbar_data))
+
+χᵁbarlim = (minimum(χᵁbar_data), maximum(χᵁbar_data))
+χⱽbarlim = (minimum(χⱽbar_data), maximum(χⱽbar_data))
+χᵂbarlim = (minimum(χᵂbar_data), maximum(χᵂbar_data))
 
 startframe_lim = 30
 uwlim = (minimum(uw_data[1, 1, :, startframe_lim:end]), maximum(uw_data[1, 1, :, startframe_lim:end]))
@@ -398,6 +419,10 @@ uwₙ = @lift interior(uw_data[$n], 1, 1, :)
 vwₙ = @lift interior(vw_data[$n], 1, 1, :)
 wbₙ = @lift interior(wb_data[$n], 1, 1, :)
 
+χᵁbarₙ = @lift interior(χᵁbar_data[$n], 1, 1, :)
+χⱽbarₙ = @lift interior(χⱽbar_data[$n], 1, 1, :)
+χᵂbarₙ = @lift interior(χᵂbar_data[$n], 1, 1, :)
+
 lines!(axubar, ubarₙ, zC)
 lines!(axvbar, vbarₙ, zC)
 lines!(axbbar, bbarₙ, zC)
@@ -405,6 +430,10 @@ lines!(axbbar, bbarₙ, zC)
 lines!(axuw, uwₙ, zF)
 lines!(axvw, vwₙ, zF)
 lines!(axwb, wbₙ, zF)
+
+lines!(axχᵁbar, χᵁbarₙ, zC)
+lines!(axχⱽbar, χⱽbarₙ, zC)
+lines!(axχᵂbar, χᵂbarₙ, zC)
 
 xlims!(axubar, ubarlim)
 xlims!(axvbar, vbarlim)
@@ -414,7 +443,13 @@ xlims!(axuw, uwlim)
 xlims!(axvw, vwlim)
 xlims!(axwb, wblim)
 
+xlims!(axχᵁbar, χᵁbarlim)
+xlims!(axχⱽbar, χⱽbarlim)
+xlims!(axχᵂbar, χᵂbarlim)
+
 trim!(fig.layout)
+
+display(fig)
 
 record(fig, "$(FILE_DIR)/$(FILE_NAME).mp4", 1:Nt, framerate=args["fps"]) do nn
     n[] = nn

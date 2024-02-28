@@ -283,15 +283,15 @@ wb = Field(Average(w * b, dims=(1, 2)))
 χⱽ = model.auxiliary_fields.χⱽ
 χᵂ = model.auxiliary_fields.χᵂ
 
-χᵁbar = Field(Average(χᵁ, dims=(1, 2)))
-χⱽbar = Field(Average(χⱽ, dims=(1, 2)))
-χᵂbar = Field(Average(@at((Center, Center, Center), χᵂ), dims=(1, 2)))
+χᵁbar = Field(Average(-χᵁ, dims=(1, 2)))
+χⱽbar = Field(Average(-χⱽ, dims=(1, 2)))
+χᵂbar = Field(Average(@at((Center, Center, Center), -χᵂ), dims=(1, 2)))
 
 timeseries_outputs = (; ubar, vbar, bbar,
                         uw, vw, wb,
                         χᵁbar, χⱽbar, χᵂbar)
 
-simulation.callbacks[:compute_χ]     = Callback(compute_χ_values,       TimeInterval(args["field_time_interval"]seconds))
+simulation.callbacks[:compute_χ]     = Callback(compute_χ_values,       TimeInterval(args["time_interval"]seconds))
 simulation.callbacks[:update_values] = Callback(update_previous_values, IterationInterval(1))
 
 # simulation.output_writers[:u] = JLD2OutputWriter(model, (; model.velocities.u),

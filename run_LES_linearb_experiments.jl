@@ -12,6 +12,7 @@ using Random
 using Statistics
 using ArgParse
 using Glob
+include("compute_dissipation.jl")
 
 import Dates
 
@@ -213,6 +214,7 @@ model = NonhydrostaticModel(;
             advection = advection,
             forcing = (u=uvw_sponge, v=uvw_sponge, w=uvw_sponge, b=b_sponge),
             boundary_conditions = (b=b_bcs, u=u_bcs),
+            auxiliary_fields = (; χᵁ, χⱽ, χᵂ, bⁿ⁻¹, Uⁿ⁻¹, Vⁿ⁻¹, Wⁿ⁻¹)
             )
 
 set!(model, b=b_initial_noisy)
@@ -267,6 +269,14 @@ uw = Field(Average(w * u, dims=(1, 2)))
 vw = Field(Average(w * v, dims=(1, 2)))
 wb = Field(Average(w * b, dims=(1, 2)))
 
+χᵁ = model.auxiliary_fields.χᵁ
+χⱽ = model.auxiliary_fields.χⱽ
+χᵂ = model.auxiliary_fields.χᵂ
+
+χᵁbar = Field(Average(-χᵁ, dims=(1, 2)))
+χⱽbar = Field(Average(-χⱽ, dims=(1, 2)))
+χᵂbar = Field(Average(@at((Center, Center, Center), -χᵂ), dims=(1, 2)))
+
 if closure isa SmagorinskyLilly
     νₑ, κₑ = model.diffusivity_fields.νₑ, model.diffusivity_fields.νₑ / closure.Pr
 else
@@ -276,14 +286,18 @@ end
 νₑbar = Field(Average(νₑ, dims=(1, 2)))
 κₑbar = Field(Average(κₑ, dims=(1, 2)))
 
-χᵁbar = Field(Average(κₑ * ∂x(b)^2, dims=(1, 2)))
-χⱽbar = Field(Average(κₑ * ∂y(b)^2, dims=(1, 2)))
-χᵂbar = Field(Average(κₑ * ∂z(b)^2, dims=(1, 2)))
+χᵁₑbar = Field(Average(2 * κₑ * ∂x(b)^2, dims=(1, 2)))
+χⱽₑbar = Field(Average(2 * κₑ * ∂y(b)^2, dims=(1, 2)))
+χᵂₑbar = Field(Average(2 * κₑ * ∂z(b)^2, dims=(1, 2)))
 
 timeseries_outputs = (; ubar, vbar, bbar,
                         uw, vw, wb,
                         νₑbar, κₑbar,
-                        χᵁbar, χⱽbar, χᵂbar)
+                        χᵁbar, χⱽbar, χᵂbar,
+                        χᵁₑbar, χⱽₑbar, χᵂₑbar)
+
+simulation.callbacks[:compute_χ]     = Callback(compute_χ_values,       TimeInterval(args["time_interval"]seconds))
+simulation.callbacks[:update_values] = Callback(update_previous_values, IterationInterval(1))
 
 # simulation.output_writers[:u] = JLD2OutputWriter(model, (; model.velocities.u),
 #                                                           filename = "$(FILE_DIR)/instantaneous_fields_u.jld2",
@@ -351,6 +365,10 @@ wb_data = FieldTimeSeries("$(FILE_DIR)/instantaneous_timeseries.jld2", "wb")
 χⱽbar_data = FieldTimeSeries("$(FILE_DIR)/instantaneous_timeseries.jld2", "χⱽbar")
 χᵂbar_data = FieldTimeSeries("$(FILE_DIR)/instantaneous_timeseries.jld2", "χᵂbar")
 
+χᵁₑbar_data = FieldTimeSeries("$(FILE_DIR)/instantaneous_timeseries.jld2", "χᵁₑbar")
+χⱽₑbar_data = FieldTimeSeries("$(FILE_DIR)/instantaneous_timeseries.jld2", "χⱽₑbar")
+χᵂₑbar_data = FieldTimeSeries("$(FILE_DIR)/instantaneous_timeseries.jld2", "χᵂₑbar")
+
 Nt = length(bbar_data.times)
 
 xC = bbar_data.grid.xᶜᵃᵃ[1:Nx]
@@ -359,7 +377,7 @@ zC = bbar_data.grid.zᵃᵃᶜ[1:Nz]
 
 zF = uw_data.grid.zᵃᵃᶠ[1:Nz+1]
 ##
-fig = Figure(size=(1900, 1300))
+fig = Figure(size=(1900, 1400))
 
 axubar = Axis(fig[1, 1], title="<u>", xlabel="m s⁻¹", ylabel="z")
 axvbar = Axis(fig[1, 2], title="<v>", xlabel="m s⁻¹", ylabel="z")
@@ -386,9 +404,9 @@ ubarlim = (minimum(ubar_data), maximum(ubar_data))
 vbarlim = (minimum(vbar_data), maximum(vbar_data))
 bbarlim = (minimum(bbar_data), maximum(bbar_data))
 diffusivitylim = (find_min(νₑbar_data, κₑbar_data), find_max(νₑbar_data, κₑbar_data))
-χᵁbarlim = (minimum(χᵁbar_data), maximum(χᵁbar_data))
-χⱽbarlim = (minimum(χⱽbar_data), maximum(χⱽbar_data))
-χᵂbarlim = (minimum(χᵂbar_data), maximum(χᵂbar_data))
+χᵁbarlim = (find_min(χᵁbar_data, χᵁₑbar_data), find_max(χᵁbar_data, χᵁₑbar_data))
+χⱽbarlim = (find_min(χⱽbar_data, χⱽₑbar_data), find_max(χⱽbar_data, χⱽₑbar_data))
+χᵂbarlim = (find_min(χᵂbar_data, χᵂₑbar_data), find_max(χᵂbar_data, χᵂₑbar_data))
 
 startframe_lim = 30
 uwlim = (minimum(uw_data[1, 1, :, startframe_lim:end]), maximum(uw_data[1, 1, :, startframe_lim:end]))
@@ -408,6 +426,9 @@ bbarₙ = @lift interior(bbar_data[$n], 1, 1, :)
 χᵁbarₙ = @lift interior(χᵁbar_data[$n], 1, 1, :)
 χⱽbarₙ = @lift interior(χⱽbar_data[$n], 1, 1, :)
 χᵂbarₙ = @lift interior(χᵂbar_data[$n], 1, 1, :)
+χᵁₑbarₙ = @lift interior(χᵁₑbar_data[$n], 1, 1, :)
+χⱽₑbarₙ = @lift interior(χⱽₑbar_data[$n], 1, 1, :)
+χᵂₑbarₙ = @lift interior(χᵂₑbar_data[$n], 1, 1, :)
 
 uwₙ = @lift interior(uw_data[$n], 1, 1, :)
 vwₙ = @lift interior(vw_data[$n], 1, 1, :)
@@ -423,6 +444,15 @@ lines!(axuw, uwₙ, zF)
 lines!(axvw, vwₙ, zF)
 lines!(axwb, wbₙ, zF)
 
+lines!(axχᵁbar, χᵁbarₙ, zC, label="Implicit")
+lines!(axχᵁbar, χᵁₑbarₙ, zC, label="Explicit")
+
+lines!(axχⱽbar, χⱽbarₙ, zC, label="Implicit")
+lines!(axχⱽbar, χⱽₑbarₙ, zC, label="Explicit")
+
+lines!(axχᵂbar, χᵂbarₙ, zC, label="Implicit")
+lines!(axχᵂbar, χᵂₑbarₙ, zC, label="Explicit")
+
 xlims!(axubar, ubarlim)
 xlims!(axvbar, vbarlim)
 xlims!(axbbar, bbarlim)
@@ -437,6 +467,7 @@ xlims!(axχⱽbar, χⱽbarlim)
 xlims!(axχᵂbar, χᵂbarlim)
 
 axislegend(axdiffusivity, position=:rt)
+Legend(fig[4, :], axχᵁbar, orientation=:horizontal)
 
 trim!(fig.layout)
 

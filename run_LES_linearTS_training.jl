@@ -179,12 +179,19 @@ const pickup = args["pickup"]
 
 const eos = TEOS10EquationOfState()
 
-FILE_NAME = "linearTS_dTdz_$(dTdz)_dSdz_$(dSdz)_QU_$(Qᵁ)_QT_$(Qᵀ)_QS_$(Qˢ)_T_$(T_surface)_S_$(S_surface)_$(args["advection"])_Lxz_$(Lx)_$(Lz)_Nxz_$(Nx)_$(Nz)"
+FILE_NAME = "linearTS_dTdz_$(dTdz)_dSdz_$(dSdz)_QU_$(Qᵁ)_QT_$(Qᵀ)_QS_$(Qˢ)_T_$(T_surface)_S_$(S_surface)_f_$(f)_$(args["advection"])_Lxz_$(Lx)_$(Lz)_Nxz_$(Nx)_$(Nz)"
 FILE_DIR = "$(args["file_location"])/LES/$(FILE_NAME)"
 mkpath(FILE_DIR)
 
 size_halo = 5
 
+function find_min(a...)
+  return minimum(minimum.([a...]))
+end
+
+function find_max(a...)
+  return maximum(maximum.([a...]))
+end
 grid = RectilinearGrid(GPU(), Float64,
                        size = (Nx, Ny, Nz),
                        halo = (size_halo, size_halo, size_halo),
@@ -319,47 +326,47 @@ field_outputs = merge(model.velocities, model.tracers)
 timeseries_outputs = (; ubar, vbar, Tbar, Sbar, bbar, ρbar,
                         uw, vw, wT, wS, wb, wρ)
 
-simulation.output_writers[:u] = JLD2OutputWriter(model, (; u),
-                                                          filename = "$(FILE_DIR)/instantaneous_fields_u.jld2",
-                                                          schedule = TimeInterval(args["field_time_interval"]minutes),
-                                                          with_halos = true,
-                                                          init = init_save_some_metadata!)
+# simulation.output_writers[:u] = JLD2OutputWriter(model, (; u),
+#                                                           filename = "$(FILE_DIR)/instantaneous_fields_u.jld2",
+#                                                           schedule = TimeInterval(args["field_time_interval"]minutes),
+#                                                           with_halos = true,
+#                                                           init = init_save_some_metadata!)
 
-simulation.output_writers[:v] = JLD2OutputWriter(model, (; v),
-                                                          filename = "$(FILE_DIR)/instantaneous_fields_v.jld2",
-                                                          schedule = TimeInterval(args["field_time_interval"]minutes),
-                                                          with_halos = true,
-                                                          init = init_save_some_metadata!)
+# simulation.output_writers[:v] = JLD2OutputWriter(model, (; v),
+#                                                           filename = "$(FILE_DIR)/instantaneous_fields_v.jld2",
+#                                                           schedule = TimeInterval(args["field_time_interval"]minutes),
+#                                                           with_halos = true,
+#                                                           init = init_save_some_metadata!)
 
-simulation.output_writers[:w] = JLD2OutputWriter(model, (; w),
-                                                          filename = "$(FILE_DIR)/instantaneous_fields_w.jld2",
-                                                          schedule = TimeInterval(args["field_time_interval"]minutes),
-                                                          with_halos = true,
-                                                          init = init_save_some_metadata!)
+# simulation.output_writers[:w] = JLD2OutputWriter(model, (; w),
+#                                                           filename = "$(FILE_DIR)/instantaneous_fields_w.jld2",
+#                                                           schedule = TimeInterval(args["field_time_interval"]minutes),
+#                                                           with_halos = true,
+#                                                           init = init_save_some_metadata!)
 
-simulation.output_writers[:T] = JLD2OutputWriter(model, (; T),
-                                                          filename = "$(FILE_DIR)/instantaneous_fields_T.jld2",
-                                                          schedule = TimeInterval(args["field_time_interval"]minutes),
-                                                          with_halos = true,
-                                                          init = init_save_some_metadata!)
+# simulation.output_writers[:T] = JLD2OutputWriter(model, (; T),
+#                                                           filename = "$(FILE_DIR)/instantaneous_fields_T.jld2",
+#                                                           schedule = TimeInterval(args["field_time_interval"]minutes),
+#                                                           with_halos = true,
+#                                                           init = init_save_some_metadata!)
 
-simulation.output_writers[:S] = JLD2OutputWriter(model, (; S),
-                                                          filename = "$(FILE_DIR)/instantaneous_fields_S.jld2",
-                                                          schedule = TimeInterval(args["field_time_interval"]minutes),
-                                                          with_halos = true,
-                                                          init = init_save_some_metadata!)
+# simulation.output_writers[:S] = JLD2OutputWriter(model, (; S),
+#                                                           filename = "$(FILE_DIR)/instantaneous_fields_S.jld2",
+#                                                           schedule = TimeInterval(args["field_time_interval"]minutes),
+#                                                           with_halos = true,
+#                                                           init = init_save_some_metadata!)
 
-simulation.output_writers[:b] = JLD2OutputWriter(model, (; b),
-                                                          filename = "$(FILE_DIR)/instantaneous_fields_b.jld2",
-                                                          schedule = TimeInterval(args["field_time_interval"]minutes),
-                                                          with_halos = true,
-                                                          init = init_save_some_metadata!)
+# simulation.output_writers[:b] = JLD2OutputWriter(model, (; b),
+#                                                           filename = "$(FILE_DIR)/instantaneous_fields_b.jld2",
+#                                                           schedule = TimeInterval(args["field_time_interval"]minutes),
+#                                                           with_halos = true,
+#                                                           init = init_save_some_metadata!)
 
-simulation.output_writers[:ρ] = JLD2OutputWriter(model, (; ρ),
-                                                          filename = "$(FILE_DIR)/instantaneous_fields_rho.jld2",
-                                                          schedule = TimeInterval(args["field_time_interval"]minutes),
-                                                          with_halos = true,
-                                                          init = init_save_some_metadata!)
+# simulation.output_writers[:ρ] = JLD2OutputWriter(model, (; ρ),
+#                                                           filename = "$(FILE_DIR)/instantaneous_fields_rho.jld2",
+#                                                           schedule = TimeInterval(args["field_time_interval"]minutes),
+#                                                           with_halos = true,
+#                                                           init = init_save_some_metadata!)
 
 simulation.output_writers[:timeseries] = JLD2OutputWriter(model, timeseries_outputs,
                                                           filename = "$(FILE_DIR)/instantaneous_timeseries.jld2",
@@ -381,6 +388,11 @@ if pickup
     end
 else
     run!(simulation)
+end
+
+checkpointers = glob("$(FILE_DIR)/model_checkpoint_iteration*.jld2")
+if !isempty(checkpointers)
+    rm.(checkpointers)
 end
 
 #%%
@@ -423,14 +435,6 @@ axvw = Axis(fig[3, 6], title="vw", xlabel="m² s⁻²", ylabel="z")
 axwb = Axis(fig[4, 5], title="wb", xlabel="m² s⁻³", ylabel="z")
 axwρ = Axis(fig[4, 6], title="wρ", xlabel="kg m⁻² s⁻²", ylabel="z")
 
-function find_min(a...)
-    return minimum(minimum.([a...]))
-end
-
-function find_max(a...)
-    return maximum(maximum.([a...]))
-end
-
 ubarlim = (minimum(ubar_data), maximum(ubar_data))
 vbarlim = (minimum(vbar_data), maximum(vbar_data))
 Tbarlim = (minimum(Tbar_data), maximum(Tbar_data))
@@ -448,7 +452,7 @@ wρlim = (minimum(wρ_data[1, 1, :, startframe_lim:end]), maximum(wρ_data[1, 1,
 
 n = Observable(1)
 
-time_str = @lift "Qᵁ = $(Qᵁ), Qᵀ = $(Qᵀ), Qˢ = $(Qˢ), Time = $(round(Tbar_data.times[$n]/24/60^2, digits=3)) days"
+time_str = @lift "Qᵁ = $(Qᵁ), Qᵀ = $(Qᵀ), Qˢ = $(Qˢ), f = $(f), Time = $(round(Tbar_data.times[$n]/24/60^2, digits=3)) days"
 title = Label(fig[0, :], time_str, font=:bold, tellwidth=false)
 
 ubarₙ = @lift interior(ubar_data[$n], 1, 1, :)
@@ -503,112 +507,122 @@ record(fig, "$(FILE_DIR)/$(FILE_NAME)_timeseries.mp4", 1:Nt, framerate=15) do nn
 end
 
 @info "Timeseries animation completed"
+# #%%
+# w_data = FieldTimeSeries("$(FILE_DIR)/instantaneous_fields_w.jld2", "w", backend=OnDisk())
+# b_data = FieldTimeSeries("$(FILE_DIR)/instantaneous_fields_b.jld2", "b", backend=OnDisk())
+# T_data = FieldTimeSeries("$(FILE_DIR)/instantaneous_fields_T.jld2", "T", backend=OnDisk())
+# S_data = FieldTimeSeries("$(FILE_DIR)/instantaneous_fields_S.jld2", "S", backend=OnDisk())
 
-#%%
-w_data = FieldTimeSeries("$(FILE_DIR)/instantaneous_fields_w.jld2", "w", backend=OnDisk())
-b_data = FieldTimeSeries("$(FILE_DIR)/instantaneous_fields_b.jld2", "b", backend=OnDisk())
-T_data = FieldTimeSeries("$(FILE_DIR)/instantaneous_fields_T.jld2", "T", backend=OnDisk())
-S_data = FieldTimeSeries("$(FILE_DIR)/instantaneous_fields_S.jld2", "S", backend=OnDisk())
+# Nt = length(b_data.times)
 
-Nt = length(b_data.times)
+# xC = T_data.grid.xᶜᵃᵃ[1:Nx]
+# yC = T_data.grid.yᵃᶜᵃ[1:Ny]
+# zC = T_data.grid.zᵃᵃᶜ[1:Nz]
+# zF = T_data.grid.zᵃᵃᶠ[1:Nz+1]
 
-xC = T_data.grid.xᶜᵃᵃ[1:Nx]
-yC = T_data.grid.yᵃᶜᵃ[1:Ny]
-zC = T_data.grid.zᵃᵃᶜ[1:Nz]
-zF = T_data.grid.zᵃᵃᶠ[1:Nz+1]
+# xCs_xy = xC
+# yCs_xy = yC
+# zCs_xy = [zC[Nz] for x in xCs_xy, y in yCs_xy]
 
-xCs_xy = xC
-yCs_xy = yC
-zCs_xy = [zC[Nz] for x in xCs_xy, y in yCs_xy]
+# yCs_yz = yC
+# xCs_yz = range(xC[1], stop=xC[1], length=length(zC))
+# zCs_yz = zeros(length(xCs_yz), length(yCs_yz))
+# for j in axes(zCs_yz, 2)
+#   zCs_yz[:, j] .= zC
+# end
 
-yCs_yz = yC
-xCs_yz = range(xC[1], stop=xC[1], length=length(zC))
-zCs_yz = zeros(length(xCs_yz), length(yCs_yz))
-for j in axes(zCs_yz, 2)
-  zCs_yz[:, j] .= zC
-end
+# xCs_xz = xC
+# yCs_xz = range(yC[1], stop=yC[1], length=length(zC))
+# zCs_xz = zeros(length(xCs_xz), length(yCs_xz))
+# for i in axes(zCs_xz, 1)
+#   zCs_xz[i, :] .= zC
+# end
 
-xCs_xz = xC
-yCs_xz = range(yC[1], stop=yC[1], length=length(zC))
-zCs_xz = zeros(length(xCs_xz), length(yCs_xz))
-for i in axes(zCs_xz, 1)
-  zCs_xz[i, :] .= zC
-end
+# xFs_xy = xC
+# yFs_xy = yC
+# # zFs_xy = [zF[Nz+1] for x in xFs_xy, y in yFs_xy]
+# zFs_xy = [zF[Nz] for x in xFs_xy, y in yFs_xy]
 
-xFs_xy = xC
-yFs_xy = yC
-zFs_xy = [zF[Nz+1] for x in xFs_xy, y in yFs_xy]
+# yFs_yz = yC
+# xFs_yz = range(xC[1], stop=xC[1], length=length(zF))
+# zFs_yz = zeros(length(xFs_yz), length(yFs_yz))
+# for j in axes(zFs_yz, 2)
+#   zFs_yz[:, j] .= zF
+# end
 
-yFs_yz = yC
-xFs_yz = range(xC[1], stop=xC[1], length=length(zF))
-zFs_yz = zeros(length(xFs_yz), length(yFs_yz))
-for j in axes(zFs_yz, 2)
-  zFs_yz[:, j] .= zF
-end
+# xFs_xz = xC
+# yFs_xz = range(yC[1], stop=yC[1], length=length(zF))
+# zFs_xz = zeros(length(xFs_xz), length(yFs_xz))
+# for i in axes(zFs_xz, 1)
+#   zFs_xz[i, :] .= zF
+# end
+# #%%
+# fig = Figure(size=(1800, 1800))
 
-xFs_xz = xC
-yFs_xz = range(yC[1], stop=yC[1], length=length(zF))
-zFs_xz = zeros(length(xFs_xz), length(yFs_xz))
-for i in axes(zFs_xz, 1)
-  zFs_xz[i, :] .= zF
-end
-#%%
-fig = Figure(size=(1800, 1800))
+# axw = Axis3(fig[1, 1], title="w", xlabel="x", ylabel="y", zlabel="z", viewmode=:fitzoom, aspect=:data)
+# axb = Axis3(fig[1, 2], title="b", xlabel="x", ylabel="y", zlabel="z", viewmode=:fitzoom, aspect=:data)
+# axT = Axis3(fig[2, 1], title="T", xlabel="x", ylabel="y", zlabel="z", viewmode=:fitzoom, aspect=:data)
+# axS = Axis3(fig[2, 2], title="S", xlabel="x", ylabel="y", zlabel="z", viewmode=:fitzoom, aspect=:data)
 
-axw = Axis3(fig[1, 1], title="w", xlabel="x", ylabel="y", zlabel="z", viewmode=:fitzoom, aspect=:data)
-axb = Axis3(fig[1, 2], title="b", xlabel="x", ylabel="y", zlabel="z", viewmode=:fitzoom, aspect=:data)
-axT = Axis3(fig[2, 1], title="T", xlabel="x", ylabel="y", zlabel="z", viewmode=:fitzoom, aspect=:data)
-axS = Axis3(fig[2, 2], title="S", xlabel="x", ylabel="y", zlabel="z", viewmode=:fitzoom, aspect=:data)
+# colormap = Reverse(:RdBu_10)
 
-wlim = (minimum(w_data), maximum(w_data))
-blim = (minimum(b_data), maximum(b_data))
-Tlim = (minimum(T_data), maximum(T_data))
-Slim = (minimum(S_data), maximum(S_data))
+# n = Observable(1)
 
-colormap = Reverse(:RdBu_10)
+# # wₙ_xy = @lift interior(w_data[$n], :, :, Nz+1)
+# wₙ_xy = @lift interior(w_data[$n], :, :, Nz)
+# wₙ_yz = @lift transpose(interior(w_data[$n], 1, :, :))
+# wₙ_xz = @lift interior(w_data[$n], :, 1, :)
 
-n = Observable(1)
+# bₙ_xy = @lift interior(b_data[$n], :, :, Nz)
+# bₙ_yz = @lift transpose(interior(b_data[$n], 1, :, :))
+# bₙ_xz = @lift interior(b_data[$n], :, 1, :)
 
-wₙ_xy = @lift interior(w_data[$n], :, :, Nz+1)
-wₙ_yz = @lift transpose(interior(w_data[$n], 1, :, :))
-wₙ_xz = @lift interior(w_data[$n], :, 1, :)
+# Tₙ_xy = @lift interior(T_data[$n], :, :, Nz)
+# Tₙ_yz = @lift transpose(interior(T_data[$n], 1, :, :))
+# Tₙ_xz = @lift interior(T_data[$n], :, 1, :)
 
-bₙ_xy = @lift interior(b_data[$n], :, :, Nz)
-bₙ_yz = @lift transpose(interior(b_data[$n], 1, :, :))
-bₙ_xz = @lift interior(b_data[$n], :, 1, :)
+# Sₙ_xy = @lift interior(S_data[$n], :, :, Nz)
+# Sₙ_yz = @lift transpose(interior(S_data[$n], 1, :, :))
+# Sₙ_xz = @lift interior(S_data[$n], :, 1, :)
 
-Tₙ_xy = @lift interior(T_data[$n], :, :, Nz)
-Tₙ_yz = @lift transpose(interior(T_data[$n], 1, :, :))
-Tₙ_xz = @lift interior(T_data[$n], :, 1, :)
+# wlim = @lift (find_min(interior(w_data[$n], :, :, Nz), interior(w_data[$n], 1, :, :), interior(w_data[$n], :, 1, :)), 
+#               find_max(interior(w_data[$n], :, :, Nz), interior(w_data[$n], 1, :, :), interior(w_data[$n], :, 1, :)))
+# blim = @lift (find_min(interior(b_data[$n], :, :, Nz), interior(b_data[$n], 1, :, :), interior(b_data[$n], :, 1, :)), 
+#               find_max(interior(b_data[$n], :, :, Nz), interior(b_data[$n], 1, :, :), interior(b_data[$n], :, 1, :)))
+# Tlim = @lift (find_min(interior(T_data[$n], :, :, Nz), interior(T_data[$n], 1, :, :), interior(T_data[$n], :, 1, :)), 
+#               find_max(interior(T_data[$n], :, :, Nz), interior(T_data[$n], 1, :, :), interior(T_data[$n], :, 1, :)))
+# Slim = @lift (find_min(interior(S_data[$n], :, :, Nz), interior(S_data[$n], 1, :, :), interior(S_data[$n], :, 1, :)),
+#               find_max(interior(S_data[$n], :, :, Nz), interior(S_data[$n], 1, :, :), interior(S_data[$n], :, 1, :)))
 
-Sₙ_xy = @lift interior(S_data[$n], :, :, Nz)
-Sₙ_yz = @lift transpose(interior(S_data[$n], 1, :, :))
-Sₙ_xz = @lift interior(S_data[$n], :, 1, :)
+# # wlim = (minimum(w_data), maximum(w_data))
+# # blim = (minimum(b_data), maximum(b_data))
+# # Tlim = (minimum(T_data), maximum(T_data))
+# # Slim = (minimum(S_data), maximum(S_data))
 
-time_str = @lift "Qᵁ = $(Qᵁ), Qᵀ = $(Qᵀ), Qˢ = $(Qˢ), Time = $(round(T_data.times[$n]/24/60^2, digits=3)) days"
-title = Label(fig[0, :], time_str, font=:bold, tellwidth=false)
+# time_str = @lift "Qᵁ = $(Qᵁ), Qᵀ = $(Qᵀ), Qˢ = $(Qˢ), Time = $(round(T_data.times[$n]/24/60^2, digits=3)) days"
+# title = Label(fig[0, :], time_str, font=:bold, tellwidth=false)
 
-w_xy_surface = surface!(axw, xFs_xy, yFs_xy, zFs_xy, color=wₙ_xy, colormap=colormap)
-w_yz_surface = surface!(axw, xFs_yz, yFs_yz, zFs_yz, color=wₙ_yz, colormap=colormap)
-w_xz_surface = surface!(axw, xFs_xz, yFs_xz, zFs_xz, color=wₙ_xz, colormap=colormap)
+# w_xy_surface = surface!(axw, xFs_xy, yFs_xy, zFs_xy, color=wₙ_xy, colormap=colormap, colorrange=wlim)
+# w_yz_surface = surface!(axw, xFs_yz, yFs_yz, zFs_yz, color=wₙ_yz, colormap=colormap, colorrange=wlim)
+# w_xz_surface = surface!(axw, xFs_xz, yFs_xz, zFs_xz, color=wₙ_xz, colormap=colormap, colorrange=wlim)
 
-b_xy_surface = surface!(axb, xCs_xy, yCs_xy, zCs_xy, color=bₙ_xy, colormap=colormap)
-b_yz_surface = surface!(axb, xCs_yz, yCs_yz, zCs_yz, color=bₙ_yz, colormap=colormap)
-b_xz_surface = surface!(axb, xCs_xz, yCs_xz, zCs_xz, color=bₙ_xz, colormap=colormap)
+# # b_xy_surface = surface!(axb, xCs_xy, yCs_xy, zCs_xy, color=bₙ_xy, colormap=colormap, colorrange=blim)
+# # b_yz_surface = surface!(axb, xCs_yz, yCs_yz, zCs_yz, color=bₙ_yz, colormap=colormap, colorrange=blim)
+# # b_xz_surface = surface!(axb, xCs_xz, yCs_xz, zCs_xz, color=bₙ_xz, colormap=colormap, colorrange=blim)
 
-T_xy_surface = surface!(axT, xCs_xy, yCs_xy, zCs_xy, color=Tₙ_xy, colormap=colormap)
-T_yz_surface = surface!(axT, xCs_yz, yCs_yz, zCs_yz, color=Tₙ_yz, colormap=colormap)
-T_xz_surface = surface!(axT, xCs_xz, yCs_xz, zCs_xz, color=Tₙ_xz, colormap=colormap)
+# # T_xy_surface = surface!(axT, xCs_xy, yCs_xy, zCs_xy, color=Tₙ_xy, colormap=colormap, colorrange=Tlim)
+# # T_yz_surface = surface!(axT, xCs_yz, yCs_yz, zCs_yz, color=Tₙ_yz, colormap=colormap, colorrange=Tlim)
+# # T_xz_surface = surface!(axT, xCs_xz, yCs_xz, zCs_xz, color=Tₙ_xz, colormap=colormap, colorrange=Tlim)
 
-S_xy_surface = surface!(axS, xCs_xy, yCs_xy, zCs_xy, color=Sₙ_xy, colormap=colormap)
-S_yz_surface = surface!(axS, xCs_yz, yCs_yz, zCs_yz, color=Sₙ_yz, colormap=colormap)
-S_xz_surface = surface!(axS, xCs_xz, yCs_xz, zCs_xz, color=Sₙ_xz, colormap=colormap)
+# # S_xy_surface = surface!(axS, xCs_xy, yCs_xy, zCs_xy, color=Sₙ_xy, colormap=colormap, colorrange=Slim)
+# # S_yz_surface = surface!(axS, xCs_yz, yCs_yz, zCs_yz, color=Sₙ_yz, colormap=colormap, colorrange=Slim)
+# # S_xz_surface = surface!(axS, xCs_xz, yCs_xz, zCs_xz, color=Sₙ_xz, colormap=colormap, colorrange=Slim)
 
-trim!(fig.layout)
+# trim!(fig.layout)
 
-record(fig, "$(FILE_DIR)/$(FILE_NAME)_fields.mp4", 1:Nt, framerate=1) do nn
-    n[] = nn
-end
+# record(fig, "$(FILE_DIR)/$(FILE_NAME)_fields.mp4", 1:Nt, framerate=1) do nn
+#     n[] = nn
+# end
 
-@info "Animation completed"
-#%%
+# @info "Animation completed"
+# #%%

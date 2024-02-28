@@ -75,3 +75,47 @@ end
 
     return (𝒜z * 2 * δᶻb★ - 𝒟z) / Vᶜᶜᶠ(i, j, k, grid)
 end
+
+function compute_implicit_diffusivity(b::FieldTimeSeries, χᵁ::FieldTimeSeries, χⱽ::FieldTimeSeries, χᵂ::FieldTimeSeries)
+    κx = FieldTimeSeries{Nothing, Nothing, Center}(b.grid, b.times)
+    κy = FieldTimeSeries{Nothing, Nothing, Center}(b.grid, b.times)
+    κz = FieldTimeSeries{Nothing, Nothing, Center}(b.grid, b.times)
+
+    for i in eachindex(b.times)
+        @info i
+        _κx = Field(Average(χᵁ[i] / ∂x(b[i])^2, dims=(1, 2)))
+        _κy = Field(Average(χⱽ[i] / ∂y(b[i])^2, dims=(1, 2)))
+        _κz = @at (Nothing, Nothing, Center) Field(Average(χᵂ[i] / ∂z(b[i])^2, dims=(1, 2)))
+        
+        compute!(_κx)
+        compute!(_κy)
+        compute!(_κz)
+
+        set!(κx[i], _κx)
+        set!(κy[i], _κy)
+        set!(κz[i], _κz)
+    end
+    return κx, κy, κz
+end
+
+function compute_average_implicit_dissipation(χᵁ::FieldTimeSeries, χⱽ::FieldTimeSeries, χᵂ::FieldTimeSeries)
+    χx = FieldTimeSeries{Nothing, Nothing, Center}(χᵁ.grid, χᵁ.times)
+    χy = FieldTimeSeries{Nothing, Nothing, Center}(χᵁ.grid, χᵁ.times)
+    χz = FieldTimeSeries{Nothing, Nothing, Center}(χᵁ.grid, χᵁ.times)
+
+    for i in eachindex(χᵁ.times)
+        @info i
+        _χx = Field(Average(χᵁ[i], dims=(1, 2)))
+        _χy = Field(Average(χⱽ[i], dims=(1, 2)))
+        _χz = Field(Average(@at((Center, Center, Center), χᵂ[i]), dims=(1, 2)))
+        
+        compute!(_χx)
+        compute!(_χy)
+        compute!(_χz)
+
+        set!(χx[i], _χx)
+        set!(χy[i], _χy)
+        set!(χz[i], _χz)
+    end
+    return χx, χy, χz
+end

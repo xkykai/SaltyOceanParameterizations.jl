@@ -276,33 +276,38 @@ end
 νₑbar = Field(Average(νₑ, dims=(1, 2)))
 κₑbar = Field(Average(κₑ, dims=(1, 2)))
 
+χᵁbar = Field(Average(κₑ * ∂x(b)^2, dims=(1, 2)))
+χⱽbar = Field(Average(κₑ * ∂y(b)^2, dims=(1, 2)))
+χᵂbar = Field(Average(κₑ * ∂z(b)^2, dims=(1, 2)))
+
 timeseries_outputs = (; ubar, vbar, bbar,
                         uw, vw, wb,
-                        νₑbar, κₑbar)
+                        νₑbar, κₑbar,
+                        χᵁbar, χⱽbar, χᵂbar)
 
-simulation.output_writers[:u] = JLD2OutputWriter(model, (; model.velocities.u),
-                                                          filename = "$(FILE_DIR)/instantaneous_fields_u.jld2",
-                                                          schedule = TimeInterval(args["field_time_interval"]seconds),
-                                                          with_halos = true,
-                                                          init = init_save_some_metadata!)
+# simulation.output_writers[:u] = JLD2OutputWriter(model, (; model.velocities.u),
+#                                                           filename = "$(FILE_DIR)/instantaneous_fields_u.jld2",
+#                                                           schedule = TimeInterval(args["field_time_interval"]seconds),
+#                                                           with_halos = true,
+#                                                           init = init_save_some_metadata!)
 
-simulation.output_writers[:v] = JLD2OutputWriter(model, (; model.velocities.v),
-                                                          filename = "$(FILE_DIR)/instantaneous_fields_v.jld2",
-                                                          schedule = TimeInterval(args["field_time_interval"]seconds),
-                                                          with_halos = true,
-                                                          init = init_save_some_metadata!)
+# simulation.output_writers[:v] = JLD2OutputWriter(model, (; model.velocities.v),
+#                                                           filename = "$(FILE_DIR)/instantaneous_fields_v.jld2",
+#                                                           schedule = TimeInterval(args["field_time_interval"]seconds),
+#                                                           with_halos = true,
+#                                                           init = init_save_some_metadata!)
 
-simulation.output_writers[:w] = JLD2OutputWriter(model, (; model.velocities.w),
-                                                          filename = "$(FILE_DIR)/instantaneous_fields_w.jld2",
-                                                          schedule = TimeInterval(args["field_time_interval"]seconds),
-                                                          with_halos = true,
-                                                          init = init_save_some_metadata!)
+# simulation.output_writers[:w] = JLD2OutputWriter(model, (; model.velocities.w),
+#                                                           filename = "$(FILE_DIR)/instantaneous_fields_w.jld2",
+#                                                           schedule = TimeInterval(args["field_time_interval"]seconds),
+#                                                           with_halos = true,
+#                                                           init = init_save_some_metadata!)
 
-simulation.output_writers[:b] = JLD2OutputWriter(model, (; model.tracers.b),
-                                                          filename = "$(FILE_DIR)/instantaneous_fields_b.jld2",
-                                                          schedule = TimeInterval(args["field_time_interval"]seconds),
-                                                          with_halos = true,
-                                                          init = init_save_some_metadata!)
+# simulation.output_writers[:b] = JLD2OutputWriter(model, (; model.tracers.b),
+#                                                           filename = "$(FILE_DIR)/instantaneous_fields_b.jld2",
+#                                                           schedule = TimeInterval(args["field_time_interval"]seconds),
+#                                                           with_halos = true,
+#                                                           init = init_save_some_metadata!)
 
 simulation.output_writers[:timeseries] = JLD2OutputWriter(model, timeseries_outputs,
                                                           filename = "$(FILE_DIR)/instantaneous_timeseries.jld2",
@@ -342,6 +347,10 @@ wb_data = FieldTimeSeries("$(FILE_DIR)/instantaneous_timeseries.jld2", "wb")
 νₑbar_data = FieldTimeSeries("$(FILE_DIR)/instantaneous_timeseries.jld2", "νₑbar")
 κₑbar_data = FieldTimeSeries("$(FILE_DIR)/instantaneous_timeseries.jld2", "κₑbar")
 
+χᵁbar_data = FieldTimeSeries("$(FILE_DIR)/instantaneous_timeseries.jld2", "χᵁbar")
+χⱽbar_data = FieldTimeSeries("$(FILE_DIR)/instantaneous_timeseries.jld2", "χⱽbar")
+χᵂbar_data = FieldTimeSeries("$(FILE_DIR)/instantaneous_timeseries.jld2", "χᵂbar")
+
 Nt = length(bbar_data.times)
 
 xC = bbar_data.grid.xᶜᵃᵃ[1:Nx]
@@ -350,16 +359,20 @@ zC = bbar_data.grid.zᵃᵃᶜ[1:Nz]
 
 zF = uw_data.grid.zᵃᵃᶠ[1:Nz+1]
 ##
-fig = Figure(size=(1900, 900))
+fig = Figure(size=(1900, 1300))
 
 axubar = Axis(fig[1, 1], title="<u>", xlabel="m s⁻¹", ylabel="z")
 axvbar = Axis(fig[1, 2], title="<v>", xlabel="m s⁻¹", ylabel="z")
 axbbar = Axis(fig[1, 3], title="<b>", xlabel="m s⁻²", ylabel="z")
-axdiffusivity = Axis(fig[1, 4], title="<νₑ>, <κₑ>", xlabel="m² s⁻¹", ylabel="z")
 
 axuw = Axis(fig[2, 1], title="uw", xlabel="m² s⁻²", ylabel="z")
 axvw = Axis(fig[2, 2], title="vw", xlabel="m² s⁻²", ylabel="z")
 axwb = Axis(fig[2, 3], title="wb", xlabel="m² s⁻³", ylabel="z")
+
+axdiffusivity = Axis(fig[1, 4], title="<νₑ>, <κₑ>", xlabel="m² s⁻¹", ylabel="z")
+axχᵁbar = Axis(fig[3, 1], title="<κ (∂x(b))²>", xlabel="m² s⁻⁵", ylabel="z")
+axχⱽbar = Axis(fig[3, 2], title="<κ (∂y(b))²>", xlabel="m² s⁻⁵", ylabel="z")
+axχᵂbar = Axis(fig[3, 3], title="<κ (∂z(b))²>", xlabel="m² s⁻⁵", ylabel="z")
 
 function find_min(a...)
     return minimum(minimum.([a...]))
@@ -373,6 +386,9 @@ ubarlim = (minimum(ubar_data), maximum(ubar_data))
 vbarlim = (minimum(vbar_data), maximum(vbar_data))
 bbarlim = (minimum(bbar_data), maximum(bbar_data))
 diffusivitylim = (find_min(νₑbar_data, κₑbar_data), find_max(νₑbar_data, κₑbar_data))
+χᵁbarlim = (minimum(χᵁbar_data), maximum(χᵁbar_data))
+χⱽbarlim = (minimum(χⱽbar_data), maximum(χⱽbar_data))
+χᵂbarlim = (minimum(χᵂbar_data), maximum(χᵂbar_data))
 
 startframe_lim = 30
 uwlim = (minimum(uw_data[1, 1, :, startframe_lim:end]), maximum(uw_data[1, 1, :, startframe_lim:end]))
@@ -389,6 +405,9 @@ vbarₙ = @lift interior(vbar_data[$n], 1, 1, :)
 bbarₙ = @lift interior(bbar_data[$n], 1, 1, :)
 νₑbarₙ = @lift interior(νₑbar_data[$n], 1, 1, :)
 κₑbarₙ = @lift interior(κₑbar_data[$n], 1, 1, :)
+χᵁbarₙ = @lift interior(χᵁbar_data[$n], 1, 1, :)
+χⱽbarₙ = @lift interior(χⱽbar_data[$n], 1, 1, :)
+χᵂbarₙ = @lift interior(χᵂbar_data[$n], 1, 1, :)
 
 uwₙ = @lift interior(uw_data[$n], 1, 1, :)
 vwₙ = @lift interior(vw_data[$n], 1, 1, :)
@@ -412,6 +431,10 @@ xlims!(axdiffusivity, diffusivitylim)
 xlims!(axuw, uwlim)
 xlims!(axvw, vwlim)
 xlims!(axwb, wblim)
+
+xlims!(axχᵁbar, χᵁbarlim)
+xlims!(axχⱽbar, χⱽbarlim)
+xlims!(axχᵂbar, χᵂbarlim)
 
 axislegend(axdiffusivity, position=:rt)
 

@@ -204,6 +204,15 @@ bottom_mask = GaussianMask{:z}(center=-grid.Lz, width=damping_width)
 uvw_sponge = Relaxation(rate=damping_rate, mask=bottom_mask)
 b_sponge = Relaxation(rate=damping_rate, mask=bottom_mask, target=b_target)
 
+χᵁ   = XFaceField(grid)
+χⱽ   = YFaceField(grid)
+χᵂ   = ZFaceField(grid)
+
+bⁿ⁻¹ = CenterField(grid)
+Uⁿ⁻¹ = XFaceField(grid)
+Vⁿ⁻¹ = YFaceField(grid)
+Wⁿ⁻¹ = ZFaceField(grid)
+
 model = NonhydrostaticModel(; 
             grid = grid,
             closure = closure,

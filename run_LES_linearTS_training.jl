@@ -212,7 +212,7 @@ T_bcs = FieldBoundaryConditions(top=FluxBoundaryCondition(Qᵀ), bottom=Gradient
 S_bcs = FieldBoundaryConditions(top=FluxBoundaryCondition(Qˢ), bottom=GradientBoundaryCondition(dSdz))
 u_bcs = FieldBoundaryConditions(top=FluxBoundaryCondition(Qᵁ))
 
-damping_rate = 1/5minute
+damping_rate = 1/10minute
 
 T_target(x, y, z, t) = T_initial(x, y, z)
 S_target(x, y, z, t) = S_initial(x, y, z)

@@ -4,18 +4,16 @@ using JLD2
 using FileIO
 using Printf
 using CairoMakie
-using Oceananigans.Grids: halo_size
 using Oceananigans.Operators
 using Oceananigans.AbstractOperations: KernelFunctionOperation
 using Oceananigans.BuoyancyModels
-using Oceananigans.BuoyancyModels: Zᶜᶜᶠ, Zᶜᶜᶜ
 using SeawaterPolynomials.TEOS10
 using SeawaterPolynomials
 using Random
 using Statistics
 using ArgParse
-using SeawaterPolynomials.TEOS10: ζ, r₀, r′, τ, s, R₀₀, R₀₁, R₀₂, R₀₃, R₀₄, R₀₅, r′₀, r′₁, r′₂, r′₃
 using LinearAlgebra
+using Glob
 
 import Dates
 

@@ -190,6 +190,7 @@ end
 function find_max(a...)
   return maximum(maximum.([a...]))
 end
+
 grid = RectilinearGrid(GPU(), Float64,
                        size = (Nx, Ny, Nz),
                        halo = (size_halo, size_halo, size_halo),
@@ -210,7 +211,7 @@ T_bcs = FieldBoundaryConditions(top=FluxBoundaryCondition(Qᵀ), bottom=Gradient
 S_bcs = FieldBoundaryConditions(top=FluxBoundaryCondition(Qˢ), bottom=GradientBoundaryCondition(dSdz))
 u_bcs = FieldBoundaryConditions(top=FluxBoundaryCondition(Qᵁ))
 
-damping_rate = 1/10minute
+damping_rate = 1/15minute
 
 T_target(x, y, z, t) = T_initial(x, y, z)
 S_target(x, y, z, t) = S_initial(x, y, z)

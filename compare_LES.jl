@@ -3,13 +3,34 @@ using Oceananigans
 using JLD2
 
 FILE_DIRS = [
-    "./LES/QU_-0.0005_QT_5.0e-6_QS_5.0e-5_Ttop_20.0_Stop_35.0_sponge_WENO9nu1e-5_Lz_256.0_Lx_512.0_Ly_512.0_Nz_128_Nx_256_Ny_256",
-    "./LES/QU_-0.0005_QT_5.0e-6_QS_5.0e-5_Ttop_20.0_Stop_35.0_sponge_WENO9nu1e-5_Lz_256.0_Lx_512.0_Ly_512.0_Nz_128_Nx_128_Ny_128"
+    # "./LES/QU_-0.0005_QT_5.0e-6_QS_-5.0e-5_Ttop_2.0_Stop_35.0_sponge_WENO9nu1e-5_Lz_256.0_Lx_128.0_Ly_128.0_Nz_128_Nx_64_Ny_64",
+    # "./LES/QU_-0.0005_QT_5.0e-6_QS_-5.0e-5_Ttop_2.0_Stop_35.0_sponge_AMD_Lz_256.0_Lx_128.0_Ly_128.0_Nz_128_Nx_64_Ny_64",
+
+    # "./LES/QU_-0.0005_QT_5.0e-6_QS_-5.0e-5_Ttop_2.0_Stop_35.0_sponge_WENO9nu1e-5_Lz_256.0_Lx_128.0_Ly_128.0_Nz_256_Nx_128_Ny_128",
+    # "./LES/QU_-0.0005_QT_5.0e-6_QS_-5.0e-5_Ttop_2.0_Stop_35.0_sponge_AMD_Lz_256.0_Lx_128.0_Ly_128.0_Nz_256_Nx_128_Ny_128",
+
+    "./LES/QU_-0.0005_QT_5.0e-6_QS_-5.0e-5_Ttop_20.0_Stop_35.0_sponge_WENO9nu1e-5_Lz_256.0_Lx_64.0_Ly_64.0_Nz_128_Nx_32_Ny_32",
+    "./LES/QU_-0.0005_QT_5.0e-6_QS_-5.0e-5_Ttop_20.0_Stop_35.0_sponge_AMD_Lz_256.0_Lx_64.0_Ly_64.0_Nz_128_Nx_32_Ny_32",
+    "./LES/QU_-0.0005_QT_5.0e-6_QS_-5.0e-5_Ttop_20.0_Stop_35.0_sponge_WENOAMD_Lz_256.0_Lx_64.0_Ly_64.0_Nz_128_Nx_32_Ny_32",
+    "./LES/QU_-0.0005_QT_5.0e-6_QS_-5.0e-5_Ttop_20.0_Stop_35.0_sponge_WENO9nu0_Lz_256.0_Lx_64.0_Ly_64.0_Nz_128_Nx_32_Ny_32",
+
+    # "./LES/QU_-0.0005_QT_5.0e-6_QS_-5.0e-5_Ttop_2.0_Stop_35.0_sponge_WENO9nu1e-5_Lz_256.0_Lx_64.0_Ly_64.0_Nz_256_Nx_64_Ny_64",
+    # "./LES/QU_-0.0005_QT_5.0e-6_QS_-5.0e-5_Ttop_2.0_Stop_35.0_sponge_AMD_Lz_256.0_Lx_64.0_Ly_64.0_Nz_256_Nx_64_Ny_64",
+
+    "./LES/QU_-0.0005_QT_5.0e-6_QS_-5.0e-5_Ttop_20.0_Stop_35.0_sponge_WENO9nu1e-5_Lz_256.0_Lx_64.0_Ly_64.0_Nz_512_Nx_128_Ny_128",
+    # "./LES/QU_-0.0005_QT_5.0e-6_QS_-5.0e-5_Ttop_2.0_Stop_35.0_sponge_AMD_Lz_256.0_Lx_64.0_Ly_64.0_Nz_512_Nx_128_Ny_128"
 ]
 
 labels = [
-    "WENO(9), ν = κ = 1e-5",
-    "WENO(9), ν = κ = 1e-5, halved horizontal domain"
+    "WENO(9), ν = κ = 1e-5, 2m resolution",
+    "AMD, 2m resolution",
+    "WENO(9) + AMD, 2m resolution",
+    "WENO(9), ν = κ = 0, 2m resolution",
+
+    # "WENO(9), ν = κ = 1e-5, 1m resolution",
+    # "AMD, 1m resolution",
+    "WENO(9), ν = κ = 1e-5, 0.5m resolution",
+    # "AMD, 0.5m resolution"
 ]
 
 T_top = 20.
@@ -37,12 +58,16 @@ Qˢ = parameters["salinity_flux"]
 
 # T_top = parameters["surface_temperature"]
 # S_top = parameters["surface_salinity"]
-Nx, Ny, Nz = size(u_datas[1].grid)
-zC = u_datas[1].grid.zᵃᵃᶜ[1:Nz]
-zF = uw_datas[1].grid.zᵃᵃᶠ[1:Nz+1]
+
+Nxs = [size(data.grid)[1] for data in u_datas]
+Nys = [size(data.grid)[2] for data in u_datas]
+Nzs = [size(data.grid)[3] for data in u_datas]
+
+zCs = [data.grid.zᵃᵃᶜ[1:Nzs[i]] for (i, data) in enumerate(u_datas)]
+zFs = [data.grid.zᵃᵃᶠ[1:Nzs[i]+1] for (i, data) in enumerate(u_datas)]
 
 #%%
-fig = Figure(resolution = (1800, 600))
+fig = Figure(resolution = (3600, 1200))
 axu = Axis(fig[1, 1], title="u (m s⁻¹)", ylabel="z")
 axv = Axis(fig[1, 2], title="v (m s⁻¹)", ylabel="z")
 axT = Axis(fig[1, 3], title="T (°C)", ylabel="z")
@@ -93,18 +118,18 @@ wbₙs = [@lift interior(data[$n], 1, 1, :) for data in wb_datas]
 wb′ₙs = [@lift interior(data[$n], 1, 1, :) for data in wb′_datas]
 
 for i in 1:length(FILE_DIRS)
-    lines!(axu, uₙs[i], zC, label=labels[i])
-    lines!(axv, vₙs[i], zC, label=labels[i])
-    lines!(axT, Tₙs[i], zC, label=labels[i])
-    lines!(axS, Sₙs[i], zC, label=labels[i])
+    lines!(axu, uₙs[i], zCs[i], label=labels[i])
+    lines!(axv, vₙs[i], zCs[i], label=labels[i])
+    lines!(axT, Tₙs[i], zCs[i], label=labels[i])
+    lines!(axS, Sₙs[i], zCs[i], label=labels[i])
 
-    lines!(axuw, uwₙs[i], zF, label=labels[i])
-    lines!(axvw, vwₙs[i], zF, label=labels[i])
-    lines!(axwT, wTₙs[i], zF, label=labels[i])
-    lines!(axwS, wSₙs[i], zF, label=labels[i])
+    lines!(axuw, uwₙs[i], zFs[i], label=labels[i])
+    lines!(axvw, vwₙs[i], zFs[i], label=labels[i])
+    lines!(axwT, wTₙs[i], zFs[i], label=labels[i])
+    lines!(axwS, wSₙs[i], zFs[i], label=labels[i])
 
-    lines!(axwb, wbₙs[i], zF, label="wb, $(labels[i])")
-    lines!(axwb, wb′ₙs[i], zF, label="g(αwT - βwS), $(labels[i])")
+    lines!(axwb, wbₙs[i], zFs[i], label="wb, $(labels[i])")
+    lines!(axwb, wb′ₙs[i], zFs[i], label="g(αwT - βwS), $(labels[i])")
 end
 
 # make a legend
@@ -123,7 +148,7 @@ xlims!(axwb, wblim)
 
 trim!(fig.layout)
 
-record(fig, "./Data/QU_$(Qᵁ)_QT_$(Qᵀ)_QS_$(Qˢ)_Ttop_$(T_top)_Stop_$(S_top)_closure.mp4", 1:Nt, framerate=15) do nn
+record(fig, "./Data/QU_$(Qᵁ)_QT_$(Qᵀ)_QS_$(Qˢ)_Ttop_$(T_top)_Stop_$(S_top)_closure_2kmresolution_0.5.mp4", 1:Nt, framerate=15) do nn
     n[] = nn
 end
 

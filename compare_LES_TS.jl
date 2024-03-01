@@ -2,35 +2,59 @@ using CairoMakie
 using Oceananigans
 using JLD2
 
+# FILE_DIRS = [
+#     # "./LES/QU_-0.0005_QT_5.0e-6_QS_-5.0e-5_Ttop_20.0_Stop_35.0_sponge_WENO9nu1e-5_Lz_256.0_Lx_64.0_Ly_64.0_Nz_128_Nx_32_Ny_32",
+#     # "./LES/QU_-0.0005_QT_5.0e-6_QS_-5.0e-5_Ttop_20.0_Stop_35.0_sponge_AMD_Lz_256.0_Lx_64.0_Ly_64.0_Nz_128_Nx_32_Ny_32",
+#     # "./LES/QU_-0.0005_QT_5.0e-6_QS_-5.0e-5_Ttop_20.0_Stop_35.0_sponge_WENO9nu1e-5_Lz_256.0_Lx_64.0_Ly_64.0_Nz_256_Nx_64_Ny_64",
+#     # "./LES/QU_-0.0005_QT_5.0e-6_QS_-5.0e-5_Ttop_20.0_Stop_35.0_sponge_AMD_Lz_256.0_Lx_64.0_Ly_64.0_Nz_256_Nx_64_Ny_64",
+#     # "./LES/QU_-0.0005_QT_5.0e-6_QS_-5.0e-5_Ttop_20.0_Stop_35.0_sponge_WENO9nu1e-5_Lz_256.0_Lx_64.0_Ly_64.0_Nz_512_Nx_128_Ny_128",
+#     # "./LES/QU_-0.0005_QT_5.0e-6_QS_-5.0e-5_Ttop_20.0_Stop_35.0_sponge_AMD_Lz_256.0_Lx_64.0_Ly_64.0_Nz_512_Nx_128_Ny_128"
+
+#     "./LES/QU_-0.0005_QT_5.0e-6_QS_-5.0e-5_Ttop_2.0_Stop_35.0_sponge_WENO9nu1e-5_Lz_256.0_Lx_64.0_Ly_64.0_Nz_128_Nx_32_Ny_32",
+#     "./LES/QU_-0.0005_QT_5.0e-6_QS_-5.0e-5_Ttop_2.0_Stop_35.0_sponge_AMD_Lz_256.0_Lx_64.0_Ly_64.0_Nz_128_Nx_32_Ny_32",
+#     "./LES/QU_-0.0005_QT_5.0e-6_QS_-5.0e-5_Ttop_2.0_Stop_35.0_sponge_WENO9nu1e-5_Lz_256.0_Lx_64.0_Ly_64.0_Nz_256_Nx_64_Ny_64",
+#     "./LES/QU_-0.0005_QT_5.0e-6_QS_-5.0e-5_Ttop_2.0_Stop_35.0_sponge_AMD_Lz_256.0_Lx_64.0_Ly_64.0_Nz_256_Nx_64_Ny_64",
+#     "./LES/QU_-0.0005_QT_5.0e-6_QS_-5.0e-5_Ttop_2.0_Stop_35.0_sponge_WENO9nu1e-5_Lz_256.0_Lx_64.0_Ly_64.0_Nz_512_Nx_128_Ny_128",
+#     "./LES/QU_-0.0005_QT_5.0e-6_QS_-5.0e-5_Ttop_2.0_Stop_35.0_sponge_AMD_Lz_256.0_Lx_64.0_Ly_64.0_Nz_512_Nx_128_Ny_128"
+    
+#     # "./LES/QU_-0.0005_QT_5.0e-6_QS_-5.0e-5_Ttop_20.0_Stop_35.0_sponge_WENO9nu1e-5_Lz_256.0_Lx_128.0_Ly_128.0_Nz_128_Nx_64_Ny_64",
+#     # "./LES/QU_-0.0005_QT_5.0e-6_QS_-5.0e-5_Ttop_20.0_Stop_35.0_sponge_AMD_Lz_256.0_Lx_128.0_Ly_128.0_Nz_128_Nx_64_Ny_64",
+#     # "./LES/QU_-0.0005_QT_5.0e-6_QS_-5.0e-5_Ttop_20.0_Stop_35.0_sponge_WENO9nu1e-5_Lz_256.0_Lx_128.0_Ly_128.0_Nz_256_Nx_128_Ny_128",
+#     # "./LES/QU_-0.0005_QT_5.0e-6_QS_-5.0e-5_Ttop_20.0_Stop_35.0_sponge_AMD_Lz_256.0_Lx_128.0_Ly_128.0_Nz_256_Nx_128_Ny_128",
+# ]
 FILE_DIRS = [
+    # "./LES/QU_-0.0005_QT_5.0e-6_QS_-5.0e-5_Ttop_2.0_Stop_35.0_sponge_WENO9nu1e-5_Lz_256.0_Lx_128.0_Ly_128.0_Nz_128_Nx_64_Ny_64",
+    # "./LES/QU_-0.0005_QT_5.0e-6_QS_-5.0e-5_Ttop_2.0_Stop_35.0_sponge_AMD_Lz_256.0_Lx_128.0_Ly_128.0_Nz_128_Nx_64_Ny_64",
+
+    # "./LES/QU_-0.0005_QT_5.0e-6_QS_-5.0e-5_Ttop_2.0_Stop_35.0_sponge_WENO9nu1e-5_Lz_256.0_Lx_128.0_Ly_128.0_Nz_256_Nx_128_Ny_128",
+    # "./LES/QU_-0.0005_QT_5.0e-6_QS_-5.0e-5_Ttop_2.0_Stop_35.0_sponge_AMD_Lz_256.0_Lx_128.0_Ly_128.0_Nz_256_Nx_128_Ny_128",
+
     "./LES/QU_-0.0005_QT_5.0e-6_QS_-5.0e-5_Ttop_20.0_Stop_35.0_sponge_WENO9nu1e-5_Lz_256.0_Lx_64.0_Ly_64.0_Nz_128_Nx_32_Ny_32",
     "./LES/QU_-0.0005_QT_5.0e-6_QS_-5.0e-5_Ttop_20.0_Stop_35.0_sponge_AMD_Lz_256.0_Lx_64.0_Ly_64.0_Nz_128_Nx_32_Ny_32",
-    "./LES/QU_-0.0005_QT_5.0e-6_QS_-5.0e-5_Ttop_20.0_Stop_35.0_sponge_WENO9nu1e-5_Lz_256.0_Lx_64.0_Ly_64.0_Nz_256_Nx_64_Ny_64",
-    "./LES/QU_-0.0005_QT_5.0e-6_QS_-5.0e-5_Ttop_20.0_Stop_35.0_sponge_AMD_Lz_256.0_Lx_64.0_Ly_64.0_Nz_256_Nx_64_Ny_64",
+    # "./LES/QU_-0.0005_QT_5.0e-6_QS_-5.0e-5_Ttop_20.0_Stop_35.0_sponge_WENOAMD_Lz_256.0_Lx_64.0_Ly_64.0_Nz_128_Nx_32_Ny_32",
+    "./LES/QU_-0.0005_QT_5.0e-6_QS_-5.0e-5_Ttop_20.0_Stop_35.0_sponge_WENO9nu0_Lz_256.0_Lx_64.0_Ly_64.0_Nz_128_Nx_32_Ny_32",
+
+    # "./LES/QU_-0.0005_QT_5.0e-6_QS_-5.0e-5_Ttop_2.0_Stop_35.0_sponge_WENO9nu1e-5_Lz_256.0_Lx_64.0_Ly_64.0_Nz_256_Nx_64_Ny_64",
+    # "./LES/QU_-0.0005_QT_5.0e-6_QS_-5.0e-5_Ttop_2.0_Stop_35.0_sponge_AMD_Lz_256.0_Lx_64.0_Ly_64.0_Nz_256_Nx_64_Ny_64",
+
     "./LES/QU_-0.0005_QT_5.0e-6_QS_-5.0e-5_Ttop_20.0_Stop_35.0_sponge_WENO9nu1e-5_Lz_256.0_Lx_64.0_Ly_64.0_Nz_512_Nx_128_Ny_128",
     "./LES/QU_-0.0005_QT_5.0e-6_QS_-5.0e-5_Ttop_20.0_Stop_35.0_sponge_AMD_Lz_256.0_Lx_64.0_Ly_64.0_Nz_512_Nx_128_Ny_128"
-    # "./LES/QU_-0.0005_QT_5.0e-6_QS_-5.0e-5_Ttop_20.0_Stop_35.0_sponge_WENO9nu1e-5_Lz_256.0_Lx_128.0_Ly_128.0_Nz_128_Nx_64_Ny_64",
-    # "./LES/QU_-0.0005_QT_5.0e-6_QS_-5.0e-5_Ttop_20.0_Stop_35.0_sponge_AMD_Lz_256.0_Lx_128.0_Ly_128.0_Nz_128_Nx_64_Ny_64",
-    # "./LES/QU_-0.0005_QT_5.0e-6_QS_-5.0e-5_Ttop_20.0_Stop_35.0_sponge_WENO9nu1e-5_Lz_256.0_Lx_128.0_Ly_128.0_Nz_256_Nx_128_Ny_128",
-    # "./LES/QU_-0.0005_QT_5.0e-6_QS_-5.0e-5_Ttop_20.0_Stop_35.0_sponge_AMD_Lz_256.0_Lx_128.0_Ly_128.0_Nz_256_Nx_128_Ny_128",
 ]
 
 labels = [
     "WENO(9), ν = κ = 1e-5, 2m resolution",
     "AMD, 2m resolution",
-    "WENO(9), ν = κ = 1e-5, 1m resolution",
-    "AMD, 1m resolution",
+    # "WENO(9) + AMD, 2m resolution",
+    "WENO(9), ν = κ = 0, 2m resolution",
+
+    # "WENO(9), ν = κ = 1e-5, 1m resolution",
+    # "AMD, 1m resolution",
     "WENO(9), ν = κ = 1e-5, 0.5m resolution",
     "AMD, 0.5m resolution"
 ]
 
 T_top = 20.
 S_top = 35.
-
-video_name = "./Data/QU_$(Qᵁ)_QT_$(Qᵀ)_QS_$(Qˢ)_Ttop_$(T_top)_Stop_$(S_top)_TS_resolution.mp4"
-
-T_datas = [FieldTimeSeries("$(FILE_DIR)/instantaneous_timeseries.jld2", "Tbar") for FILE_DIR in FILE_DIRS]
-S_datas = [FieldTimeSeries("$(FILE_DIR)/instantaneous_timeseries.jld2", "Sbar") for FILE_DIR in FILE_DIRS]
 
 parameters = jldopen("$(FILE_DIRS[1])/instantaneous_timeseries.jld2", "r") do file
     return Dict([(key, file["metadata/parameters/$(key)"]) for key in keys(file["metadata/parameters"])])
@@ -41,6 +65,11 @@ Qᵀ = parameters["temperature_flux"]
 Qˢ = parameters["salinity_flux"]
 # T_top = parameters["surface_temperature"]
 # S_top = parameters["surface_salinity"]
+
+video_name = "./Data/QU_$(Qᵁ)_QT_$(Qᵀ)_QS_$(Qˢ)_Ttop_$(T_top)_Stop_$(S_top)_TS_closure_2kmresolution_0.5_2.mp4"
+
+T_datas = [FieldTimeSeries("$(FILE_DIR)/instantaneous_timeseries.jld2", "Tbar") for FILE_DIR in FILE_DIRS]
+S_datas = [FieldTimeSeries("$(FILE_DIR)/instantaneous_timeseries.jld2", "Sbar") for FILE_DIR in FILE_DIRS]
 
 Nxs = [size(data.grid)[1] for data in T_datas]
 Nys = [size(data.grid)[2] for data in T_datas]
@@ -67,7 +96,7 @@ Slim = (find_min(S_datas...), find_max(S_datas...))
 
 n = Observable(1)
 
-times = u_datas[1].times
+times = T_datas[1].times
 Nt = length(times)
 time_str = @lift "Qᵁ = $(Qᵁ), Qᵀ = $(Qᵀ), Qˢ = $(Qˢ), Time = $(round(times[$n]/24/60^2, digits=3)) days"
 title = Label(fig[0, :], time_str, font=:bold, tellwidth=false)

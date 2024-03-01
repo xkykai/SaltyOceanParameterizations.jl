@@ -3,15 +3,15 @@ using Oceananigans
 using JLD2
 
 FILE_DIRS = [
-    # "./LES/linearb_experiments_dbdz_5.0_QU_-5.0e-5_QB_0.0_b_0.0_AMD_Lxz_2.0_1.0_Nxz_256_128",
-    # "./LES/linearb_experiments_dbdz_5.0_QU_-5.0e-5_QB_0.0_b_0.0_WENO9nu0_Lxz_2.0_1.0_Nxz_256_128",
+    "./LES/linearb_experiments_dbdz_5.0_QU_-5.0e-5_QB_0.0_b_0.0_AMD_Lxz_2.0_1.0_Nxz_256_128",
+    "./LES/linearb_experiments_dbdz_5.0_QU_-5.0e-5_QB_0.0_b_0.0_WENO9nu0_Lxz_2.0_1.0_Nxz_256_128",
     "./LES/linearb_experiments_dbdz_5.0_QU_-5.0e-5_QB_0.0_b_0.0_AMD_Lxz_2.0_1.0_Nxz_128_64",
     "./LES/linearb_experiments_dbdz_5.0_QU_-5.0e-5_QB_0.0_b_0.0_WENO9nu0_Lxz_2.0_1.0_Nxz_128_64",
 ]
 
 labels = [
-    # "Centered 2nd Order + AMD, 1/128 m resolution",
-    # L"WENO + $\nu$ = $\kappa$ = 0 m$^{2}$ s$^{-1}$, 1/128 m resolution",
+    "Centered 2nd Order + AMD, 1/128 m resolution",
+    L"WENO + $\nu$ = $\kappa$ = 0 m$^{2}$ s$^{-1}$, 1/128 m resolution",
     "Centered 2nd Order + AMD, 1/64 m resolution",
     L"WENO + $\nu$ = $\kappa$ = 0 m$^{2}$ s$^{-1}$, 1/64 m resolution",
 ]
@@ -23,9 +23,11 @@ end
 Qᵁ = parameters["momentum_flux"]
 dbdz = parameters["buoyancy_gradient"]
 
-video_name = "./Data/windmixing_QU_$(Qᵁ)_dbdz_$(dbdz).mp4"
+video_name = "./Data/windmixing_QU_$(Qᵁ)_dbdz_$(dbdz)_1973.mp4"
 
 b_datas = [FieldTimeSeries("$(FILE_DIR)/instantaneous_timeseries.jld2", "bbar") for FILE_DIR in FILE_DIRS]
+
+@info [size(data) for data in b_datas]
 
 Nxs = [size(data.grid)[1] for data in b_datas]
 Nys = [size(data.grid)[2] for data in b_datas]
@@ -48,8 +50,11 @@ times = b_datas[1].times
 Nt = length(times)
 
 function wind_mixing_MLD_scaling(Qᵁ, dbdz, t)
-    ustar = √(abs(Qᵁ))
-    return -ustar * (15*t / dbdz)^(1/3)
+    # ustar = √(abs(Qᵁ))
+    # return -ustar * (15*t / dbdz)^(1/3)
+    N = sqrt(dbdz)
+
+    return -2^0.25 * sqrt(abs(Qᵁ) / N * t)
 end
 
 MLD_theory = [wind_mixing_MLD_scaling(Qᵁ, dbdz, t) for t in times]
@@ -64,7 +69,8 @@ with_theme(theme_latexfonts()) do
     time_str = @lift "Wind Mixing, Qᵁ = $(Qᵁ), Time = $(round(times[$n], digits=1)) s"
     title = Label(fig[0, :], time_str, font=:bold, tellwidth=false)
     
-    bₙs = [@lift interior(data[findfirst(x -> x≈times[$n], data.times)], 1, 1, :) for data in b_datas]
+    # bₙs = [@lift interior(data[findfirst(x -> x≈times[$n], data.times)], 1, 1, :) for data in b_datas]
+    bₙs = [@lift interior(data[$n], 1, 1, :) for data in b_datas]
 
     MLD_theoryₙ = @lift [MLD_theory[$n]]
     
@@ -82,6 +88,7 @@ with_theme(theme_latexfonts()) do
     trim!(fig.layout)
     
     record(fig, video_name, 1:Nt, framerate=15) do nn
+        @info nn
         n[] = nn
     end
     

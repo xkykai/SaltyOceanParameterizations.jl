@@ -70,9 +70,17 @@ FILE_DIRS = [
     # "./LES/linearb_experiments_dbdz_5.0e-6_QU_-5.0e-5_QB_4.0e-8_b_0.0_f_0.0001_WENO9nu0_Lxz_256.0_128.0_Nxz_128_64",
     # "./LES/linearb_experiments_dbdz_5.0e-6_QU_-5.0e-5_QB_4.0e-8_b_0.0_f_0.0001_WENO9AMD_Lxz_256.0_128.0_Nxz_128_64",
     
-    "./LES/linearb_experiments_dbdz_0.08_QU_0.0_QB_1.0e-6_b_0.0_f_0.0_AMD_C2_0.08333333333333333_Lxz_2.0_1.0_Nxz_128_64",
-    "./LES/linearb_experiments_dbdz_0.08_QU_0.0_QB_1.0e-6_b_0.0_f_0.0_AMD_C2_0.25_Lxz_2.0_1.0_Nxz_128_64",
-    "./LES/linearb_experiments_dbdz_0.08_QU_0.0_QB_1.0e-6_b_0.0_f_0.0_AMD_C2_0.041666666666666664_Lxz_2.0_1.0_Nxz_128_64"
+    # "./LES/linearb_experiments_dbdz_0.08_QU_0.0_QB_1.0e-6_b_0.0_f_0.0_AMD_C2_0.08333333333333333_Lxz_2.0_1.0_Nxz_128_64",
+    # "./LES/linearb_experiments_dbdz_0.08_QU_0.0_QB_1.0e-6_b_0.0_f_0.0_AMD_C2_0.25_Lxz_2.0_1.0_Nxz_128_64",
+    # "./LES/linearb_experiments_dbdz_0.08_QU_0.0_QB_1.0e-6_b_0.0_f_0.0_AMD_C2_0.041666666666666664_Lxz_2.0_1.0_Nxz_128_64"
+
+    "./LES/linearb_experiments_dbdz_0.08_QU_0.0_QB_1.0e-6_b_0.0_f_0.0_WENO9nu0_Lxz_2.0_1.0_Nxz_128_64",
+    "./LES/linearb_experiments_dbdz_0.08_QU_0.0_QB_1.0e-6_b_0.0_f_0.0_WENO9nu0_Lxz_2.0_1.0_Nxz_256_128",
+    "./LES/linearb_experiments_dbdz_0.08_QU_0.0_QB_1.0e-6_b_0.0_f_0.0_WENO9nu0_Lxz_2.0_1.0_Nxz_512_256",
+
+    "./LES/linearb_experiments_dbdz_0.08_QU_0.0_QB_1.0e-6_b_0.0_f_0.0_WENO5nu0_Lxz_2.0_1.0_Nxz_128_64",
+    "./LES/linearb_experiments_dbdz_0.08_QU_0.0_QB_1.0e-6_b_0.0_f_0.0_WENO5nu0_Lxz_2.0_1.0_Nxz_256_128",
+    "./LES/linearb_experiments_dbdz_0.08_QU_0.0_QB_1.0e-6_b_0.0_f_0.0_WENO5nu0_Lxz_2.0_1.0_Nxz_512_256",
 ]
 
 labels = [
@@ -95,9 +103,17 @@ labels = [
     # L"WENO + $\nu$ = $\kappa$ = 0 m$^{2}$ s$^{-1}$, 0.5 m resolution",
     # L"WENO + $\nu$ = $\kappa$ = 0 m$^{2}$ s$^{-1}$ + AMD, 0.5 m resolution",
 
-    "Centered 2nd Order + AMD, 2 m resolution, C² = 1/12",
-    "Centered 2nd Order + AMD, 2 m resolution, C² = 1/4",
-    "Centered 2nd Order + AMD, 2 m resolution, C² = 1/24"
+    # "Centered 2nd Order + AMD, 2 m resolution, C² = 1/12",
+    # "Centered 2nd Order + AMD, 2 m resolution, C² = 1/4",
+    # "Centered 2nd Order + AMD, 2 m resolution, C² = 1/24"
+
+    L"WENO(9) + $\nu$ = $\kappa$ = 0 m$^{2}$ s$^{-1}$, 2 m resolution",
+    L"WENO(9) + $\nu$ = $\kappa$ = 0 m$^{2}$ s$^{-1}$, 1 m resolution",
+    L"WENO(9) + $\nu$ = $\kappa$ = 0 m$^{2}$ s$^{-1}$, 0.5 m resolution",
+
+    L"WENO(5) + $\nu$ = $\kappa$ = 0 m$^{2}$ s$^{-1}$, 2 m resolution",
+    L"WENO(5) + $\nu$ = $\kappa$ = 0 m$^{2}$ s$^{-1}$, 1 m resolution",
+    L"WENO(5) + $\nu$ = $\kappa$ = 0 m$^{2}$ s$^{-1}$, 0.5 m resolution",
 ]
 
 parameters = jldopen("$(FILE_DIRS[1])/instantaneous_timeseries.jld2", "r") do file
@@ -110,7 +126,7 @@ Qᴮ = parameters["buoyancy_flux"]
 dbdz = parameters["buoyancy_gradient"]
 f = parameters["coriolis_parameter"]
 
-video_name = "./Data/freeconvection_AMD_C2_2.8_QB_$(Qᴮ)_QU_$(Qᵁ)_dbdz_$(dbdz)_f_$(f)_convergence.mp4"
+video_name = "./Data/freeconvection_WENO_2.8_QB_$(Qᴮ)_QU_$(Qᵁ)_dbdz_$(dbdz)_f_$(f)_convergence.mp4"
 
 b_datas = [FieldTimeSeries("$(FILE_DIR)/instantaneous_timeseries.jld2", "bbar") for FILE_DIR in FILE_DIRS]
 wb_datas = [FieldTimeSeries("$(FILE_DIR)/instantaneous_timeseries.jld2", "wb") for FILE_DIR in FILE_DIRS]

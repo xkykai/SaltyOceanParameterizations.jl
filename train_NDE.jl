@@ -165,7 +165,7 @@ function train_NDE(train_data, NNs, ps_NN, st_NN; coarse_size=32, dev=cpu_device
     wall_clock = [time_ns()]
 
     callback = function (p, l, pred, ind_loss)
-        @printf("%s, Δt %s, iter %d/%d, loss total %6.5e, u %6.5e, v %6.5e, T %6.5e, S %6.5e, ρ %6.5e\n",
+        @printf("%s, Δt %s, iter %d/%d, loss total %6.10e, u %6.5e, v %6.5e, T %6.5e, S %6.5e, ρ %6.5e\n",
                 Dates.now(), prettytime(1e-9 * (time_ns() - wall_clock[1])), iter, maxiter, l, ind_loss.u, ind_loss.v, ind_loss.T, ind_loss.S, ind_loss.ρ)
         losses[iter+1] = l
         u_losses[iter+1] = ind_loss.u
@@ -208,7 +208,7 @@ function train_NDE(train_data, NNs, ps_NN, st_NN; coarse_size=32, dev=cpu_device
     return res, loss_NDE(res.u), sols_posttraining, flux_posttraining, losses
 end
 
-res, loss, sols, fluxes, losses = train_NDE(train_data, NNs, ps_NN, st_NN, maxiter=3)
+res, loss, sols, fluxes, losses = train_NDE(train_data, NNs, ps_NN, st_NN, maxiter=2000)
 
 train_data_plot = LESDatasets(field_datasets, ZeroMeanUnitVarianceScaling, full_timeframes)
 

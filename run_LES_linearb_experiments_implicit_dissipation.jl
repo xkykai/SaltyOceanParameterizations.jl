@@ -13,6 +13,7 @@ using Statistics
 using ArgParse
 using Glob
 include("compute_dissipation.jl")
+include("correct_reduction_oceananigans.jl")
 
 import Dates
 
@@ -212,7 +213,6 @@ bⁿ⁻¹ = CenterField(grid)
 Uⁿ⁻¹ = XFaceField(grid)
 Vⁿ⁻¹ = YFaceField(grid)
 Wⁿ⁻¹ = ZFaceField(grid)
-
 
 model = NonhydrostaticModel(; 
             grid = grid,

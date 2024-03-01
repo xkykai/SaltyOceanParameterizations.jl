@@ -14,6 +14,7 @@ using Random
 using Statistics
 using ArgParse
 using SeawaterPolynomials.TEOS10: ζ, r₀, r′, τ, s
+include("correct_reduction_oceananigans.jl")
 
 import Dates
 
@@ -113,6 +114,10 @@ function parse_commandline()
         help = "Location to save files"
         arg_type = String
         default = "."
+      "--max_filesize"
+        help = "Maximum filesize of fields.jld2 (bytes)"
+        arg_type = Float64
+        default = 50e9
     end
     return parse_args(s)
 end
@@ -170,6 +175,7 @@ const T_surface = args["T_surface"]
 const S_surface = args["S_surface"]
 
 const pickup = args["pickup"]
+const max_filesize = args["max_filesize"]
 
 FILE_NAME = "linearTS_simplefields_dTdz_$(dTdz)_dSdz_$(dSdz)_QU_$(Qᵁ)_QT_$(Qᵀ)_QS_$(Qˢ)_T_$(T_surface)_S_$(S_surface)_$(args["advection"])_Lxz_$(Lx)_$(Lz)_Nxz_$(Nx)_$(Nz)"
 FILE_DIR = "$(args["file_location"])/LES/$(FILE_NAME)"
@@ -304,13 +310,6 @@ field_outputs = merge(model.velocities, model.tracers)
 timeseries_outputs = (; ubar, vbar, Tbar, Sbar, bbar,
                         uw, vw, wT, wS, wb)
 
-simulation.output_writers[:jld2] = JLD2OutputWriter(model, field_outputs,
-                                                          filename = "$(FILE_DIR)/instantaneous_fields.jld2",
-                                                          schedule = TimeInterval(args["time_interval"]minutes),
-                                                          with_halos = true,
-                                                          init = init_save_some_metadata!,
-                                                          max_filesize=50e9)
-
 simulation.output_writers[:timeseries] = JLD2OutputWriter(model, timeseries_outputs,
                                                           filename = "$(FILE_DIR)/instantaneous_timeseries.jld2",
                                                           schedule = TimeInterval(args["time_interval"]minutes),
@@ -319,16 +318,35 @@ simulation.output_writers[:timeseries] = JLD2OutputWriter(model, timeseries_outp
 
 simulation.output_writers[:checkpointer] = Checkpointer(model, schedule=TimeInterval(args["checkpoint_interval"]days), prefix="$(FILE_DIR)/model_checkpoint")
 
-if pickup
-    files = readdir(FILE_DIR)
-    checkpoint_files = files[occursin.("model_checkpoint_iteration", files)]
-    if !isempty(checkpoint_files)
-        checkpoint_iters = parse.(Int, [filename[findfirst("iteration", filename)[end]+1:findfirst(".jld2", filename)[1]-1] for filename in checkpoint_files])
-        pickup_iter = maximum(checkpoint_iters)
-        run!(simulation, pickup="$(FILE_DIR)/model_checkpoint_iteration$(pickup_iter).jld2")
+files = readdir(FILE_DIR)
+checkpoint_files = files[occursin.("model_checkpoint_iteration", files)]
+
+if pickup && !isempty(checkpoint_files)
+    checkpoint_iters = parse.(Int, [filename[findfirst("iteration", filename)[end]+1:findfirst(".jld2", filename)[1]-1] for filename in checkpoint_files])
+    pickup_iter = maximum(checkpoint_iters)
+
+    part_files = files[occursin("instantaneous_fields_part", files)]
+
+    if !isempty(part_files)
+        part_iters = parse.(Int, [filename[findfirst("part", filename)[end]+1:findfirst(".jld2", filename)[1]-1] for filename in part_files])
+        part_iter = maximum(part_iters)
     else
-        run!(simulation)
+        part_iter = 1
     end
+else
+      part_iter = 1
+end
+
+simulation.output_writers[:jld2] = JLD2OutputWriter(model, field_outputs,
+                                                    filename = "$(FILE_DIR)/instantaneous_fields.jld2",
+                                                    schedule = TimeInterval(args["time_interval"]minutes),
+                                                    with_halos = true,
+                                                    init = init_save_some_metadata!,
+                                                    max_filesize=max_filesize,
+                                                    part = part_iter)
+
+if pickup && !isempty(checkpoint_files)
+    run!(simulation, pickup="$(FILE_DIR)/model_checkpoint_iteration$(pickup_iter).jld2")
 else
     run!(simulation)
 end

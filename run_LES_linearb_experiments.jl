@@ -13,6 +13,7 @@ using Statistics
 using ArgParse
 using Glob
 include("compute_dissipation.jl")
+include("correct_reduction_oceananigans.jl")
 
 import Dates
 

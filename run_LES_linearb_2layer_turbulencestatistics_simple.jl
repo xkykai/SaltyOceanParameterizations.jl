@@ -12,6 +12,7 @@ using Oceananigans.Utils: ConsecutiveIterations
 using Random
 using Statistics
 using ArgParse
+include("correct_reduction_oceananigans.jl")
 
 import Dates
 

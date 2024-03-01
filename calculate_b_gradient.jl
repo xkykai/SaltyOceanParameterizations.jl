@@ -56,8 +56,8 @@ zFs_max_WENO9nu0 = [[zF[argmax[1]] for argmax in Δb_argmax] for (zF, Δb_argmax
 times_fit_AMD = [range(extrema(time)..., step=maximum(time)/1000) for time in times_AMD]
 times_fit_WENO9nu0 = [range(extrema(time)..., step=maximum(time)/1000) for time in times_WENO9nu0]
 
-loess_model_Δbs_AMD = [loess(time, Δb_max, span=0.15) for (time, Δb_max) in zip(times_AMD, Δbs_max_AMD)]
-loess_model_Δbs_WENO9nu0 = [loess(time, Δb_max, span=0.15) for (time, Δb_max) in zip(times_WENO9nu0, Δbs_max_WENO9nu0)]
+loess_model_Δbs_AMD = [loess(time, Δb_max, span=0.5) for (time, Δb_max) in zip(times_AMD, Δbs_max_AMD)]
+loess_model_Δbs_WENO9nu0 = [loess(time, Δb_max, span=0.5) for (time, Δb_max) in zip(times_WENO9nu0, Δbs_max_WENO9nu0)]
 
 Δbs_fit_AMD = [predict(model, time) for (model, time) in zip(loess_model_Δbs_AMD, times_fit_AMD)]
 Δbs_fit_WENO9nu0 = [predict(model, time) for (model, time) in zip(loess_model_Δbs_WENO9nu0, times_fit_WENO9nu0)]

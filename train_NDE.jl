@@ -208,7 +208,7 @@ function train_NDE(train_data, NNs, ps_NN, st_NN; coarse_size=32, dev=cpu_device
     return res, loss_NDE(res.u), sols_posttraining, flux_posttraining, losses
 end
 
-@time res, loss, sols, fluxes, losses = train_NDE(train_data, NNs, ps_NN, st_NN, maxiter=3)
+res, loss, sols, fluxes, losses = train_NDE(train_data, NNs, ps_NN, st_NN, maxiter=3)
 
 train_data_plot = LESDatasets(field_datasets, ZeroMeanUnitVarianceScaling, full_timeframes)
 

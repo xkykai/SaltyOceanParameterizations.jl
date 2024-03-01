@@ -47,11 +47,11 @@ maxlat = args["maxlat"]
 
 @info args["month"]
 
-s_ds = NCDataset(glob("ARGO/field/*/*_PSAL.nc", "/storage6/xinkai"))
-T_ds = NCDataset(glob("ARGO/field/*/*_TEMP.nc", "/storage6/xinkai"))
+# s_ds = NCDataset(glob("ARGO/field/*/*_PSAL.nc", "/storage6/xinkai"))
+# T_ds = NCDataset(glob("ARGO/field/*/*_TEMP.nc", "/storage6/xinkai"))
 
-# s_ds = NCDataset(glob("ARGO/field/*/*_PSAL.nc"))
-# T_ds = NCDataset(glob("ARGO/field/*/*_TEMP.nc"))
+s_ds = NCDataset(glob("ARGO/field/*/*_PSAL.nc"))
+T_ds = NCDataset(glob("ARGO/field/*/*_TEMP.nc"))
 
 times = collect(s_ds["time"])
 lats = collect(s_ds["latitude"])
@@ -78,17 +78,19 @@ Tbar = zeros(1, 1, size(T)[3:end]...)
 
 Threads.@threads for k in axes(sbar, 3)
     for l in axes(sbar, 4)
-        sbar[1, 1, k, l] = mean(skipmissing(s[:, :, k, l]))
+        # sbar[1, 1, k, l] = mean(skipmissing(s[:, :, k, l]))
+        sbar[1, 1, k, l] = mean(s[:, :, k, l])
     end
 end
 
 Threads.@threads for k in axes(Tbar, 3)
     for l in axes(Tbar, 4)
-        Tbar[1, 1, k, l] = mean(skipmissing(T[:, :, k, l]))
+        # Tbar[1, 1, k, l] = mean(skipmissing(T[:, :, k, l]))
+        Tbar[1, 1, k, l] = mean(T[:, :, k, l])
     end
 end
 
-jldopen("./Data/lon_$(minlon)_$(maxlon)_lat_$(minlat)_$(maxlat)_month_$(args["month"])_skipmissing.jld2", "w") do file
+jldopen("./Data/lon_$(minlon)_$(maxlon)_lat_$(minlat)_$(maxlat)_month_$(args["month"]).jld2", "w") do file
     file["S"] = sbar
     file["T"] = Tbar
 end

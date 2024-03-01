@@ -30,7 +30,7 @@ FILE_DIRS_QUARTERm = [
 ]
 
 labels = [
-    "AMD",
+    "Centered 2nd Order + AMD",
     L"WENO, $\nu$ = $\kappa$ = 0 m$^{2}$ s$^{-1}$",
     L"WENO, $\nu$ = $\kappa$ = $1 \times 10^{-5}$ m$^{2}$ s$^{-1}$",
     "WENO + AMD",

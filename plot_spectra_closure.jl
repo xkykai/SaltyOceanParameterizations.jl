@@ -94,10 +94,15 @@ times_WENO9nu0 = [b_datas_WENO9nu0[i].times for i in eachindex(b_datas_WENO9nu0)
 times_WENO9nu1eminus5 = [b_datas_WENO9nu1eminus5[i].times for i in eachindex(b_datas_WENO9nu1eminus5)]
 times_WENO9AMD = [b_datas_WENO9AMD[i].times for i in eachindex(b_datas_WENO9AMD)]
 
-zC_AMD = b_datas_AMD[1].grid.zᵃᵃᶜ[1:64]
-zC_WENO9nu0 = b_datas_WENO9nu0[1].grid.zᵃᵃᶜ[1:128]
-zC_WENO9nu1eminus5 = b_datas_WENO9nu1eminus5[1].grid.zᵃᵃᶜ[1:256]
-zC_WENO9AMD = b_datas_WENO9AMD[1].grid.zᵃᵃᶜ[1:512]
+Nzs_AMD = [b_datas_AMD[i].grid.Nz for i in eachindex(b_datas_AMD)]
+Nzs_WENO9nu0 = [b_datas_WENO9nu0[i].grid.Nz for i in eachindex(b_datas_WENO9nu0)]
+Nzs_WENO9nu1eminus5 = [b_datas_WENO9nu1eminus5[i].grid.Nz for i in eachindex(b_datas_WENO9nu1eminus5)]
+Nzs_WENO9AMD = [b_datas_WENO9AMD[i].grid.Nz for i in eachindex(b_datas_WENO9AMD)]
+
+zCs_AMD = [b_datas_AMD[i].grid.zᵃᵃᶜ[1:Nzs_AMD[i]] for i in eachindex(b_datas_AMD)]
+zCs_WENO9nu0 = [b_datas_WENO9nu0[i].grid.zᵃᵃᶜ[1:Nzs_WENO9nu0[i]] for i in eachindex(b_datas_WENO9nu0)]
+zCs_WENO9nu1eminus5 = [b_datas_WENO9nu1eminus5[i].grid.zᵃᵃᶜ[1:Nzs_WENO9nu1eminus5[i]] for i in eachindex(b_datas_WENO9nu1eminus5)]
+zCs_WENO9AMD = [b_datas_WENO9AMD[i].grid.zᵃᵃᶜ[1:Nzs_WENO9AMD[i]] for i in eachindex(b_datas_WENO9AMD)]
 
 n_start = 29
 n_window = n_start:48
@@ -106,10 +111,10 @@ times = (0:60^2:48*60^2) ./ (24 * 60^2)
 
 zrange = (-50, -2)
 
-z_levels_AMD = findfirst(z -> z>zrange[1], zC_AMD):findlast(z -> z<zrange[2], zC_AMD)
-z_levels_WENO9nu0 = findfirst(z -> z>zrange[1], zC_WENO9nu0):findlast(z -> z<zrange[2], zC_WENO9nu0)
-z_levels_WENO9nu1eminus5 = findfirst(z -> z>zrange[1], zC_WENO9nu1eminus5):findlast(z -> z<zrange[2], zC_WENO9nu1eminus5)
-z_levels_WENO9AMD = findfirst(z -> z>zrange[1], zC_WENO9AMD):findlast(z -> z<zrange[2], zC_WENO9AMD)
+z_levels_AMD = [findfirst(z -> z>zrange[1], zC_AMD):findlast(z -> z<zrange[2], zC_AMD) for zC_AMD in zCs_AMD]
+z_levels_WENO9nu0 = [findfirst(z -> z>zrange[1], zC_WENO9nu0):findlast(z -> z<zrange[2], zC_WENO9nu0) for zC_WENO9nu0 in zCs_WENO9nu0]
+z_levels_WENO9nu1eminus5 = [findfirst(z -> z>zrange[1], zC_WENO9nu1eminus5):findlast(z -> z<zrange[2], zC_WENO9nu1eminus5) for zC_WENO9nu1eminus5 in zCs_WENO9nu1eminus5]
+z_levels_WENO9AMD = [findfirst(z -> z>zrange[1], zC_WENO9AMD):findlast(z -> z<zrange[2], zC_WENO9AMD) for zC_WENO9AMD in zCs_WENO9AMD]
 
 TKE_kxs_AMD = [0.5 .* (u.spectra²_kx .+ v.spectra²_kx .+ w.spectra²_kx) for (u, v, w) in zip(u²_spectras_AMD, v²_spectras_AMD, w²_spectras_AMD)]
 TKE_kys_AMD = [0.5 .* (u.spectra²_ky .+ v.spectra²_ky .+ w.spectra²_ky) for (u, v, w) in zip(u²_spectras_AMD, v²_spectras_AMD, w²_spectras_AMD)]
@@ -166,67 +171,67 @@ with_theme(theme_latexfonts()) do
     Label(fig[7:8, -1], "Averaged in x", rotation=π/2, tellheight=false, font=:bold)
 
     for i in eachindex(b²_spectras_AMD)
-        lines!(axkx_b_AMD, b²_spectras_AMD[i].kx[2:end], mean(b²_spectras_AMD[i].spectra²_kx[2:end, :, z_levels_AMD, n_window], dims=(3, 4))[:], label=labels[i])
+        lines!(axkx_b_AMD, b²_spectras_AMD[i].kx[2:end], mean(b²_spectras_AMD[i].spectra²_kx[2:end, :, z_levels_AMD[i], n_window], dims=(3, 4))[:], label=labels[i])
     end
 
     for i in eachindex(b²_spectras_AMD)
-        lines!(axky_b_AMD, b²_spectras_AMD[i].ky[2:end], mean(b²_spectras_AMD[i].spectra²_ky[:, 2:end, z_levels_AMD, n_window], dims=(3, 4))[:], label=labels[i])
+        lines!(axky_b_AMD, b²_spectras_AMD[i].ky[2:end], mean(b²_spectras_AMD[i].spectra²_ky[:, 2:end, z_levels_AMD[i], n_window], dims=(3, 4))[:], label=labels[i])
     end
 
     for i in eachindex(TKE_kxs_AMD)
-        lines!(axkx_TKE_AMD, b²_spectras_AMD[i].kx[2:end], mean(TKE_kxs_AMD[i][2:end, :, z_levels_AMD, n_window], dims=(3, 4))[:], label=labels[i])
+        lines!(axkx_TKE_AMD, b²_spectras_AMD[i].kx[2:end], mean(TKE_kxs_AMD[i][2:end, :, z_levels_AMD[i], n_window], dims=(3, 4))[:], label=labels[i])
     end
 
     for i in eachindex(TKE_kys_AMD)
-        lines!(axky_TKE_AMD, b²_spectras_AMD[i].ky[2:end], mean(TKE_kys_AMD[i][:, 2:end, z_levels_AMD, n_window], dims=(3, 4))[:], label=labels[i])
+        lines!(axky_TKE_AMD, b²_spectras_AMD[i].ky[2:end], mean(TKE_kys_AMD[i][:, 2:end, z_levels_AMD[i], n_window], dims=(3, 4))[:], label=labels[i])
     end
 
     for i in eachindex(b²_spectras_WENO9nu0)
-        lines!(axkx_b_WENO9nu0, b²_spectras_WENO9nu0[i].kx[2:end], mean(b²_spectras_WENO9nu0[i].spectra²_kx[2:end, :, z_levels_WENO9nu0, n_window], dims=(3, 4))[:], label=labels[i])
+        lines!(axkx_b_WENO9nu0, b²_spectras_WENO9nu0[i].kx[2:end], mean(b²_spectras_WENO9nu0[i].spectra²_kx[2:end, :, z_levels_WENO9nu0[i], n_window], dims=(3, 4))[:], label=labels[i])
     end
 
     for i in eachindex(b²_spectras_WENO9nu0)
-        lines!(axky_b_WENO9nu0, b²_spectras_WENO9nu0[i].ky[2:end], mean(b²_spectras_WENO9nu0[i].spectra²_ky[:, 2:end, z_levels_WENO9nu0, n_window], dims=(3, 4))[:], label=labels[i])
+        lines!(axky_b_WENO9nu0, b²_spectras_WENO9nu0[i].ky[2:end], mean(b²_spectras_WENO9nu0[i].spectra²_ky[:, 2:end, z_levels_WENO9nu0[i], n_window], dims=(3, 4))[:], label=labels[i])
     end
 
     for i in eachindex(TKE_kxs_WENO9nu0)
-        lines!(axkx_TKE_WENO9nu0, b²_spectras_WENO9nu0[i].kx[2:end], mean(TKE_kxs_WENO9nu0[i][2:end, :, z_levels_WENO9nu0, n_window], dims=(3, 4))[:], label=labels[i])
+        lines!(axkx_TKE_WENO9nu0, b²_spectras_WENO9nu0[i].kx[2:end], mean(TKE_kxs_WENO9nu0[i][2:end, :, z_levels_WENO9nu0[i], n_window], dims=(3, 4))[:], label=labels[i])
     end
 
     for i in eachindex(TKE_kys_WENO9nu0)
-        lines!(axky_TKE_WENO9nu0, b²_spectras_WENO9nu0[i].ky[2:end], mean(TKE_kys_WENO9nu0[i][:, 2:end, z_levels_WENO9nu0, n_window], dims=(3, 4))[:], label=labels[i])
+        lines!(axky_TKE_WENO9nu0, b²_spectras_WENO9nu0[i].ky[2:end], mean(TKE_kys_WENO9nu0[i][:, 2:end, z_levels_WENO9nu0[i], n_window], dims=(3, 4))[:], label=labels[i])
     end
 
     for i in eachindex(b²_spectras_WENO9nu1eminus5)
-        lines!(axkx_b_WENO91eminus5, b²_spectras_WENO9nu1eminus5[i].kx[2:end], mean(b²_spectras_WENO9nu1eminus5[i].spectra²_kx[2:end, :, z_levels_WENO9nu1eminus5, n_window], dims=(3, 4))[:], label=labels[i])
+        lines!(axkx_b_WENO91eminus5, b²_spectras_WENO9nu1eminus5[i].kx[2:end], mean(b²_spectras_WENO9nu1eminus5[i].spectra²_kx[2:end, :, z_levels_WENO9nu1eminus5[i], n_window], dims=(3, 4))[:], label=labels[i])
     end
 
     for i in eachindex(b²_spectras_WENO9nu1eminus5)
-        lines!(axky_b_WENO91eminus5, b²_spectras_WENO9nu1eminus5[i].ky[2:end], mean(b²_spectras_WENO9nu1eminus5[i].spectra²_ky[:, 2:end, z_levels_WENO9nu1eminus5, n_window], dims=(3, 4))[:], label=labels[i])
+        lines!(axky_b_WENO91eminus5, b²_spectras_WENO9nu1eminus5[i].ky[2:end], mean(b²_spectras_WENO9nu1eminus5[i].spectra²_ky[:, 2:end, z_levels_WENO9nu1eminus5[i], n_window], dims=(3, 4))[:], label=labels[i])
     end
 
     for i in eachindex(TKE_kxs_WENO9nu1eminus5)
-        lines!(axkx_TKE_WENO91eminus5, b²_spectras_WENO9nu1eminus5[i].kx[2:end], mean(TKE_kxs_WENO9nu1eminus5[i][2:end, :, z_levels_WENO9nu1eminus5, n_window], dims=(3, 4))[:], label=labels[i])
+        lines!(axkx_TKE_WENO91eminus5, b²_spectras_WENO9nu1eminus5[i].kx[2:end], mean(TKE_kxs_WENO9nu1eminus5[i][2:end, :, z_levels_WENO9nu1eminus5[i], n_window], dims=(3, 4))[:], label=labels[i])
     end
 
     for i in eachindex(TKE_kys_WENO9nu1eminus5)
-        lines!(axky_TKE_WENO91eminus5, b²_spectras_WENO9nu1eminus5[i].ky[2:end], mean(TKE_kys_WENO9nu1eminus5[i][:, 2:end, z_levels_WENO9nu1eminus5, n_window], dims=(3, 4))[:], label=labels[i])
+        lines!(axky_TKE_WENO91eminus5, b²_spectras_WENO9nu1eminus5[i].ky[2:end], mean(TKE_kys_WENO9nu1eminus5[i][:, 2:end, z_levels_WENO9nu1eminus5[i], n_window], dims=(3, 4))[:], label=labels[i])
     end
 
     for i in eachindex(b²_spectras_WENO9AMD)
-        lines!(axkx_b_WENO9AMD, b²_spectras_WENO9AMD[i].kx[2:end], mean(b²_spectras_WENO9AMD[i].spectra²_kx[2:end, :, z_levels_WENO9AMD, n_window], dims=(3, 4))[:], label=labels[i])
+        lines!(axkx_b_WENO9AMD, b²_spectras_WENO9AMD[i].kx[2:end], mean(b²_spectras_WENO9AMD[i].spectra²_kx[2:end, :, z_levels_WENO9AMD[i], n_window], dims=(3, 4))[:], label=labels[i])
     end
 
     for i in eachindex(b²_spectras_WENO9AMD)
-        lines!(axky_b_WENO9AMD, b²_spectras_WENO9AMD[i].ky[2:end], mean(b²_spectras_WENO9AMD[i].spectra²_ky[:, 2:end, z_levels_WENO9AMD, n_window], dims=(3, 4))[:], label=labels[i])
+        lines!(axky_b_WENO9AMD, b²_spectras_WENO9AMD[i].ky[2:end], mean(b²_spectras_WENO9AMD[i].spectra²_ky[:, 2:end, z_levels_WENO9AMD[i], n_window], dims=(3, 4))[:], label=labels[i])
     end
 
     for i in eachindex(TKE_kxs_WENO9AMD)
-        lines!(axkx_TKE_WENO9AMD, b²_spectras_WENO9AMD[i].kx[2:end], mean(TKE_kxs_WENO9AMD[i][2:end, :, z_levels_WENO9AMD, n_window], dims=(3, 4))[:], label=labels[i])
+        lines!(axkx_TKE_WENO9AMD, b²_spectras_WENO9AMD[i].kx[2:end], mean(TKE_kxs_WENO9AMD[i][2:end, :, z_levels_WENO9AMD[i], n_window], dims=(3, 4))[:], label=labels[i])
     end
 
     for i in eachindex(TKE_kys_WENO9AMD)
-        lines!(axky_TKE_WENO9AMD, b²_spectras_WENO9AMD[i].ky[2:end], mean(TKE_kys_WENO9AMD[i][:, 2:end, z_levels_WENO9AMD, n_window], dims=(3, 4))[:], label=labels[i])
+        lines!(axky_TKE_WENO9AMD, b²_spectras_WENO9AMD[i].ky[2:end], mean(TKE_kys_WENO9AMD[i][:, 2:end, z_levels_WENO9AMD[i], n_window], dims=(3, 4))[:], label=labels[i])
     end
 
 
@@ -249,6 +254,16 @@ with_theme(theme_latexfonts()) do
     hidedecorations!(axky_b_WENO9AMD, ticks=false, ticklabels=false)
     hidedecorations!(axkx_TKE_WENO9AMD, ticks=false, ticklabels=false)
     hidedecorations!(axky_TKE_WENO9AMD, ticks=false, ticklabels=false)
+
+    linkyaxes!(axkx_b_AMD, axkx_b_WENO9nu0, axkx_b_WENO91eminus5, axkx_b_WENO9AMD)
+    linkyaxes!(axky_b_AMD, axky_b_WENO9nu0, axky_b_WENO91eminus5, axky_b_WENO9AMD)
+    linkyaxes!(axkx_TKE_AMD, axkx_TKE_WENO9nu0, axkx_TKE_WENO91eminus5, axkx_TKE_WENO9AMD)
+    linkyaxes!(axky_TKE_AMD, axky_TKE_WENO9nu0, axky_TKE_WENO91eminus5, axky_TKE_WENO9AMD)
+
+    linkxaxes!(axkx_b_AMD, axkx_b_WENO9nu0, axkx_b_WENO91eminus5, axkx_b_WENO9AMD)
+    linkxaxes!(axky_b_AMD, axky_b_WENO9nu0, axky_b_WENO91eminus5, axky_b_WENO9AMD)
+    linkxaxes!(axkx_TKE_AMD, axkx_TKE_WENO9nu0, axkx_TKE_WENO91eminus5, axkx_TKE_WENO9AMD)
+    linkxaxes!(axky_TKE_AMD, axky_TKE_WENO9nu0, axky_TKE_WENO91eminus5, axky_TKE_WENO9AMD)
 
     Legend(fig[9, :], axkx_b_AMD, orientation=:horizontal)
 

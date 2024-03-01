@@ -1,59 +1,59 @@
+using FFTW
 using Oceananigans
 using CairoMakie
 using Statistics
 using LinearAlgebra
+using SparseArrays
 using JLD2
-using FileIO
 
 FILE_DIRS = [
-    # "./LES/linearb_turbulencestatistics_dbdz_1.953125e-5_QU_-0.001_QB_1.0e-7_b_0.0_AMD_Lxz_64.0_128.0_Nxz_32_64_f",
+    "./LES/linearb_turbulencestatistics_dbdz_1.953125e-5_QU_-0.001_QB_1.0e-7_b_0.0_AMD_Lxz_64.0_128.0_Nxz_32_64_f",
     # "./LES/linearb_turbulencestatistics_dbdz_1.953125e-5_QU_-0.001_QB_1.0e-7_b_0.0_WENO9nu0_Lxz_64.0_128.0_Nxz_32_64_f",
     # "./LES/linearb_turbulencestatistics_dbdz_1.953125e-5_QU_-0.001_QB_1.0e-7_b_0.0_WENO9nu1e-5_Lxz_64.0_128.0_Nxz_32_64_f",
-    # "./LES/linearb_turbulencestatistics_dbdz_1.953125e-5_QU_-0.001_QB_1.0e-7_b_0.0_WENO9AMD_Lxz_64.0_128.0_Nxz_32_64_f",
+    "./LES/linearb_turbulencestatistics_dbdz_1.953125e-5_QU_-0.001_QB_1.0e-7_b_0.0_WENO9AMD_Lxz_64.0_128.0_Nxz_32_64_f",
 
     # "./LES/linearb_turbulencestatistics_dbdz_1.953125e-5_QU_-0.0005_QB_1.0e-7_b_0.0_AMD_Lxz_64.0_128.0_Nxz_32_64_f",
     # "./LES/linearb_turbulencestatistics_dbdz_1.953125e-5_QU_-0.0005_QB_1.0e-7_b_0.0_WENO9nu0_Lxz_64.0_128.0_Nxz_32_64_f",
     # "./LES/linearb_turbulencestatistics_dbdz_1.953125e-5_QU_-0.0005_QB_1.0e-7_b_0.0_WENO9nu1e-5_Lxz_64.0_128.0_Nxz_32_64_f",
     # "./LES/linearb_turbulencestatistics_dbdz_1.953125e-5_QU_-0.0005_QB_1.0e-7_b_0.0_WENO9AMD_Lxz_64.0_128.0_Nxz_32_64_f",
 
-    # "./LES/linearb_turbulencestatistics_dbdz_1.953125e-5_QU_-0.001_QB_1.0e-7_b_0.0_AMD_Lxz_64.0_128.0_Nxz_64_128_f",
+    "./LES/linearb_turbulencestatistics_dbdz_1.953125e-5_QU_-0.001_QB_1.0e-7_b_0.0_AMD_Lxz_64.0_128.0_Nxz_64_128_f",
     # "./LES/linearb_turbulencestatistics_dbdz_1.953125e-5_QU_-0.001_QB_1.0e-7_b_0.0_WENO9nu0_Lxz_64.0_128.0_Nxz_64_128_f",
     # "./LES/linearb_turbulencestatistics_dbdz_1.953125e-5_QU_-0.001_QB_1.0e-7_b_0.0_WENO9nu1e-5_Lxz_64.0_128.0_Nxz_64_128_f",
-    # "./LES/linearb_turbulencestatistics_dbdz_1.953125e-5_QU_-0.001_QB_1.0e-7_b_0.0_WENO9AMD_Lxz_64.0_128.0_Nxz_64_128_f",
+    "./LES/linearb_turbulencestatistics_dbdz_1.953125e-5_QU_-0.001_QB_1.0e-7_b_0.0_WENO9AMD_Lxz_64.0_128.0_Nxz_64_128_f",
 
     # "./LES/linearb_turbulencestatistics_dbdz_1.953125e-5_QU_-0.0005_QB_1.0e-7_b_0.0_AMD_Lxz_64.0_128.0_Nxz_64_128_f",
     # "./LES/linearb_turbulencestatistics_dbdz_1.953125e-5_QU_-0.0005_QB_1.0e-7_b_0.0_WENO9nu0_Lxz_64.0_128.0_Nxz_64_128_f",
     # "./LES/linearb_turbulencestatistics_dbdz_1.953125e-5_QU_-0.0005_QB_1.0e-7_b_0.0_WENO9nu1e-5_Lxz_64.0_128.0_Nxz_64_128_f",
     # "./LES/linearb_turbulencestatistics_dbdz_1.953125e-5_QU_-0.0005_QB_1.0e-7_b_0.0_WENO9AMD_Lxz_64.0_128.0_Nxz_64_128_f",
 
-    # "./LES/linearb_turbulencestatistics_dbdz_1.953125e-5_QU_-0.001_QB_1.0e-7_b_0.0_AMD_Lxz_64.0_128.0_Nxz_128_256_f",
+    "./LES/linearb_turbulencestatistics_dbdz_1.953125e-5_QU_-0.001_QB_1.0e-7_b_0.0_AMD_Lxz_64.0_128.0_Nxz_128_256_f",
     # "./LES/linearb_turbulencestatistics_dbdz_1.953125e-5_QU_-0.001_QB_1.0e-7_b_0.0_WENO9nu0_Lxz_64.0_128.0_Nxz_128_256_f",
     # "./LES/linearb_turbulencestatistics_dbdz_1.953125e-5_QU_-0.001_QB_1.0e-7_b_0.0_WENO9nu1e-5_Lxz_64.0_128.0_Nxz_128_256_f",
-    # "./LES/linearb_turbulencestatistics_dbdz_1.953125e-5_QU_-0.001_QB_1.0e-7_b_0.0_WENO9AMD_Lxz_64.0_128.0_Nxz_128_256_f",
-    
-    "./LES/linearb_turbulencestatistics_dbdz_1.953125e-5_QU_-0.0005_QB_1.0e-7_b_0.0_AMD_Lxz_64.0_128.0_Nxz_128_256_f",
-    "./LES/linearb_turbulencestatistics_dbdz_1.953125e-5_QU_-0.0005_QB_1.0e-7_b_0.0_WENO9nu0_Lxz_64.0_128.0_Nxz_128_256_f",
-    "./LES/linearb_turbulencestatistics_dbdz_1.953125e-5_QU_-0.0005_QB_1.0e-7_b_0.0_WENO9nu1e-5_Lxz_64.0_128.0_Nxz_128_256_f",
-    "./LES/linearb_turbulencestatistics_dbdz_1.953125e-5_QU_-0.0005_QB_1.0e-7_b_0.0_WENO9AMD_Lxz_64.0_128.0_Nxz_128_256_f",
-    
+    "./LES/linearb_turbulencestatistics_dbdz_1.953125e-5_QU_-0.001_QB_1.0e-7_b_0.0_WENO9AMD_Lxz_64.0_128.0_Nxz_128_256_f",
+
+    # "./LES/linearb_turbulencestatistics_dbdz_1.953125e-5_QU_-0.0005_QB_1.0e-7_b_0.0_AMD_Lxz_64.0_128.0_Nxz_128_256_f",
+    # "./LES/linearb_turbulencestatistics_dbdz_1.953125e-5_QU_-0.0005_QB_1.0e-7_b_0.0_WENO9nu0_Lxz_64.0_128.0_Nxz_128_256_f",
+    # "./LES/linearb_turbulencestatistics_dbdz_1.953125e-5_QU_-0.0005_QB_1.0e-7_b_0.0_WENO9nu1e-5_Lxz_64.0_128.0_Nxz_128_256_f",
+    # "./LES/linearb_turbulencestatistics_dbdz_1.953125e-5_QU_-0.0005_QB_1.0e-7_b_0.0_WENO9AMD_Lxz_64.0_128.0_Nxz_128_256_f",
+
     # "./LES/linearb_turbulencestatistics_dbdz_1.953125e-5_QU_-0.001_QB_1.0e-7_b_0.0_AMD_Lxz_64.0_128.0_Nxz_256_512_f"
-    # "./LES/linearb_turbulencestatistics_dbdz_1.953125e-5_QU_-0.0005_QB_1.0e-7_b_0.0_AMD_Lxz_64.0_128.0_Nxz_256_512_f"
 ]
 
 labels = [
-    # "AMD, 2m resolution",
+    "AMD, 2m resolution",
     # "WENO(9), ν = κ = 0, 2m resolution",
     # "WENO(9), ν = κ = 1e-5, 2m resolution",
-    # "WENO(9) + AMD, 2m resolution",
+    "WENO(9) + AMD, 2m resolution",
 
-    # "AMD, 1m resolution",
+    "AMD, 1m resolution",
     # "WENO(9), ν = κ = 0, 1m resolution",
     # "WENO(9), ν = κ = 1e-5, 1m resolution",
-    # "WENO(9) + AMD, 1m resolution",
+    "WENO(9) + AMD, 1m resolution",
 
     "AMD, 0.5m resolution",
-    "WENO(9), ν = κ = 0, 0.5m resolution",
-    "WENO(9), ν = κ = 1e-5, 0.5m resolution",
+    # "WENO(9), ν = κ = 0, 0.5m resolution",
+    # "WENO(9), ν = κ = 1e-5, 0.5m resolution",
     "WENO(9) + AMD, 0.5m resolution",
 
     # "AMD, 0.25m resolution"
@@ -66,35 +66,108 @@ end
 Qᴮ = parameters["buoyancy_flux"]
 Qᵁ = parameters["momentum_flux"]
 
-video_name = "./Data/QU_$(Qᵁ)_QB_$(Qᴮ)_btop_0_AMD_WENO_WENOAMD_0.5mresolution_spectra.mp4"
-
-b_datas = [FieldTimeSeries("$(FILE_DIR)/instantaneous_fields_b.jld2", "b", backend=OnDisk()) for FILE_DIR in FILE_DIRS]
-u_datas = [FieldTimeSeries("$(FILE_DIR)/instantaneous_fields_u.jld2", "u", backend=OnDisk()) for FILE_DIR in FILE_DIRS]
-v_datas = [FieldTimeSeries("$(FILE_DIR)/instantaneous_fields_v.jld2", "v", backend=OnDisk()) for FILE_DIR in FILE_DIRS]
-w_datas = [FieldTimeSeries("$(FILE_DIR)/instantaneous_fields_w.jld2", "w", backend=OnDisk()) for FILE_DIR in FILE_DIRS]
+video_name = "./Data/QU_$(Qᵁ)_QB_$(Qᴮ)_btop_0_AMD_WENOAMD_spectra.mp4"
 
 bbar_datas = [FieldTimeSeries("$(FILE_DIR)/instantaneous_timeseries.jld2", "bbar") for FILE_DIR in FILE_DIRS]
+b_datas = [FieldTimeSeries("$(FILE_DIR)/instantaneous_fields_b.jld2", "b") for FILE_DIR in FILE_DIRS]
+u_datas = [FieldTimeSeries("$(FILE_DIR)/instantaneous_fields_u.jld2", "u") for FILE_DIR in FILE_DIRS]
+v_datas = [FieldTimeSeries("$(FILE_DIR)/instantaneous_fields_v.jld2", "v") for FILE_DIR in FILE_DIRS]
+w_datas = [FieldTimeSeries("$(FILE_DIR)/instantaneous_fields_w.jld2", "w") for FILE_DIR in FILE_DIRS]
 
-Nxs = [size(data.grid)[1] for data in bbar_datas]
-Nys = [size(data.grid)[2] for data in bbar_datas]
-Nzs = [size(data.grid)[3] for data in bbar_datas]
+Nxs = [size(data.grid)[1] for data in b_datas]
+Nys = [size(data.grid)[2] for data in b_datas]
+Nzs = [size(data.grid)[3] for data in b_datas]
 
-Δxs = [data.grid.Δxᶜᵃᵃ for data in bbar_datas]
-Δys = [data.grid.Δyᵃᶜᵃ for data in bbar_datas]
+Δxs = [data.grid.Δxᶜᵃᵃ for data in b_datas]
+Δys = [data.grid.Δyᵃᶜᵃ for data in b_datas]
 
-zCs = [data.grid.zᵃᵃᶜ[1:Nzs[i]] for (i, data) in enumerate(bbar_datas)]
-zFs = [data.grid.zᵃᵃᶠ[1:Nzs[i]+1] for (i, data) in enumerate(bbar_datas)]
+zCs = [data.grid.zᵃᵃᶜ[1:Nzs[i]] for (i, data) in enumerate(b_datas)]
+zFs = [data.grid.zᵃᵃᶠ[1:Nzs[i]+1] for (i, data) in enumerate(b_datas)]
 
-times_coarse = b_datas[1].times[1:end-2]
-times_fine = bbar_datas[1].times[1:end-2]
+times_coarse = b_datas[1].times
+times_fine = bbar_datas[1].times
 
 Nt_coarse = length(times_coarse)
 Nt_fine = length(times_fine)
 
-b²_spectras = [load("$(FILE_DIR)/spectra.jld2", "b") for FILE_DIR in FILE_DIRS]
-u²_spectras = [load("$(FILE_DIR)/spectra.jld2", "u") for FILE_DIR in FILE_DIRS]
-v²_spectras = [load("$(FILE_DIR)/spectra.jld2", "v") for FILE_DIR in FILE_DIRS]
-w²_spectras = [load("$(FILE_DIR)/spectra.jld2", "w") for FILE_DIR in FILE_DIRS]
+face_to_centers = [spzeros(size(interior(u_datas[i][1]), 3), size(interior(w_datas[i][1]), 3)) for i in eachindex(b_datas)]
+
+for face_to_center in face_to_centers
+    for i in axes(face_to_center, 1)
+        face_to_center[i, i:i+1] .= 0.5
+    end
+end
+
+w_center_datas = [zeros(size(u_data)) for u_data in u_datas]
+for (num, w_center) in enumerate(w_center_datas)
+    @info num
+    for i in axes(w_center, 1), j in axes(w_center, 2), l in axes(w_center, 4)
+        w_center[i, j, :, l] .= face_to_centers[num] * interior(w_datas[num][l], i, j, :)
+    end
+end
+
+fig = Figure()
+ax = Axis(fig[1,1])
+lines!(interior(w_datas[1][end], 1, 1, :), zFs[1])
+lines!(w_center_datas[1][1, 1, :, end], zCs[1])
+display(fig)
+
+function calculate_spectra(data::FieldTimeSeries)
+    Nx, Ny, Nz = data.grid.Nx, data.grid.Ny, data.grid.Nz
+    Δx, Δy, Δz = data.grid.Δxᶜᵃᵃ, data.grid.Δyᵃᶜᵃ, data.grid.Δzᵃᵃᶜ
+
+    Nt_coarse = size(data, 4)
+
+    kx = fftshift(rfftfreq(Nx, 1/Δx))
+    ky = fftshift(rfftfreq(Ny, 1/Δy))
+
+    spectra_kx = cat([rfft(mean(interior(data[i]), dims=2), 1) for i in 1:Nt_coarse]..., dims=4)
+    spectra_ky = cat([rfft(mean(interior(data[i]), dims=1), 2) for i in 1:Nt_coarse]..., dims=4)
+
+    spectra²_kx = real.(spectra_kx .* conj.(spectra_kx)) ./ Nx^2
+    spectra²_ky = real.(spectra_ky .* conj.(spectra_ky)) ./ Ny^2
+
+    # for k in 1:Nz, l in 1:Nt_coarse
+    #     spectra²_kx[:, 1, k, l] .*= kx
+    #     spectra²_ky[1, :, k, l] .*= ky
+    # end
+
+    return (; spectra²_kx, spectra²_ky, kx, ky)
+end
+
+function calculate_spectra(data, Nx, Ny, Nz, Δx, Δy)
+    Nt_coarse = size(data, 4)
+
+    kx = fftshift(rfftfreq(Nx, 1/Δx))
+    ky = fftshift(rfftfreq(Ny, 1/Δy))
+
+    spectra_kx = cat([rfft(mean(@view(data[:, :, :, i]), dims=2), 1) for i in 1:Nt_coarse]..., dims=4)
+    spectra_ky = cat([rfft(mean(@view(data[:, :, :, i]), dims=1), 2) for i in 1:Nt_coarse]..., dims=4)
+
+    spectra²_kx = real.(spectra_kx .* conj.(spectra_kx)) ./ Nx^2
+    spectra²_ky = real.(spectra_ky .* conj.(spectra_ky)) ./ Ny^2
+
+    # for k in 1:Nz, l in 1:Nt_coarse
+    #     spectra²_kx[:, 1, k, l] .*= kx
+    #     spectra²_ky[1, :, k, l] .*= ky
+    # end
+
+    return (; spectra²_kx, spectra²_ky, kx, ky)
+end
+
+b²_spectras = [calculate_spectra(data) for data in b_datas]
+u²_spectras = [calculate_spectra(data) for data in u_datas]
+v²_spectras = [calculate_spectra(data) for data in v_datas]
+w²_spectras = [calculate_spectra(data, Nxs[i], Nys[i], Nzs[i], Δxs[i], Δys[i]) for (i, data) in enumerate(w_center_datas)]
+
+w²_face_spectras = [calculate_spectra(data, Nxs[i], Nys[i], Nzs[i] + 1, Δxs[i], Δys[i]) for (i, data) in enumerate(w_datas)]
+
+# fig = Figure()
+# ax = Axis(fig[1,1])
+# for data in w²_face_spectras
+#     lines!(data.kxs[2:end], data.spectra²_kx[2:end, 1, 1, 1])
+# end
+# display(fig)
 
 TKE_kxs = [0.5 .* (u²_spectras[i].spectra²_kx .+ v²_spectras[i].spectra²_kx .+ w²_spectras[i].spectra²_kx) for i in eachindex(u²_spectras)]
 TKE_kys = [0.5 .* (u²_spectras[i].spectra²_ky .+ v²_spectras[i].spectra²_ky .+ w²_spectras[i].spectra²_ky) for i in eachindex(u²_spectras)]
@@ -109,20 +182,32 @@ function find_max(a...)
 end
 
 #%%
-zrange = (-50, -2)
+zrange = (-70, -2)
 # zrange = (-4, -2)
 
 z_levels = [findfirst(z -> z>zrange[1], zC):findlast(z -> z<zrange[2], zC) for zC in zCs]
 
-TKEs_u = [0.5 * [mean(interior(u_datas[i][t], :, :, :) .^ 2) for t in 1:Nt_coarse] for i in eachindex(u_datas)]
-TKEs_v = [0.5 * [mean(interior(v_datas[i][t], :, :, :) .^ 2) for t in 1:Nt_coarse] for i in eachindex(v_datas)]
-TKEs_w = [0.5 * [mean(interior(w_datas[i][t], :, :, :) .^ 2) for t in 1:Nt_coarse] for i in eachindex(w_datas)]
+TKEs = [mean(0.5 .* (interior(u_datas[i])[:, :, z_levels[i], :] .^ 2 .+ interior(v_datas[i])[:, :, z_levels[i], :] .^ 2 .+ w_center_datas[i][:, :, z_levels[i], :] .^ 2), dims=(1, 2, 3))[1, 1, 1, :] for i in eachindex(u_datas)]
 
-TKEs = TKEs_u .+ TKEs_v .+ TKEs_w
+TKEs[1][end]
+
+a = sum(mean(interior(u_datas[1][end], :, :, 60), dims=2) .^2)
+# a = mean(interior(u_datas[1][end], :, :, 60) .^2)
+b = sum(u²_spectras[1].spectra²_kx[:, 1, 60, end] .* mean(diff(u²_spectras[1].kx)) .* 32^2) / 32^2 / mean(diff(u²_spectras[1].kx))
 
 t_start = length(times_coarse) - 20
 
+a = mean(interior(u_datas[1][end], :, :, 60), dims=2)[:]
+b = rfft(a)
+d = fft(a)
+c = real.(b .* conj.(b))
+f = real.(d .* conj.(d))
+mean(f)
+mean(vcat(c, c[2:end]))
+sum(a.^2)
 #%%
+# t_start = 40
+
 t_window = t_start:length(times_coarse)
 n = Observable(t_start)
 n_fine = @lift findfirst(x -> x ≈ times_coarse[$n], times_fine)
@@ -143,6 +228,8 @@ axkx_TKE_vertical = Axis(fig[3, 3], xlabel="kx", ylabel="S(vertical TKE)", title
 axky_TKE_vertical = Axis(fig[3, 4], xlabel="ky", ylabel="S(vertical TKE)", title="0.5 w² spectra, x-average", xscale=log10, yscale=log10)
 
 axTKE = Axis(fig[1, 4], xlabel="t (days)", ylabel="TKE", title="Mean TKE", yscale=log10)
+
+display(fig)
 
 times_day = times_coarse ./ 24 ./ 60^2
 time = @lift times_coarse[$n] / 24 / 60^2
@@ -183,6 +270,8 @@ end
 
 hlines!(axbbar, [zrange[1], zrange[2]], color=:black, linestyle=:dash)
 # vlines!(axTKE, [time.val], color=:black, linestyle=:dash)
+
+display(fig)
 
 record(fig, video_name, t_start:Nt_coarse, framerate=1) do nn
     n[] = nn

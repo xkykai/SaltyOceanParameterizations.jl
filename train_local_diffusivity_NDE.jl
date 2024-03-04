@@ -84,7 +84,7 @@ function train_NDE(train_data, NN, ps_NN, st_NN; coarse_size=32, dev=cpu_device(
         T = inv(params.scaling.T).(T_hat)
         S = inv(params.scaling.S).(S_hat)
 
-        Ris = calculate_Ri(u, v, T, S, params.zC, params.Dᶠ, params.g, eos.reference_density)
+        Ris = calculate_Ri(u, v, T, S, params.zC, params.Dᶠ, params.g, eos.reference_density, clamp_lims=(-1, 10))
 
         diffusivities = [first(NN([Ri], p, st)) for Ri in Ris]
         νs = [diffusivity[1] / 10 + ν₀ for diffusivity in diffusivities]
@@ -244,7 +244,7 @@ function train_NDE(train_data, NN, ps_NN, st_NN; coarse_size=32, dev=cpu_device(
     return res, loss_NDE(res.u), sols_posttraining, flux_posttraining, losses
 end
 
-res, loss, sols, fluxes, losses = train_NDE(train_data, NN, ps_NN, st_NN, maxiter=3)
+res, loss, sols, fluxes, losses = train_NDE(train_data, NN, ps_NN, st_NN, maxiter=1000)
 
 @info "Training complete"
 train_data_plot = LESDatasets(field_datasets, ZeroMeanUnitVarianceScaling, full_timeframes)

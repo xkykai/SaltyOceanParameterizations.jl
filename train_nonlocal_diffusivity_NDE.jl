@@ -221,7 +221,7 @@ function train_NDE(train_data, NN, ps_NN, st_NN; coarse_size=32, dev=cpu_device(
     optf = Optimization.OptimizationFunction((x, p) -> loss_NDE(x), adtype)
     optprob = Optimization.OptimizationProblem(optf, ps_NN)
 
-    res = Optimization.solve(optprob, OptimizationOptimisers.ADAM(0.005), callback=callback, maxiters=maxiter)
+    res = Optimization.solve(optprob, OptimizationOptimisers.ADAM(0.001), callback=callback, maxiters=maxiter)
 
     sols_posttraining = predict_NDE_posttraining(res.u)
 
@@ -246,7 +246,7 @@ function train_NDE(train_data, NN, ps_NN, st_NN; coarse_size=32, dev=cpu_device(
     return res, loss_NDE(res.u), sols_posttraining, flux_posttraining, losses
 end
 
-res, loss, sols, fluxes, losses = train_NDE(train_data, NN, ps_NN, st_NN, maxiter=500)
+res, loss, sols, fluxes, losses = train_NDE(train_data, NN, ps_NN, st_NN, maxiter=20)
 
 @info "Training complete"
 train_data_plot = LESDatasets(field_datasets, ZeroMeanUnitVarianceScaling, full_timeframes)

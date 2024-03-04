@@ -120,10 +120,10 @@ function train_NDE(train_data, NN, ps_NN, st_NN; coarse_size=32, dev=cpu_device(
         wT_diffusive = params.scaling.T.σ / params.H .* _wT_diffusive
         wS_diffusive = params.scaling.S.σ / params.H .* _wS_diffusive
 
-        uw_boundary = inv(scaling.uw).(_uw_boundary)
-        vw_boundary = inv(scaling.vw).(_vw_boundary)
-        wT_boundary = inv(scaling.wT).(_wT_boundary)
-        wS_boundary = inv(scaling.wS).(_wS_boundary)
+        uw_boundary = inv(params.scaling.uw).(_uw_boundary)
+        vw_boundary = inv(params.scaling.vw).(_vw_boundary)
+        wT_boundary = inv(params.scaling.wT).(_wT_boundary)
+        wS_boundary = inv(params.scaling.wS).(_wS_boundary)
 
         uw = uw_diffusive .+ uw_boundary
         vw = vw_diffusive .+ vw_boundary

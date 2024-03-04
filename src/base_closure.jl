@@ -1,14 +1,15 @@
 using SeawaterPolynomials.TEOS10
 
 function calculate_Ri(u, v, T, S, z, Dᶠ, g, ρ₀)
+    ϵ = 1e-7
     eos = TEOS10EquationOfState()
-    ρ′ = TEOS10.ρ′(T, S, z, eos)
+    ρ′ = TEOS10.ρ′.(T, S, z, Ref(eos))
     ∂ρ∂z = Dᶠ * ρ′
     ∂u∂z = Dᶠ * u
     ∂v∂z = Dᶠ * v
-    ∂b∂z = -g / ρ₀ * ∂ρ∂z
+    ∂b∂z = -g ./ ρ₀ .* ∂ρ∂z
 
-    return ∂b∂z / (∂u∂z^2 + ∂v∂z^2)
+    return ∂b∂z ./ (∂u∂z.^2 .+ ∂v∂z.^2 .+ ϵ)
 end
 
 function local_Ri_diffusivity(Ri, ν₀, ν₁, Riᶜ, ΔRi, Pr)

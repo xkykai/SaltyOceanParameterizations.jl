@@ -55,14 +55,18 @@ function train_NDE(train_data, NN, ps_NN, st_NN; coarse_size=32, dev=cpu_device(
                                   H = data.metadata["original_grid"].Lz,
                                   g = data.metadata["gravitational_acceleration"],
                         coarse_size = coarse_size, 
-                                 Dᶜ = Dᶜ(coarse_size, data.metadata["zC"][2] - data.metadata["zC"][1]), 
+                                 Dᶜ = Dᶜ(coarse_size, data.metadata["zC"][2] - data.metadata["zC"][1]),
                                  Dᶠ = Dᶠ(coarse_size, data.metadata["zF"][3] - data.metadata["zF"][2]),
                              Dᶜ_hat = Dᶜ(coarse_size, data.metadata["zC"][2] - data.metadata["zC"][1]) .* data.metadata["original_grid"].Lz,
                              Dᶠ_hat = Dᶠ(coarse_size, data.metadata["zF"][3] - data.metadata["zF"][2]) .* data.metadata["original_grid"].Lz,
-                                 uw = (top=data.flux.uw.surface.scaled, bottom=data.flux.uw.bottom.scaled),
-                                 vw = (top=data.flux.vw.surface.scaled, bottom=data.flux.vw.bottom.scaled),
-                                 wT = (top=data.flux.wT.surface.scaled, bottom=data.flux.wT.bottom.scaled),
-                                 wS = (top=data.flux.wS.surface.scaled, bottom=data.flux.wS.bottom.scaled),
+                                 uw = (scaled = (top=data.flux.uw.surface.scaled, bottom=data.flux.uw.bottom.scaled),
+                                       unscaled = (top=data.flux.uw.surface.unscaled, bottom=data.flux.uw.bottom.unscaled)),
+                                 vw = (scaled = (top=data.flux.vw.surface.scaled, bottom=data.flux.vw.bottom.scaled),
+                                       unscaled = (top=data.flux.vw.surface.unscaled, bottom=data.flux.vw.bottom.unscaled)),
+                                 wT = (scaled = (top=data.flux.wT.surface.scaled, bottom=data.flux.wT.bottom.scaled),
+                                       unscaled = (top=data.flux.wT.surface.unscaled, bottom=data.flux.wT.bottom.unscaled)),
+                                 wS = (scaled = (top=data.flux.wS.surface.scaled, bottom=data.flux.wS.bottom.scaled),
+                                       unscaled = (top=data.flux.wS.surface.unscaled, bottom=data.flux.wS.bottom.unscaled)),                                    
                             scaling = train_data.scaling
                ) for data in train_data.data] |> dev
 
@@ -99,27 +103,27 @@ function train_NDE(train_data, NN, ps_NN, st_NN; coarse_size=32, dev=cpu_device(
     end
 
     function predict_boundary_flux(params)
-        uw_boundary = vcat(ones(coarse_size) .* params.uw.bottom, params.uw.top)
-        vw_boundary = vcat(ones(coarse_size) .* params.vw.bottom, params.vw.top)
-        wT_boundary = vcat(ones(coarse_size) .* params.wT.bottom, params.wT.top)
-        wS_boundary = vcat(ones(coarse_size) .* params.wS.bottom, params.wS.top)
+        uw_boundary = vcat(fill(params.uw.scaled.bottom, coarse_size), params.uw.scaled.top)
+        vw_boundary = vcat(fill(params.vw.scaled.bottom, coarse_size), params.vw.scaled.top)
+        wT_boundary = vcat(fill(params.wT.scaled.bottom, coarse_size), params.wT.scaled.top)
+        wS_boundary = vcat(fill(params.wS.scaled.bottom, coarse_size), params.wS.scaled.top)
 
         return uw_boundary, vw_boundary, wT_boundary, wS_boundary
     end
 
     function predict_total_flux_dimensional(x, p, params, st)
-        uw_diffusive_hat, vw_diffusive_hat, wT_diffusive_hat, wS_diffusive_hat = predict_diffusive_flux(x, p, params, st)
-        uw_boundary_hat, vw_boundary_hat, wT_boundary_hat, wS_boundary_hat = predict_boundary_flux(params)
+        _uw_diffusive, _vw_diffusive, _wT_diffusive, _wS_diffusive = predict_diffusive_flux(x, p, params, st)
+        _uw_boundary, _vw_boundary, _wT_boundary, _wS_boundary = predict_boundary_flux(params)
 
-        uw_diffusive = params.scaling.u.σ / H .* (uw_diffusive_hat)
-        vw_diffusive = params.scaling.v.σ / H .* (vw_diffusive_hat)
-        wT_diffusive = params.scaling.T.σ / H .* (wT_diffusive_hat)
-        wS_diffusive = params.scaling.S.σ / H .* (wS_diffusive_hat)
+        uw_diffusive = params.scaling.u.σ / params.H .* _uw_diffusive
+        vw_diffusive = params.scaling.v.σ / params.H .* _vw_diffusive
+        wT_diffusive = params.scaling.T.σ / params.H .* _wT_diffusive
+        wS_diffusive = params.scaling.S.σ / params.H .* _wS_diffusive
 
-        uw_boundary = inv(params.scaling.uw).(uw_boundary_hat)
-        vw_boundary = inv(params.scaling.vw).(vw_boundary_hat)
-        wT_boundary = inv(params.scaling.wT).(wT_boundary_hat)
-        wS_boundary = inv(params.scaling.wS).(wS_boundary_hat)
+        uw_boundary = inv(scaling.uw).(_uw_boundary)
+        vw_boundary = inv(scaling.vw).(_vw_boundary)
+        wT_boundary = inv(scaling.wT).(_wT_boundary)
+        wS_boundary = inv(scaling.wS).(_wS_boundary)
 
         uw = uw_diffusive .+ uw_boundary
         vw = vw_diffusive .+ vw_boundary
@@ -240,7 +244,7 @@ function train_NDE(train_data, NN, ps_NN, st_NN; coarse_size=32, dev=cpu_device(
     return res, loss_NDE(res.u), sols_posttraining, flux_posttraining, losses
 end
 
-res, loss, sols, fluxes, losses = train_NDE(train_data, NN, ps_NN, st_NN, maxiter=1000)
+res, loss, sols, fluxes, losses = train_NDE(train_data, NN, ps_NN, st_NN, maxiter=3)
 
 @info "Training complete"
 train_data_plot = LESDatasets(field_datasets, ZeroMeanUnitVarianceScaling, full_timeframes)

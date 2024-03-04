@@ -1,6 +1,6 @@
 using SeawaterPolynomials.TEOS10
 
-function calculate_Ri(u, v, T, S, z, Dᶠ, g, ρ₀)
+function calculate_Ri(u, v, T, S, z, Dᶠ, g, ρ₀; clamp_lims=(-Inf, Inf))
     ϵ = 1e-7
     eos = TEOS10EquationOfState()
     ρ′ = TEOS10.ρ′.(T, S, z, Ref(eos))
@@ -9,7 +9,7 @@ function calculate_Ri(u, v, T, S, z, Dᶠ, g, ρ₀)
     ∂v∂z = Dᶠ * v
     ∂b∂z = -g ./ ρ₀ .* ∂ρ∂z
 
-    return ∂b∂z ./ (∂u∂z.^2 .+ ∂v∂z.^2 .+ ϵ)
+    return clamp.(∂b∂z ./ (∂u∂z.^2 .+ ∂v∂z.^2 .+ ϵ), clamp_lims[1], clamp_lims[2])
 end
 
 function local_Ri_diffusivity(Ri, ν₀, ν₁, Riᶜ, ΔRi, Pr)

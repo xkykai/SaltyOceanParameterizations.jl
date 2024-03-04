@@ -279,13 +279,13 @@ uw = Field(Average(w * u, dims=(1, 2)))
 vw = Field(Average(w * v, dims=(1, 2)))
 wb = Field(Average(w * b, dims=(1, 2)))
 
-χᵁ = model.auxiliary_fields.χᵁ
-χⱽ = model.auxiliary_fields.χⱽ
-χᵂ = model.auxiliary_fields.χᵂ
+χᵁ = -model.auxiliary_fields.χᵁ
+χⱽ = -model.auxiliary_fields.χⱽ
+χᵂ = -model.auxiliary_fields.χᵂ
 
-χᵁbar = Field(Average(-χᵁ, dims=(1, 2)))
-χⱽbar = Field(Average(-χⱽ, dims=(1, 2)))
-χᵂbar = Field(Average(@at((Center, Center, Center), -χᵂ), dims=(1, 2)))
+χᵁbar = Field(Average(χᵁ, dims=(1, 2)))
+χⱽbar = Field(Average(χⱽ, dims=(1, 2)))
+χᵂbar = Field(Average(@at((Center, Center, Center), χᵂ), dims=(1, 2)))
 
 timeseries_outputs = (; ubar, vbar, bbar,
                         uw, vw, wb,
@@ -381,9 +381,9 @@ axuw = Axis(fig[2, 1], title="uw", xlabel="m² s⁻²", ylabel="z")
 axvw = Axis(fig[2, 2], title="vw", xlabel="m² s⁻²", ylabel="z")
 axwb = Axis(fig[2, 3], title="wb", xlabel="m² s⁻³", ylabel="z")
 
-axχᵁbar = Axis(fig[3, 1], title="<κ (∂x(b))²>", xlabel="m² s⁻⁵", ylabel="z")
-axχⱽbar = Axis(fig[3, 2], title="<κ (∂y(b))²>", xlabel="m² s⁻⁵", ylabel="z")
-axχᵂbar = Axis(fig[3, 3], title="<κ (∂z(b))²>", xlabel="m² s⁻⁵", ylabel="z")
+axχᵁbar = Axis(fig[3, 1], title="<χᵁ>", xlabel="m² s⁻⁵", ylabel="z")
+axχⱽbar = Axis(fig[3, 2], title="<χⱽ>", xlabel="m² s⁻⁵", ylabel="z")
+axχᵂbar = Axis(fig[3, 3], title="<χᵂ>", xlabel="m² s⁻⁵", ylabel="z")
 
 function find_min(a...)
     return minimum(minimum.([a...]))

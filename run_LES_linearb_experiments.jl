@@ -279,13 +279,13 @@ uw = Field(Average(w * u, dims=(1, 2)))
 vw = Field(Average(w * v, dims=(1, 2)))
 wb = Field(Average(w * b, dims=(1, 2)))
 
-χᵁ = model.auxiliary_fields.χᵁ
-χⱽ = model.auxiliary_fields.χⱽ
-χᵂ = model.auxiliary_fields.χᵂ
+χᵁ = -model.auxiliary_fields.χᵁ
+χⱽ = -model.auxiliary_fields.χⱽ
+χᵂ = -model.auxiliary_fields.χᵂ
 
-χᵁbar = Field(Average(-χᵁ, dims=(1, 2)))
-χⱽbar = Field(Average(-χⱽ, dims=(1, 2)))
-χᵂbar = Field(Average(@at((Center, Center, Center), -χᵂ), dims=(1, 2)))
+χᵁbar = Field(Average(χᵁ, dims=(1, 2)))
+χⱽbar = Field(Average(χⱽ, dims=(1, 2)))
+χᵂbar = Field(Average(@at((Center, Center, Center), χᵂ), dims=(1, 2)))
 
 if closure isa SmagorinskyLilly
     νₑ, κₑ = model.diffusivity_fields.νₑ, model.diffusivity_fields.νₑ / closure.Pr

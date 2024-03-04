@@ -76,7 +76,7 @@ function train_NDE(train_data, ps; coarse_size=32, dev=cpu_device(), maxiter=10)
         T = inv(params.scaling.T).(T_hat)
         S = inv(params.scaling.S).(S_hat)
 
-        Ris = calculate_Ri(u, v, T, S, params.zC, params.Dᶠ, params.g, eos.reference_density, clamp_lims=(-1, 10))
+        Ris = calculate_Ri(u, v, T, S, params.zC, params.Dᶠ, params.g, eos.reference_density)
         diffusivities = [local_Ri_diffusivity(Ri, p.ν₁, p.Riᶜ, p.ΔRi, p.Pr) for Ri in Ris]
 
         νs = [diffusivity[1] for diffusivity in diffusivities]

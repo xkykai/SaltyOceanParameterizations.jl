@@ -441,7 +441,7 @@ epoch = 1
 res, loss, sols, fluxes, losses, diffusivities = train_NDE(train_data, train_data_plot, NN, ps_NN, st_NN, 
                                                            maxiter=100, optimizer=OptimizationOptimisers.ADAM(0.005), solver=ROCK2())
 
-jldsave("$(FILE_DIR)/training_results_1.jld2"; res, loss, sols, fluxes, losses, diffusivities)
+jldsave("$(FILE_DIR)/training_results_$(epoch).jld2"; res, loss, sols, fluxes, losses, diffusivities)
 plot_loss(losses, FILE_DIR, epoch=epoch)
 for i in eachindex(field_datasets)
     animate_data(train_data_plot, sols, fluxes, diffusivities, i, FILE_DIR, epoch=epoch)
@@ -449,11 +449,11 @@ end
 
 epoch += 1
 
-res, loss, sols, fluxes, losses, diffusivities = train_NDE(train_data, train_data_plot, NN, ps_NN, st_NN, 
+res, loss, sols, fluxes, losses, diffusivities = train_NDE(train_data, train_data_plot, NN, res.u, st_NN, 
                                                            maxiter=100, optimizer=OptimizationOptimisers.ADAM(0.001), solver=ROCK2())
 @info "Training complete"
 
-jldsave("$(FILE_DIR)/training_results_2.jld2"; res, loss, sols, fluxes, losses)
+jldsave("$(FILE_DIR)/training_results_$(epoch).jld2"; res, loss, sols, fluxes, losses)
 plot_loss(losses, FILE_DIR, epoch=epoch)
 for i in eachindex(field_datasets)
     animate_data(train_data_plot, sols, fluxes, diffusivities, i, FILE_DIR, epoch=epoch)

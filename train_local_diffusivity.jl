@@ -18,7 +18,7 @@ function find_max(a...)
     return maximum(maximum.([a...]))
 end
 
-FILE_DIR = "./training_output/training_local_diffusivity_noclamp_loss_prefactor_0.01"
+FILE_DIR = "./training_output/training_local_diffusivity_noclamp_loss_prefactor_1e-4"
 mkpath(FILE_DIR)
 
 LES_FILE_DIRS = [
@@ -167,7 +167,7 @@ function train_NDE(train_data, ps; coarse_size=32, dev=cpu_device(), maxiter=10)
         Ss = [@view(pred[3*coarse_size+1:4*coarse_size, :]) for pred in preds]
         ρs = [param.scaling.ρ.(TEOS10.ρ′.(inv(param.scaling.T).(T), inv(param.scaling.S).(S), param.zC, Ref(eos)) .+ eos.reference_density) for (T, S, param) in zip(Ts, Ss, params)]
 
-        vel_prefactor = 1e-3
+        vel_prefactor = 1e-4
         u_loss = mean(mean.([(data.profile.u.scaled .- u).^2 for (data, u) in zip(train_data.data, us)])) * vel_prefactor
         v_loss = mean(mean.([(data.profile.v.scaled .- v).^2 for (data, v) in zip(train_data.data, vs)])) * vel_prefactor
         T_loss = mean(mean.([(data.profile.T.scaled .- T).^2 for (data, T) in zip(train_data.data, Ts)]))

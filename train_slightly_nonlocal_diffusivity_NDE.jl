@@ -18,7 +18,7 @@ function find_max(a...)
     return maximum(maximum.([a...]))
 end
 
-FILE_DIR = "./training_output/training_slightly_nonlocal_diffusivity_NDE"
+FILE_DIR = "./training_output/training_slightly_nonlocal_diffusivity_NDE_ROCK2"
 mkpath(FILE_DIR)
 
 LES_FILE_DIRS = [
@@ -46,7 +46,7 @@ ps_NN = ps_NN |> ComponentArray .|> Float64
 
 ps_NN ./= 100
 
-function train_NDE(train_data, train_data_plot, NN, ps_NN, st_NN; coarse_size=32, dev=cpu_device(), maxiter=10, optimizer=OptimizationOptimisers.ADAM(0.001))
+function train_NDE(train_data, train_data_plot, NN, ps_NN, st_NN; coarse_size=32, dev=cpu_device(), maxiter=10, optimizer=OptimizationOptimisers.ADAM(0.001), solver=DP5())
     train_data = train_data |> dev
     x₀s = [vcat(data.profile.u.scaled[:, 1], data.profile.v.scaled[:, 1], data.profile.T.scaled[:, 1], data.profile.S.scaled[:, 1]) for data in train_data.data] |> dev
     eos = TEOS10EquationOfState()
@@ -168,13 +168,13 @@ function train_NDE(train_data, train_data_plot, NN, ps_NN, st_NN; coarse_size=32
 
     function predict_NDE(p)
         probs = [ODEProblem((x, p′, t) -> NDE(x, p′, t, param, st_NN), x₀, (param.scaled_time[1], param.scaled_time[end]), p) for (x₀, param) in zip(x₀s, params)]
-        sols = [Array(solve(prob, DP5(), saveat=param.scaled_time, sensealg=InterpolatingAdjoint(autojacvec=ZygoteVJP()), reltol=1e-3)) for (param, prob) in zip(params, probs)]
+        sols = [Array(solve(prob, solver, saveat=param.scaled_time, sensealg=InterpolatingAdjoint(autojacvec=ZygoteVJP()), reltol=1e-3)) for (param, prob) in zip(params, probs)]
         return sols
     end
 
     function predict_NDE_posttraining(p)
         probs = [ODEProblem((x, p′, t) -> NDE(x, p′, t, param, st_NN), x₀, (param.scaled_original_time[1], param.scaled_original_time[end]), p) for (x₀, param) in zip(x₀s, params)]
-        sols = [solve(prob, DP5(), saveat=param.scaled_original_time, reltol=1e-3) for (param, prob) in zip(params, probs)]
+        sols = [solve(prob, solver, saveat=param.scaled_original_time, reltol=1e-3) for (param, prob) in zip(params, probs)]
         return sols
     end
 
@@ -438,7 +438,8 @@ function animate_data(train_data, sols, fluxes, diffusivities, index, FILE_DIR; 
 end
 
 epoch = 1
-res, loss, sols, fluxes, losses, diffusivities = train_NDE(train_data, train_data_plot, NN, ps_NN, st_NN, maxiter=500, optimizer=OptimizationOptimisers.ADAM(0.005))
+res, loss, sols, fluxes, losses, diffusivities = train_NDE(train_data, train_data_plot, NN, ps_NN, st_NN, 
+                                                           maxiter=500, optimizer=OptimizationOptimisers.ADAM(0.005), solver=ROCK2())
 
 jldsave("$(FILE_DIR)/training_results_1.jld2"; res, loss, sols, fluxes, losses, diffusivities)
 plot_loss(losses, FILE_DIR, epoch=epoch)
@@ -448,7 +449,8 @@ end
 
 epoch += 1
 
-res, loss, sols, fluxes, losses, diffusivities = train_NDE(train_data, train_data_plot, NN, ps_NN, st_NN, maxiter=500, optimizer=OptimizationOptimisers.ADAM(0.001))
+res, loss, sols, fluxes, losses, diffusivities = train_NDE(train_data, train_data_plot, NN, ps_NN, st_NN, 
+                                                           maxiter=500, optimizer=OptimizationOptimisers.ADAM(0.001), solver=ROCK2())
 @info "Training complete"
 
 jldsave("$(FILE_DIR)/training_results_2.jld2"; res, loss, sols, fluxes, losses)

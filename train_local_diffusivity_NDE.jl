@@ -18,7 +18,7 @@ function find_max(a...)
     return maximum(maximum.([a...]))
 end
 
-FILE_DIR = "./training_output/training_local_diffusivity_2nd"
+FILE_DIR = "./training_output/training_local_diffusivity_NDE"
 mkpath(FILE_DIR)
 
 LES_FILE_DIRS = [
@@ -244,7 +244,9 @@ function train_NDE(train_data, NN, ps_NN, st_NN; coarse_size=32, dev=cpu_device(
     return res, loss_NDE(res.u), sols_posttraining, flux_posttraining, losses
 end
 
-res, loss, sols, fluxes, losses = train_NDE(train_data, NN, ps_NN, st_NN, maxiter=1000)
+res, loss, sols, fluxes, losses = train_NDE(train_data, NN, ps_NN, st_NN, maxiter=700)
+
+jldsave("$(FILE_DIR)/training_results.jld2"; res, loss, sols, fluxes, losses, NN, st_NN)
 
 @info "Training complete"
 train_data_plot = LESDatasets(field_datasets, ZeroMeanUnitVarianceScaling, full_timeframes)
@@ -289,10 +291,10 @@ function animate_data(train_data, sols, fluxes, index, FILE_DIR, coarse_size=32)
     S_NDE = inv(train_data.scaling.S).(sols[index][3*coarse_size+1:4*coarse_size, :])
     ρ_NDE = TEOS10.ρ′.(T_NDE, S_NDE, zC, Ref(TEOS10EquationOfState())) .+ TEOS10EquationOfState().reference_density
 
-    uw_NDE = inv(train_data.scaling.uw).(fluxes.uw[index])
-    vw_NDE = inv(train_data.scaling.vw).(fluxes.vw[index])
-    wT_NDE = inv(train_data.scaling.wT).(fluxes.wT[index])
-    wS_NDE = inv(train_data.scaling.wS).(fluxes.wS[index])
+    uw_NDE = fluxes.uw[index]
+    vw_NDE = fluxes.vw[index]
+    wT_NDE = fluxes.wT[index]
+    wS_NDE = fluxes.wS[index]
 
     u_truthₙ = @lift train_data.data[index].profile.u.unscaled[:, $n]
     v_truthₙ = @lift train_data.data[index].profile.v.unscaled[:, $n]

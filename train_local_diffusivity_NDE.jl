@@ -18,7 +18,7 @@ function find_max(a...)
     return maximum(maximum.([a...]))
 end
 
-FILE_DIR = "./training_output/training_local_diffusivity_NDE"
+FILE_DIR = "./training_output/training_local_diffusivity_NDE_2epochs"
 mkpath(FILE_DIR)
 
 LES_FILE_DIRS = [
@@ -246,7 +246,11 @@ end
 
 res, loss, sols, fluxes, losses = train_NDE(train_data, NN, ps_NN, st_NN, maxiter=700)
 
-jldsave("$(FILE_DIR)/training_results.jld2"; res, loss, sols, fluxes, losses, NN, st_NN)
+jldsave("$(FILE_DIR)/training_results_1.jld2"; res, loss, sols, fluxes, losses, NN, st_NN)
+
+res, loss, sols, fluxes, losses = train_NDE(train_data, NN, res.u, st_NN, maxiter=500)
+
+jldsave("$(FILE_DIR)/training_results_2.jld2"; res, loss, sols, fluxes, losses, NN, st_NN)
 
 @info "Training complete"
 train_data_plot = LESDatasets(field_datasets, ZeroMeanUnitVarianceScaling, full_timeframes)

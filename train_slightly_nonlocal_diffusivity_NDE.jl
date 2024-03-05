@@ -18,7 +18,7 @@ function find_max(a...)
     return maximum(maximum.([a...]))
 end
 
-FILE_DIR = "./training_output/training_slightly_nonlocal_diffusivity_NDE_ROCK2_fast"
+FILE_DIR = "./training_output/slightly_nonlocal_diffusivity_NDE_ROCK2_fast_weightloss"
 mkpath(FILE_DIR)
 
 LES_FILE_DIRS = [
@@ -177,6 +177,32 @@ function train_NDE(train_data, train_data_plot, NN, ps_NN, st_NN; coarse_size=32
         sols = [solve(prob, solver, saveat=param.scaled_original_time, reltol=1e-3) for (param, prob) in zip(params, probs)]
         return sols
     end
+    
+    function compute_loss_prefactor(p)
+        preds = predict_NDE(p)
+
+        us = [@view(pred[1:coarse_size, :]) for pred in preds]
+        vs = [@view(pred[coarse_size+1:2*coarse_size, :]) for pred in preds]
+        Ts = [@view(pred[2*coarse_size+1:3*coarse_size, :]) for pred in preds]
+        Ss = [@view(pred[3*coarse_size+1:4*coarse_size, :]) for pred in preds]
+        ρs = [param.scaling.ρ.(TEOS10.ρ′.(inv(param.scaling.T).(T), inv(param.scaling.S).(S), param.zC, Ref(eos)) .+ eos.reference_density) for (T, S, param) in zip(Ts, Ss, params)]
+
+        u_loss = mean(mean.([(data.profile.u.scaled .- u).^2 for (data, u) in zip(train_data.data, us)]))
+        v_loss = mean(mean.([(data.profile.v.scaled .- v).^2 for (data, v) in zip(train_data.data, vs)]))
+        T_loss = mean(mean.([(data.profile.T.scaled .- T).^2 for (data, T) in zip(train_data.data, Ts)]))
+        S_loss = mean(mean.([(data.profile.S.scaled .- S).^2 for (data, S) in zip(train_data.data, Ss)]))
+        ρ_loss = mean(mean.([(data.profile.ρ.scaled .- ρ).^2 for (data, ρ) in zip(train_data.data, ρs)]))
+
+        ρ_prefactor = 1
+        T_prefactor = ρ_loss / T_loss
+        S_prefactor = ρ_loss / S_loss
+        u_prefactor = ρ_loss / u_loss * (0.05/0.3)
+        v_prefactor = ρ_loss / v_loss * (0.05/0.3)
+
+        return (u=u_prefactor, v=v_prefactor, T=T_prefactor, S=S_prefactor, ρ=ρ_prefactor)
+    end
+
+    losses_prefactor = compute_loss_prefactor(ps_NN)
 
     function loss_NDE(p)
         preds = predict_NDE(p)
@@ -187,12 +213,11 @@ function train_NDE(train_data, train_data_plot, NN, ps_NN, st_NN; coarse_size=32
         Ss = [@view(pred[3*coarse_size+1:4*coarse_size, :]) for pred in preds]
         ρs = [param.scaling.ρ.(TEOS10.ρ′.(inv(param.scaling.T).(T), inv(param.scaling.S).(S), param.zC, Ref(eos)) .+ eos.reference_density) for (T, S, param) in zip(Ts, Ss, params)]
 
-        vel_prefactor = 1e-4
-        u_loss = mean(mean.([(data.profile.u.scaled .- u).^2 for (data, u) in zip(train_data.data, us)])) * vel_prefactor
-        v_loss = mean(mean.([(data.profile.v.scaled .- v).^2 for (data, v) in zip(train_data.data, vs)])) * vel_prefactor
-        T_loss = mean(mean.([(data.profile.T.scaled .- T).^2 for (data, T) in zip(train_data.data, Ts)]))
-        S_loss = mean(mean.([(data.profile.S.scaled .- S).^2 for (data, S) in zip(train_data.data, Ss)]))
-        ρ_loss = mean(mean.([(data.profile.ρ.scaled .- ρ).^2 for (data, ρ) in zip(train_data.data, ρs)]))
+        u_loss = losses_prefactor.u * mean(mean.([(data.profile.u.scaled .- u).^2 for (data, u) in zip(train_data.data, us)]))
+        v_loss = losses_prefactor.v * mean(mean.([(data.profile.v.scaled .- v).^2 for (data, v) in zip(train_data.data, vs)]))
+        T_loss = losses_prefactor.T * mean(mean.([(data.profile.T.scaled .- T).^2 for (data, T) in zip(train_data.data, Ts)]))
+        S_loss = losses_prefactor.S * mean(mean.([(data.profile.S.scaled .- S).^2 for (data, S) in zip(train_data.data, Ss)]))
+        ρ_loss = losses_prefactor.ρ * mean(mean.([(data.profile.ρ.scaled .- ρ).^2 for (data, ρ) in zip(train_data.data, ρs)]))
 
         loss = u_loss + v_loss + T_loss + S_loss + ρ_loss
 

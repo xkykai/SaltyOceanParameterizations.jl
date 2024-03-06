@@ -289,14 +289,14 @@ end
 
 @inline function get_buoyancy(i, j, k, grid, b, C)
   T, S = Oceananigans.BuoyancyModels.get_temperature_and_salinity(b, C)
-  @inbounds ρ = Oceananigans.BuoyancyModels.ρ′(i, j, k, grid, b.model.equation_of_state, T, S) + b.model.equation_of_state.reference_density
+  @inbounds ρ = TEOS10.ρ(T[i, j, k], S[i, j, k], 0, eos)
   ρ′ = ρ - ρ₀
   return -g * ρ′ / ρ₀
 end
 
 @inline function get_density(i, j, k, grid, b, C)
   T, S = Oceananigans.BuoyancyModels.get_temperature_and_salinity(b, C)
-  @inbounds ρ = Oceananigans.BuoyancyModels.ρ′(i, j, k, grid, b.model.equation_of_state, T, S) + b.model.equation_of_state.reference_density
+  @inbounds ρ = TEOS10.ρ(T[i, j, k], S[i, j, k], 0, eos)
   return ρ
 end
 

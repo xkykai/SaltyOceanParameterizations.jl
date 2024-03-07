@@ -520,7 +520,7 @@ function animate_data(train_data, sols, fluxes, diffusivities, index, FILE_DIR; 
 end
 
 epoch = 1
-res, loss, sols, fluxes, losses, diffusivities = train_NDE(train_data, train_data_plot, NN, ps_NN, st_NN, Ri_clamp_lims=(-Inf, Inf)
+res, loss, sols, fluxes, losses, diffusivities = train_NDE(train_data, train_data_plot, NN, ps_NN, st_NN, Ri_clamp_lims=(-Inf, Inf),
                                                            maxiter=500, optimizer=OptimizationOptimisers.ADAM(0.005), solver=ROCK2())
 
 jldsave("$(FILE_DIR)/training_results_$(epoch).jld2"; res, loss, sols, fluxes, losses, diffusivities)
@@ -531,7 +531,7 @@ end
 
 epoch += 1
 
-res, loss, sols, fluxes, losses, diffusivities = train_NDE(train_data, train_data_plot, NN, res.u, st_NN, Ri_clamp_lims=(-Inf, Inf)
+res, loss, sols, fluxes, losses, diffusivities = train_NDE(train_data, train_data_plot, NN, res.u, st_NN, Ri_clamp_lims=(-Inf, Inf),
                                                            maxiter=500, optimizer=OptimizationOptimisers.ADAM(0.001), solver=ROCK2())
 @info "Training complete"
 
@@ -544,7 +544,7 @@ end
 
 epoch += 1
 
-res, loss, sols, fluxes, losses, diffusivities = train_NDE(train_data, train_data_plot, NN, res.u, st_NN, Ri_clamp_lims=(-Inf, Inf)
+res, loss, sols, fluxes, losses, diffusivities = train_NDE(train_data, train_data_plot, NN, res.u, st_NN, Ri_clamp_lims=(-Inf, Inf),
                                                            maxiter=500, optimizer=OptimizationOptimisers.ADAM(0.0005), solver=ROCK2())
 @info "Training complete"
 

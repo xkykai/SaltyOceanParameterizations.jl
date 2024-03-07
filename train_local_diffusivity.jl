@@ -18,7 +18,7 @@ function find_max(a...)
     return maximum(maximum.([a...]))
 end
 
-FILE_DIR = "./training_output/local_diffusivity_noclamp"
+FILE_DIR = "./training_output/local_diffusivity_clamp_-10_10"
 mkpath(FILE_DIR)
 
 LES_FILE_DIRS = [
@@ -454,7 +454,7 @@ end
 
 epoch = 1
 
-res, loss, sols, fluxes, losses, diffusivities = optimize_parameters(train_data, train_data_plot, ps, maxiter=500, optimizer=OptimizationOptimisers.ADAM(0.01))
+res, loss, sols, fluxes, losses, diffusivities = optimize_parameters(train_data, train_data_plot, ps, maxiter=500, optimizer=OptimizationOptimisers.ADAM(0.01), Ri_clamp_lims=(-10, 10))
 
 jldsave("$(FILE_DIR)/training_results_$(epoch).jld2"; res, loss, sols, fluxes, losses, diffusivities)
 plot_loss(losses, FILE_DIR, epoch=epoch)
@@ -465,7 +465,7 @@ end
 
 epoch += 1
 
-res, loss, sols, fluxes, losses, diffusivities = optimize_parameters(train_data, train_data_plot, res.u, maxiter=500, optimizer=OptimizationOptimisers.ADAM(0.005))
+res, loss, sols, fluxes, losses, diffusivities = optimize_parameters(train_data, train_data_plot, res.u, maxiter=500, optimizer=OptimizationOptimisers.ADAM(0.005), Ri_clamp_lims=(-10, 10))
 
 jldsave("$(FILE_DIR)/training_results_$(epoch).jld2"; res, loss, sols, fluxes, losses, diffusivities)
 plot_loss(losses, FILE_DIR, epoch=epoch)
@@ -476,7 +476,7 @@ end
 
 epoch += 1
 
-res, loss, sols, fluxes, losses, diffusivities = optimize_parameters(train_data, train_data_plot, res.u, maxiter=500, optimizer=OptimizationOptimisers.ADAM(0.001))
+res, loss, sols, fluxes, losses, diffusivities = optimize_parameters(train_data, train_data_plot, res.u, maxiter=500, optimizer=OptimizationOptimisers.ADAM(0.001), Ri_clamp_lims=(-10, 10))
 
 jldsave("$(FILE_DIR)/training_results_$(epoch).jld2"; res, loss, sols, fluxes, losses, diffusivities)
 plot_loss(losses, FILE_DIR, epoch=epoch)

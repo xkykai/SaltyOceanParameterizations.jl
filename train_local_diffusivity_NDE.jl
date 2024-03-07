@@ -19,6 +19,7 @@ function find_max(a...)
 end
 
 FILE_DIR = "./training_output/local_diffusivity_NDE_relu_noclamp"
+@info FILE_DIR
 mkpath(FILE_DIR)
 
 LES_FILE_DIRS = [
@@ -472,9 +473,9 @@ end
 
 epoch += 1
 
-res, loss, sols, fluxes, losses, diffusivities = train_NDE(train_data, train_data_plot, NN, res.u, st_NN, maxiter=500)
+res, loss, sols, fluxes, losses, diffusivities = train_NDE(train_data, train_data_plot, NN, res.u, st_NN, maxiter=500, Ri_clamp_lims=(-Inf, Inf), optimizer=OptimizationOptimisers.ADAM(0.001), solver=ROCK2())
 
-jldsave("$(FILE_DIR)/training_results_$(epoch).jld2"; res, loss, sols, fluxes, losses, NN, st_NN, diffusivities, Ri_clamp_lims=(-Inf, Inf), optimizer=OptimizationOptimisers.ADAM(0.001), solver=ROCK2())
+jldsave("$(FILE_DIR)/training_results_$(epoch).jld2"; res, loss, sols, fluxes, losses, NN, st_NN, diffusivities)
 plot_loss(losses, FILE_DIR, epoch=epoch)
 for i in eachindex(field_datasets)
     animate_data(train_data_plot, sols, fluxes, diffusivities, i, FILE_DIR, epoch=epoch)
@@ -482,9 +483,9 @@ end
 
 epoch += 1
 
-res, loss, sols, fluxes, losses, diffusivities = train_NDE(train_data, train_data_plot, NN, res.u, st_NN, maxiter=500)
+res, loss, sols, fluxes, losses, diffusivities = train_NDE(train_data, train_data_plot, NN, res.u, st_NN, maxiter=500, Ri_clamp_lims=(-Inf, Inf), optimizer=OptimizationOptimisers.ADAM(0.0005), solver=ROCK2())
 
-jldsave("$(FILE_DIR)/training_results_$(epoch).jld2"; res, loss, sols, fluxes, losses, NN, st_NN, diffusivities, Ri_clamp_lims=(-Inf, Inf), optimizer=OptimizationOptimisers.ADAM(0.0005), solver=ROCK2())
+jldsave("$(FILE_DIR)/training_results_$(epoch).jld2"; res, loss, sols, fluxes, losses, NN, st_NN, diffusivities)
 plot_loss(losses, FILE_DIR, epoch=epoch)
 for i in eachindex(field_datasets)
     animate_data(train_data_plot, sols, fluxes, diffusivities, i, FILE_DIR, epoch=epoch)

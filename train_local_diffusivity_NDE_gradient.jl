@@ -19,7 +19,7 @@ function find_max(a...)
     return maximum(maximum.([a...]))
 end
 
-FILE_DIR = "./training_output/local_diffusivity_NDE_gradient_relu_clamp_-10_10"
+FILE_DIR = "./training_output/local_diffusivity_NDE_gradient_relu_noclamp"
 @info FILE_DIR
 mkpath(FILE_DIR)
 
@@ -521,7 +521,7 @@ end
 
 epoch = 1
 
-res, loss, sols, fluxes, losses, diffusivities = train_NDE(train_data, train_data_plot, NN, ps_NN, st_NN, maxiter=500, Ri_clamp_lims=(-10, 10), optimizer=OptimizationOptimisers.ADAM(0.005), solver=ROCK2())
+res, loss, sols, fluxes, losses, diffusivities = train_NDE(train_data, train_data_plot, NN, ps_NN, st_NN, maxiter=500, Ri_clamp_lims=(-Inf, Inf), optimizer=OptimizationOptimisers.ADAM(0.005), solver=ROCK2())
 
 jldsave("$(FILE_DIR)/training_results_$(epoch).jld2"; res, loss, sols, fluxes, losses, NN, st_NN, diffusivities)
 plot_loss(losses, FILE_DIR, epoch=epoch)
@@ -531,7 +531,7 @@ end
 
 epoch += 1
 
-res, loss, sols, fluxes, losses, diffusivities = train_NDE(train_data, train_data_plot, NN, res.u, st_NN, maxiter=500, Ri_clamp_lims=(-10, 10), optimizer=OptimizationOptimisers.ADAM(0.001), solver=ROCK2())
+res, loss, sols, fluxes, losses, diffusivities = train_NDE(train_data, train_data_plot, NN, res.u, st_NN, maxiter=500, Ri_clamp_lims=(-Inf, Inf), optimizer=OptimizationOptimisers.ADAM(0.001), solver=ROCK2())
 
 jldsave("$(FILE_DIR)/training_results_$(epoch).jld2"; res, loss, sols, fluxes, losses, NN, st_NN, diffusivities)
 plot_loss(losses, FILE_DIR, epoch=epoch)
@@ -541,7 +541,7 @@ end
 
 epoch += 1
 
-res, loss, sols, fluxes, losses, diffusivities = train_NDE(train_data, train_data_plot, NN, res.u, st_NN, maxiter=500, Ri_clamp_lims=(-10, 10), optimizer=OptimizationOptimisers.ADAM(0.0005), solver=ROCK2())
+res, loss, sols, fluxes, losses, diffusivities = train_NDE(train_data, train_data_plot, NN, res.u, st_NN, maxiter=500, Ri_clamp_lims=(-Inf, Inf), optimizer=OptimizationOptimisers.ADAM(0.0005), solver=ROCK2())
 
 jldsave("$(FILE_DIR)/training_results_$(epoch).jld2"; res, loss, sols, fluxes, losses, NN, st_NN, diffusivities)
 plot_loss(losses, FILE_DIR, epoch=epoch)

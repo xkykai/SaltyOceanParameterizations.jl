@@ -1,9 +1,9 @@
 using SeawaterPolynomials.TEOS10
 
-function calculate_Ri(u, v, T, S, z, Dᶠ, g, ρ₀; clamp_lims=(-Inf, Inf))
+function calculate_Ri(u, v, T, S, Dᶠ, g, ρ₀; clamp_lims=(-Inf, Inf))
     ϵ = 1e-7
     eos = TEOS10EquationOfState()
-    ρ′ = TEOS10.ρ′.(T, S, z, Ref(eos))
+    ρ′ = TEOS10.ρ′.(T, S, 0, Ref(eos))
     ∂ρ∂z = Dᶠ * ρ′
     ∂u∂z = Dᶠ * u
     ∂v∂z = Dᶠ * v

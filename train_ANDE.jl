@@ -155,7 +155,7 @@ function train_NDE(train_data, NNs, ps_NN, st_NN; coarse_size=32, dev=cpu_device
         vs = [@view(pred[coarse_size+1:2*coarse_size, :]) for pred in preds]
         Ts = [@view(pred[2*coarse_size+1:3*coarse_size, :]) for pred in preds]
         Ss = [@view(pred[3*coarse_size+1:4*coarse_size, :]) for pred in preds]
-        ρs = [param.scaling.ρ.(TEOS10.ρ′.(inv(param.scaling.T).(T), inv(param.scaling.S).(S), param.zC, Ref(eos)) .+ eos.reference_density) for (T, S, param) in zip(Ts, Ss, params)]
+        ρs = [param.scaling.ρ.(TEOS10.ρ.(inv(param.scaling.T).(T), inv(param.scaling.S).(S), 0, Ref(eos))) for (T, S, param) in zip(Ts, Ss, params)]
 
         ∂u∂zs = [hcat([param.scaling.∂u∂z.(param.Dᶠ * inv(param.scaling.u).(@view(u[:, i]))) for i in axes(u, 2)]...) for (param, u) in zip(params, us)]
         ∂v∂zs = [hcat([param.scaling.∂v∂z.(param.Dᶠ * inv(param.scaling.v).(@view(v[:, i]))) for i in axes(v, 2)]...) for (param, v) in zip(params, vs)]
@@ -209,7 +209,7 @@ function train_NDE(train_data, NNs, ps_NN, st_NN; coarse_size=32, dev=cpu_device
         vs = [@view(pred[coarse_size+1:2*coarse_size, :]) for pred in preds]
         Ts = [@view(pred[2*coarse_size+1:3*coarse_size, :]) for pred in preds]
         Ss = [@view(pred[3*coarse_size+1:4*coarse_size, :]) for pred in preds]
-        ρs = [param.scaling.ρ.(TEOS10.ρ′.(inv(param.scaling.T).(T), inv(param.scaling.S).(S), param.zC, Ref(eos)) .+ eos.reference_density) for (T, S, param) in zip(Ts, Ss, params)]
+        ρs = [param.scaling.ρ.(TEOS10.ρ.(inv(param.scaling.T).(T), inv(param.scaling.S).(S), 0, Ref(eos))) for (T, S, param) in zip(Ts, Ss, params)]
 
         ∂u∂zs = [hcat([param.scaling.∂u∂z.(param.Dᶠ * inv(param.scaling.u).(@view(u[:, i]))) for i in axes(u, 2)]...) for (param, u) in zip(params, us)]
         ∂v∂zs = [hcat([param.scaling.∂v∂z.(param.Dᶠ * inv(param.scaling.v).(@view(v[:, i]))) for i in axes(v, 2)]...) for (param, v) in zip(params, vs)]
@@ -344,7 +344,7 @@ function animate_data(train_data, sols, fluxes, index, FILE_DIR; coarse_size=32,
     v_NDE = inv(train_data.scaling.v).(sols[index][coarse_size+1:2*coarse_size, :])
     T_NDE = inv(train_data.scaling.T).(sols[index][2*coarse_size+1:3*coarse_size, :])
     S_NDE = inv(train_data.scaling.S).(sols[index][3*coarse_size+1:4*coarse_size, :])
-    ρ_NDE = TEOS10.ρ′.(T_NDE, S_NDE, zC, Ref(TEOS10EquationOfState())) .+ TEOS10EquationOfState().reference_density
+    ρ_NDE = TEOS10.ρ.(T_NDE, S_NDE, 0, Ref(TEOS10EquationOfState()))
 
     uw_NDE = fluxes.uw[index]
     vw_NDE = fluxes.vw[index]

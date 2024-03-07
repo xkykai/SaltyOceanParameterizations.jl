@@ -17,7 +17,7 @@ function find_max(a...)
     return maximum(maximum.([a...]))
 end
 
-FILE_DIR = "./training_output/first_training"
+FILE_DIR = "./training_output/training_3"
 mkpath(FILE_DIR)
 
 LES_FILE_DIRS = [
@@ -30,7 +30,7 @@ LES_FILE_DIRS = [
 field_datasets = [FieldDataset(FILE_DIR, backend=OnDisk()) for FILE_DIR in LES_FILE_DIRS]
 
 full_timeframes = [1:length(data["ubar"].times) for data in field_datasets]
-timeframes = [5:10:length(data["ubar"].times) for data in field_datasets]
+timeframes = [5:5:length(data["ubar"].times) for data in field_datasets]
 train_data = LESDatasets(field_datasets, ZeroMeanUnitVarianceScaling, timeframes)
 coarse_size = 32
 
@@ -51,10 +51,10 @@ ps_vw = ps_vw |> ComponentArray .|> Float64
 ps_wT = ps_wT |> ComponentArray .|> Float64
 ps_wS = ps_wS |> ComponentArray .|> Float64
 
-# ps_uw .*= 1e-6
-# ps_vw .*= 1e-6
-# ps_wT .*= 1e-6
-# ps_wS .*= 1e-6
+ps_uw .*= 1e-6
+ps_vw .*= 1e-6
+ps_wT .*= 1e-6
+ps_wS .*= 1e-6
 
 st_uw = st_uw
 st_vw = st_vw
@@ -138,9 +138,9 @@ function train_NDE(train_data, NNs, ps_NN, st_NN; coarse_size=32, dev=cpu_device
         vs = [@view(pred[coarse_size+1:2*coarse_size, :]) for pred in preds]
         Ts = [@view(pred[2*coarse_size+1:3*coarse_size, :]) for pred in preds]
         Ss = [@view(pred[3*coarse_size+1:4*coarse_size, :]) for pred in preds]
-        ρs = [param.scaling.ρ.(TEOS10.ρ′.(inv(param.scaling.T).(T), inv(param.scaling.S).(S), param.zC, Ref(eos)) .+ eos.reference_density) for (T, S, param) in zip(Ts, Ss, params)]
+        ρs = [param.scaling.ρ.(TEOS10.ρ.(inv(param.scaling.T).(T), inv(param.scaling.S).(S), 0, Ref(eos))) for (T, S, param) in zip(Ts, Ss, params)]
 
-        vel_prefactor = 1e-2
+        vel_prefactor = 1e-3
         u_loss = mean(mean.([(data.profile.u.scaled .- u).^2 for (data, u) in zip(train_data.data, us)])) * vel_prefactor
         v_loss = mean(mean.([(data.profile.v.scaled .- v).^2 for (data, v) in zip(train_data.data, vs)])) * vel_prefactor
         T_loss = mean(mean.([(data.profile.T.scaled .- T).^2 for (data, T) in zip(train_data.data, Ts)]))
@@ -208,8 +208,9 @@ function train_NDE(train_data, NNs, ps_NN, st_NN; coarse_size=32, dev=cpu_device
     return res, loss_NDE(res.u), sols_posttraining, flux_posttraining, losses
 end
 
-res, loss, sols, fluxes, losses = train_NDE(train_data, NNs, ps_NN, st_NN, maxiter=2000)
+res, loss, sols, fluxes, losses = train_NDE(train_data, NNs, ps_NN, st_NN, maxiter=500)
 
+@info "Training complete"
 train_data_plot = LESDatasets(field_datasets, ZeroMeanUnitVarianceScaling, full_timeframes)
 
 #%%
@@ -250,7 +251,7 @@ function animate_data(train_data, sols, fluxes, index, FILE_DIR, coarse_size=32)
     v_NDE = inv(train_data.scaling.v).(sols[index][coarse_size+1:2*coarse_size, :])
     T_NDE = inv(train_data.scaling.T).(sols[index][2*coarse_size+1:3*coarse_size, :])
     S_NDE = inv(train_data.scaling.S).(sols[index][3*coarse_size+1:4*coarse_size, :])
-    ρ_NDE = TEOS10.ρ′.(T_NDE, S_NDE, zC, Ref(TEOS10EquationOfState())) .+ TEOS10EquationOfState().reference_density
+    ρ_NDE = TEOS10.ρ.(T_NDE, S_NDE, 0, Ref(TEOS10EquationOfState()))
 
     uw_NDE = inv(train_data.scaling.uw).(fluxes.uw[index])
     vw_NDE = inv(train_data.scaling.vw).(fluxes.vw[index])
@@ -338,6 +339,8 @@ end
 for i in eachindex(field_datasets)
     animate_data(train_data_plot, sols, fluxes, i, FILE_DIR)
 end
+
+@info "Animation complete"
 #%%
 #=
 train_data_plot = LESDatasets(field_datasets, ZeroMeanUnitVarianceScaling, [1:145 for i in 1:2])

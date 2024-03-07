@@ -84,7 +84,7 @@ function train_NDE(train_data, NN, ps_NN, st_NN; coarse_size=32, dev=cpu_device(
         T = inv(params.scaling.T).(T_hat)
         S = inv(params.scaling.S).(S_hat)
 
-        Ris = calculate_Ri(u, v, T, S, params.zC, params.Dᶠ, params.g, eos.reference_density, clamp_lims=(-1, 10))
+        Ris = calculate_Ri(u, v, T, S, params.Dᶠ, params.g, eos.reference_density, clamp_lims=(-1, 10))
 
         diffusivities = [first(NN([Ri], p, st)) for Ri in Ris]
         νs = [diffusivity[1] / 10 + ν₀ for diffusivity in diffusivities]
@@ -173,7 +173,7 @@ function train_NDE(train_data, NN, ps_NN, st_NN; coarse_size=32, dev=cpu_device(
         vs = [@view(pred[coarse_size+1:2*coarse_size, :]) for pred in preds]
         Ts = [@view(pred[2*coarse_size+1:3*coarse_size, :]) for pred in preds]
         Ss = [@view(pred[3*coarse_size+1:4*coarse_size, :]) for pred in preds]
-        ρs = [param.scaling.ρ.(TEOS10.ρ′.(inv(param.scaling.T).(T), inv(param.scaling.S).(S), param.zC, Ref(eos)) .+ eos.reference_density) for (T, S, param) in zip(Ts, Ss, params)]
+        ρs = [param.scaling.ρ.(TEOS10.ρ.(inv(param.scaling.T).(T), inv(param.scaling.S).(S), 0, Ref(eos))) for (T, S, param) in zip(Ts, Ss, params)]
 
         vel_prefactor = 1e-3
         u_loss = mean(mean.([(data.profile.u.scaled .- u).^2 for (data, u) in zip(train_data.data, us)])) * vel_prefactor
@@ -293,7 +293,7 @@ function animate_data(train_data, sols, fluxes, index, FILE_DIR, coarse_size=32)
     v_NDE = inv(train_data.scaling.v).(sols[index][coarse_size+1:2*coarse_size, :])
     T_NDE = inv(train_data.scaling.T).(sols[index][2*coarse_size+1:3*coarse_size, :])
     S_NDE = inv(train_data.scaling.S).(sols[index][3*coarse_size+1:4*coarse_size, :])
-    ρ_NDE = TEOS10.ρ′.(T_NDE, S_NDE, zC, Ref(TEOS10EquationOfState())) .+ TEOS10EquationOfState().reference_density
+    ρ_NDE = TEOS10.ρ.(T_NDE, S_NDE, 0, Ref(TEOS10EquationOfState()))
 
     uw_NDE = fluxes.uw[index]
     vw_NDE = fluxes.vw[index]

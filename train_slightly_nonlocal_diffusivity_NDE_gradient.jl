@@ -99,7 +99,7 @@ function train_NDE(train_data, train_data_plot, NN, ps_NN, st_NN; coarse_size=32
         T = inv(params.scaling.T).(T_hat)
         S = inv(params.scaling.S).(S_hat)
 
-        Ris = calculate_Ri(u, v, T, S, params.zC, params.Dᶠ, params.g, eos.reference_density, clamp_lims=Ri_clamp_lims)
+        Ris = calculate_Ri(u, v, T, S, params.Dᶠ, params.g, eos.reference_density, clamp_lims=Ri_clamp_lims)
 
         νs, κs = predict_diffusivities(Ris, p, st)
 
@@ -186,7 +186,7 @@ function train_NDE(train_data, train_data_plot, NN, ps_NN, st_NN; coarse_size=32
         vs = [@view(pred[coarse_size+1:2*coarse_size, :]) for pred in preds]
         Ts = [@view(pred[2*coarse_size+1:3*coarse_size, :]) for pred in preds]
         Ss = [@view(pred[3*coarse_size+1:4*coarse_size, :]) for pred in preds]
-        ρs = [param.scaling.ρ.(TEOS10.ρ′.(inv(param.scaling.T).(T), inv(param.scaling.S).(S), param.zC, Ref(eos)) .+ eos.reference_density) for (T, S, param) in zip(Ts, Ss, params)]
+        ρs = [param.scaling.ρ.(TEOS10.ρ.(inv(param.scaling.T).(T), inv(param.scaling.S).(S), 0, Ref(eos))) for (T, S, param) in zip(Ts, Ss, params)]
 
         ∂u∂zs = [hcat([param.scaling.∂u∂z.(param.Dᶠ * inv(param.scaling.u).(@view(u[:, i]))) for i in axes(u, 2)]...) for (param, u) in zip(params, us)]
         ∂v∂zs = [hcat([param.scaling.∂v∂z.(param.Dᶠ * inv(param.scaling.v).(@view(v[:, i]))) for i in axes(v, 2)]...) for (param, v) in zip(params, vs)]
@@ -240,7 +240,7 @@ function train_NDE(train_data, train_data_plot, NN, ps_NN, st_NN; coarse_size=32
         vs = [@view(pred[coarse_size+1:2*coarse_size, :]) for pred in preds]
         Ts = [@view(pred[2*coarse_size+1:3*coarse_size, :]) for pred in preds]
         Ss = [@view(pred[3*coarse_size+1:4*coarse_size, :]) for pred in preds]
-        ρs = [param.scaling.ρ.(TEOS10.ρ′.(inv(param.scaling.T).(T), inv(param.scaling.S).(S), param.zC, Ref(eos)) .+ eos.reference_density) for (T, S, param) in zip(Ts, Ss, params)]
+        ρs = [param.scaling.ρ.(TEOS10.ρ.(inv(param.scaling.T).(T), inv(param.scaling.S).(S), 0, Ref(eos))) for (T, S, param) in zip(Ts, Ss, params)]
 
         ∂u∂zs = [hcat([param.scaling.∂u∂z.(param.Dᶠ * inv(param.scaling.u).(@view(u[:, i]))) for i in axes(u, 2)]...) for (param, u) in zip(params, us)]
         ∂v∂zs = [hcat([param.scaling.∂v∂z.(param.Dᶠ * inv(param.scaling.v).(@view(v[:, i]))) for i in axes(v, 2)]...) for (param, v) in zip(params, vs)]
@@ -327,13 +327,13 @@ function train_NDE(train_data, train_data_plot, NN, ps_NN, st_NN; coarse_size=32
                                inv(params[i].scaling.v).(sol[coarse_size+1:2*coarse_size, t]), 
                                inv(params[i].scaling.T).(sol[2*coarse_size+1:3*coarse_size, t]), 
                                inv(params[i].scaling.S).(sol[3*coarse_size+1:4*coarse_size, t]), 
-                               params[i].zC, params[i].Dᶠ, params[i].g, eos.reference_density, clamp_lims=Ri_clamp_lims)
+                               params[i].Dᶠ, params[i].g, eos.reference_density, clamp_lims=Ri_clamp_lims)
 
             Ris_truth = calculate_Ri(train_data_plot.data[i].profile.u.unscaled[:, t], 
                                      train_data_plot.data[i].profile.v.unscaled[:, t], 
                                      train_data_plot.data[i].profile.T.unscaled[:, t], 
                                      train_data_plot.data[i].profile.S.unscaled[:, t], 
-                                     params[i].zC, params[i].Dᶠ, params[i].g, eos.reference_density, clamp_lims=Ri_clamp_lims)
+                                     params[i].Dᶠ, params[i].g, eos.reference_density, clamp_lims=Ri_clamp_lims)
             νs, κs = predict_diffusivities(Ris, res.u, st_NN)
 
             uw_posttraining[i][:, t] .= uw
@@ -399,7 +399,7 @@ function animate_data(train_data, sols, fluxes, diffusivities, index, FILE_DIR; 
     v_NDE = inv(train_data.scaling.v).(sols[index][coarse_size+1:2*coarse_size, :])
     T_NDE = inv(train_data.scaling.T).(sols[index][2*coarse_size+1:3*coarse_size, :])
     S_NDE = inv(train_data.scaling.S).(sols[index][3*coarse_size+1:4*coarse_size, :])
-    ρ_NDE = TEOS10.ρ′.(T_NDE, S_NDE, zC, Ref(TEOS10EquationOfState())) .+ TEOS10EquationOfState().reference_density
+    ρ_NDE = TEOS10.ρ.(T_NDE, S_NDE, 0, Ref(TEOS10EquationOfState()))
 
     uw_NDE = fluxes.uw[index]
     vw_NDE = fluxes.vw[index]

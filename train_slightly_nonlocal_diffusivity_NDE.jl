@@ -18,7 +18,8 @@ function find_max(a...)
     return maximum(maximum.([a...]))
 end
 
-FILE_DIR = "./training_output/slightly_nonlocal_diffusivity_NDE_ROCK2_fast_weightloss"
+FILE_DIR = "./training_output/slightly_nonlocal_diffusivity_NDE_relu_clamp_-10_10"
+@info FILE_DIR
 mkpath(FILE_DIR)
 
 LES_FILE_DIRS = [
@@ -46,12 +47,10 @@ ps_NN = ps_NN |> ComponentArray .|> Float64
 
 ps_NN ./= 100
 
-function train_NDE(train_data, train_data_plot, NN, ps_NN, st_NN; coarse_size=32, dev=cpu_device(), maxiter=10, optimizer=OptimizationOptimisers.ADAM(0.001), solver=DP5())
+function train_NDE(train_data, train_data_plot, NN, ps_NN, st_NN; coarse_size=32, dev=cpu_device(), maxiter=10, optimizer=OptimizationOptimisers.ADAM(0.001), solver=DP5(), Ri_clamp_lims=(-10, 10))
     train_data = train_data |> dev
     x₀s = [vcat(data.profile.u.scaled[:, 1], data.profile.v.scaled[:, 1], data.profile.T.scaled[:, 1], data.profile.S.scaled[:, 1]) for data in train_data.data] |> dev
     eos = TEOS10EquationOfState()
-
-    Ri_clamp_lims = (-10, 10)
 
     params = [(                   f = data.metadata["coriolis_parameter"],
                                   τ = data.times[end] - data.times[1],
@@ -464,7 +463,7 @@ end
 
 epoch = 1
 res, loss, sols, fluxes, losses, diffusivities = train_NDE(train_data, train_data_plot, NN, ps_NN, st_NN, 
-                                                           maxiter=100, optimizer=OptimizationOptimisers.ADAM(0.005), solver=ROCK2())
+                                                           maxiter=500, optimizer=OptimizationOptimisers.ADAM(0.005), solver=ROCK2())
 
 jldsave("$(FILE_DIR)/training_results_$(epoch).jld2"; res, loss, sols, fluxes, losses, diffusivities)
 plot_loss(losses, FILE_DIR, epoch=epoch)
@@ -475,13 +474,22 @@ end
 epoch += 1
 
 res, loss, sols, fluxes, losses, diffusivities = train_NDE(train_data, train_data_plot, NN, res.u, st_NN, 
-                                                           maxiter=100, optimizer=OptimizationOptimisers.ADAM(0.001), solver=ROCK2())
-@info "Training complete"
+                                                           maxiter=500, optimizer=OptimizationOptimisers.ADAM(0.0005), solver=ROCK2())
 
 jldsave("$(FILE_DIR)/training_results_$(epoch).jld2"; res, loss, sols, fluxes, losses)
 plot_loss(losses, FILE_DIR, epoch=epoch)
 for i in eachindex(field_datasets)
     animate_data(train_data_plot, sols, fluxes, diffusivities, i, FILE_DIR, epoch=epoch)
 end
-@info "Animation complete"
+
+epoch += 1
+
+res, loss, sols, fluxes, losses, diffusivities = train_NDE(train_data, train_data_plot, NN, res.u, st_NN, 
+                                                           maxiter=500, optimizer=OptimizationOptimisers.ADAM(0.0002), solver=ROCK2())
+
+jldsave("$(FILE_DIR)/training_results_$(epoch).jld2"; res, loss, sols, fluxes, losses)
+plot_loss(losses, FILE_DIR, epoch=epoch)
+for i in eachindex(field_datasets)
+    animate_data(train_data_plot, sols, fluxes, diffusivities, i, FILE_DIR, epoch=epoch)
+end
 #%%

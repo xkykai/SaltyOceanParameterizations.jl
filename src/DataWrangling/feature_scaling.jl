@@ -55,4 +55,30 @@ unscale(y, s::MinMaxScaling) = s.data_min .+ (y .- s.a) * (s.data_max - s.data_m
 (s::AbstractFeatureScaling)(x) = scale(x, s)
 Base.inv(s::AbstractFeatureScaling) = y -> unscale(y, s)
 
+struct DiffusivityScaling{T} <: AbstractFeatureScaling
+    ν₀ :: T
+    κ₀ :: T
+    ν₁ :: T
+    κ₁ :: T
+end
+
+function DiffusivityScaling(ν₀=1e-5, κ₀=1e-5, ν₁=0.1, κ₁=0.1)
+    return DiffusivityScaling(ν₀, κ₀, ν₁, κ₁)
+end
+
+function scale(x, s::DiffusivityScaling)
+    ν, κ = x
+    ν₀, κ₀, ν₁, κ₁ = s.ν₀, s.κ₀, s.ν₁, s.κ₁
+    return ν₀ + ν * ν₁, κ₀ + κ * κ₁
+end
+
+function unscale(y, s::DiffusivityScaling)
+    ν, κ = y
+    ν₀, κ₀, ν₁, κ₁ = s.ν₀, s.κ₀, s.ν₁, s.κ₁
+    return (ν - ν₀) / ν₁, (κ - κ₀) / κ₁
+end
+
+(s::DiffusivityScaling)(x) = scale(x, s)
+Base.inv(s::DiffusivityScaling) = y -> unscale(y, s)
+
 

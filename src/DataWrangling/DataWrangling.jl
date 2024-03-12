@@ -1,5 +1,6 @@
 module DataWrangling
-export ZeroMeanUnitVarianceScaling, MinMaxScaling, LESData, LESDatasets
+export ZeroMeanUnitVarianceScaling, MinMaxScaling, DiffusivityScaling
+export LESData, LESDatasets
 
 include("feature_scaling.jl")
 include("LES_data_processing.jl")

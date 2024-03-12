@@ -20,7 +20,7 @@ function find_max(a...)
     return maximum(maximum.([a...]))
 end
 
-FILE_DIR = "./training_output/NN_local_diffusivity_NDE_gradient_relu_noclamp_fast"
+FILE_DIR = "./training_output/NN_local_diffusivity_NDE_gradient_relu_noclamp_ROCK4_GaussAdjoint_fast"
 mkpath(FILE_DIR)
 
 LES_FILE_DIRS = [
@@ -83,7 +83,8 @@ NNs = (uw=uw_NN, vw=vw_NN, wT=wT_NN, wS=wS_NN, baseclosure=baseclosure_NN)
 ps_NN = ComponentArray(uw=ps_uw, vw=ps_vw, wT=ps_wT, wS=ps_wS, baseclosure=ps_baseclosure)
 st_NN = (uw=st_uw, vw=st_vw, wT=st_wT, wS=st_wS, baseclosure=st_baseclosure)
 
-function train_NDE(train_data, train_data_plot, NNs, ps_NN, st_NN; coarse_size=32, dev=cpu_device(), maxiter=10, optimizer=OptimizationOptimisers.ADAM(0.001), solver=ROCK2(), Ri_clamp_lims=(-Inf, Inf))
+function train_NDE(train_data, train_data_plot, NNs, ps_NN, st_NN; 
+                   coarse_size=32, dev=cpu_device(), maxiter=10, optimizer=OptimizationOptimisers.ADAM(0.001), solver=ROCK2(), sensealg=InterpolatingAdjoint(autojacvec=ZygoteVJP()), Ri_clamp_lims=(-Inf, Inf))
     train_data = train_data |> dev
     x₀s = [vcat(data.profile.u.scaled[:, 1], data.profile.v.scaled[:, 1], data.profile.T.scaled[:, 1], data.profile.S.scaled[:, 1]) for data in train_data.data] |> dev
     eos = TEOS10EquationOfState()
@@ -251,7 +252,7 @@ function train_NDE(train_data, train_data_plot, NNs, ps_NN, st_NN; coarse_size=3
 
     function predict_NDE(p)
         probs = [ODEProblem((x, p′, t) -> NDE(x, p′, t, param, st_NN), x₀, (param.scaled_time[1], param.scaled_time[end]), p) for (x₀, param) in zip(x₀s, params)]
-        sols = [Array(solve(prob, solver, saveat=param.scaled_time, sensealg=InterpolatingAdjoint(autojacvec=ZygoteVJP()), reltol=1e-3)) for (param, prob) in zip(params, probs)]
+        sols = [Array(solve(prob, solver, saveat=param.scaled_time, sensealg=sensealg, reltol=1e-3)) for (param, prob) in zip(params, probs)]
         return sols
     end
 
@@ -669,7 +670,7 @@ end
 
 epoch = 1
 
-res, loss, sols, fluxes, losses, diffusivities = train_NDE(train_data, train_data_plot, NNs, ps_NN, st_NN, maxiter=100, solver=ROCK4())
+res, loss, sols, fluxes, losses, diffusivities = train_NDE(train_data, train_data_plot, NNs, ps_NN, st_NN, maxiter=100, solver=ROCK4(), sensealg=GaussAdjoint(autojacvec=ZygoteVJP()))
 
 jldsave("$(FILE_DIR)/training_results_$(epoch).jld2"; res, loss, sols, fluxes, losses, NNs, st_NN, diffusivities)
 plot_loss(losses, FILE_DIR, epoch=epoch)
@@ -679,7 +680,7 @@ end
 
 epoch += 1
 
-res, loss, sols, fluxes, losses, diffusivities = train_NDE(train_data, train_data_plot, NNs, res.u, st_NN, maxiter=100, solver=ROCK4())
+res, loss, sols, fluxes, losses, diffusivities = train_NDE(train_data, train_data_plot, NNs, res.u, st_NN, maxiter=100, solver=ROCK4(), sensealg=GaussAdjoint(autojacvec=ZygoteVJP()))
 
 jldsave("$(FILE_DIR)/training_results_$(epoch).jld2"; res, loss, sols, fluxes, losses, NNs, st_NN, diffusivities)
 plot_loss(losses, FILE_DIR, epoch=epoch)

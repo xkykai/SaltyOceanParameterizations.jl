@@ -112,14 +112,26 @@ function Fluxes(uw_data, vw_data, wT_data, wS_data,
     return Fluxes(uw, vw, wT, wS)
 end
 
-struct LESData{M, T, P, F}
+struct LESData{M, T, P, F, C}
     metadata :: M
     times :: T
     profile :: P
     flux :: F
+    coriolis :: C
 end
 
 get_surface_fluxes(surface_flux::Number) = surface_flux
+
+struct CoriolisParameter{SC, S, U}
+     scaling :: SC
+      scaled :: S
+    unscaled :: U
+end
+
+function CoriolisParameter(data, scaling::AbstractFeatureScaling)
+    scaled = scaling(data)
+    return CoriolisParameter(scaling, scaled, data)
+end
 
 function LESData(data::FieldDataset, scalings::NamedTuple, timeframes, coarse_size=32)
     u = hcat([coarse_grain(interior(data["ubar"][i], 1, 1, :), coarse_size, Center) for i in timeframes]...)
@@ -141,6 +153,8 @@ function LESData(data::FieldDataset, scalings::NamedTuple, timeframes, coarse_si
     ∂T∂z = hcat([D * T[:, i] for i in axes(T, 2)]...)
     ∂S∂z = hcat([D * S[:, i] for i in axes(S, 2)]...)
     ∂ρ∂z = hcat([D * ρ[:, i] for i in axes(ρ, 2)]...)
+
+    f = data.metadata["coriolis_parameter"]
 
     uw_surface = get_surface_fluxes(data.metadata["momentum_flux"])
     wT_surface = get_surface_fluxes(data.metadata["temperature_flux"])
@@ -165,6 +179,8 @@ function LESData(data::FieldDataset, scalings::NamedTuple, timeframes, coarse_si
                   uw_bottom, vw_bottom, wT_bottom, wS_bottom, scalings.uw, 
                   scalings.vw, scalings.wT, scalings.wS)
 
+    coriolis = CoriolisParameter(f, scalings.f)
+
     metadata = data.metadata
     metadata["original_grid"] = data["ubar"].grid
     metadata["Nz"] = coarse_size
@@ -172,7 +188,7 @@ function LESData(data::FieldDataset, scalings::NamedTuple, timeframes, coarse_si
     metadata["zF"] = coarse_grain_downsampling(data["ubar"].grid.zᵃᵃᶠ[1:data["ubar"].grid.Nz+1], coarse_size+1, Face)
     metadata["original_times"] = data["ubar"].times
 
-    return LESData(metadata, data["ubar"].times[timeframes], profile, flux)
+    return LESData(metadata, data["ubar"].times[timeframes], profile, flux, coriolis)
 end
 
 struct LESDatasets{D, S}
@@ -204,6 +220,8 @@ function LESDatasets(datasets::Vector, scaling::Type{<:AbstractFeatureScaling}, 
     ∂S∂z = [hcat([D * S′[:, i] for i in axes(S′, 2)]...) for (D, S′) in zip(Dᶠs, S)]
     ∂ρ∂z = [hcat([D * ρ′[:, i] for i in axes(ρ′, 2)]...) for (D, ρ′) in zip(Dᶠs, ρ)]
 
+    f = [data.metadata["coriolis_parameter"] for data in datasets]
+
     scalings = (   u = scaling([(u...)...]), 
                    v = scaling([(v...)...]), 
                    T = scaling([(T...)...]), 
@@ -217,7 +235,8 @@ function LESDatasets(datasets::Vector, scaling::Type{<:AbstractFeatureScaling}, 
                 ∂v∂z = scaling([(∂v∂z...)...]),
                 ∂T∂z = scaling([(∂T∂z...)...]),
                 ∂S∂z = scaling([(∂S∂z...)...]),
-                ∂ρ∂z = scaling([(∂ρ∂z...)...]))
+                ∂ρ∂z = scaling([(∂ρ∂z...)...]),
+                   f = scaling([f...]))
 
     return LESDatasets([LESData(data, scalings, timeframe, coarse_size) for (data, timeframe) in zip(datasets, timeframes)], scalings)
 end

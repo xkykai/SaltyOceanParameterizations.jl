@@ -24,7 +24,7 @@ function find_max(a...)
     return maximum(maximum.([a...]))
 end
 
-FILE_DIR = "./training_output/NN_local_diffusivity_NDE_gradient_relu_noclamp_ROCK4_EKI_fast_test_96"
+FILE_DIR = "./training_output/NN_small_local_diffusivity_NDE_gradient_relu_noclamp_ROCK4_EKI_fast_test"
 mkpath(FILE_DIR)
 
 LES_FILE_DIRS = [
@@ -35,14 +35,18 @@ LES_FILE_DIRS = [
 ]
 
 BASECLOSURE_FILE_DIR = "./training_output/local_diffusivity_NDE_gradient_relu_noclamp/training_results_2.jld2"
+PS_BASECLOSURE_FILE_DIR = "./training_output/local_diffusivity_NDE_gradient_relu_noclamp/ps_baseclosure.jld2"
 
 field_datasets = [FieldDataset(FILE_DIR, backend=OnDisk()) for FILE_DIR in LES_FILE_DIRS]
 
 file_baseclosure = jldopen(BASECLOSURE_FILE_DIR, "r")
 baseclosure_NN = file_baseclosure["NN"]
 st_baseclosure = file_baseclosure["st_NN"]
-ps_baseclosure = file_baseclosure["res"].u
 close(file_baseclosure)
+
+file_ps_baseclosure = jldopen(PS_BASECLOSURE_FILE_DIR, "r")
+ps_baseclosure = file_ps_baseclosure["ps_baseclosure"]
+close(file_ps_baseclosure)
 
 full_timeframes = [1:length(data["ubar"].times) for data in field_datasets]
 timeframes = [5:5:length(data["ubar"].times) for data in field_datasets]
@@ -55,10 +59,10 @@ dev = cpu_device()
 
 rng = Random.default_rng(123)
 
-uw_NN = Chain(Dense(164, 64, leakyrelu), Dense(64, 31))
-vw_NN = Chain(Dense(164, 64, leakyrelu), Dense(64, 31))
-wT_NN = Chain(Dense(164, 64, leakyrelu), Dense(64, 31))
-wS_NN = Chain(Dense(164, 64, leakyrelu), Dense(64, 31))
+uw_NN = Chain(Dense(165, 32, leakyrelu), Dense(32, 31))
+vw_NN = Chain(Dense(165, 32, leakyrelu), Dense(32, 31))
+wT_NN = Chain(Dense(165, 32, leakyrelu), Dense(32, 31))
+wS_NN = Chain(Dense(165, 32, leakyrelu), Dense(32, 31))
 
 # uw_NN = Chain(Dense(164, 4, leakyrelu), Dense(4, 31))
 # vw_NN = Chain(Dense(164, 4, leakyrelu), Dense(4, 31))
@@ -180,6 +184,7 @@ end
 # sols = [Array(solve(prob, ROCK4(), saveat=param.scaled_time, reltol=1e-3)) for (param, prob) in zip(params, probs)]
 
 _params = [(                   f = data.metadata["coriolis_parameter"],
+                        f_scaled = data.coriolis.scaled,
                                 τ = data.times[end] - data.times[1],
                     scaled_time = (data.times .- data.times[1]) ./ (data.times[end] - data.times[1]),
             scaled_original_time = data.metadata["original_times"] ./ (data.metadata["original_times"][end] - data.metadata["original_times"][1]),
@@ -217,7 +222,7 @@ _params = [(                   f = data.metadata["coriolis_parameter"],
 function NDE_opt(x, p, t, params, NNs, st)
     eos = TEOS10EquationOfState()
     coarse_size = params.coarse_size
-    f = params.f
+    f, f_scaled = params.f, params.f_scaled
     Δ, Δ_hat = params.Δ, params.Δ_hat
     scaling = params.scaling
     τ, H = params.τ, params.H
@@ -278,6 +283,7 @@ function NDE_opt(x, p, t, params, NNs, st)
     x′[5*coarse_size+2] = params.vw.scaled.top
     x′[5*coarse_size+3] = params.wT.scaled.top
     x′[5*coarse_size+4] = params.wS.scaled.top
+    x′[5*coarse_size+5] = f_scaled
 
     uw_residual_interior .+= first(NNs.uw(x′, p.uw, st.uw))
     vw_residual_interior .+= first(NNs.vw(x′, p.vw, st.vw))
@@ -321,7 +327,7 @@ end
 function NDE_opt!(dx, x, p, t, params, NNs, st)
     eos = TEOS10EquationOfState()
     coarse_size = params.coarse_size
-    f = params.f
+    f, f_scaled = params.f, params.f_scaled
     Δ, Δ_hat = params.Δ, params.Δ_hat
     scaling = params.scaling
     τ, H = params.τ, params.H
@@ -382,6 +388,7 @@ function NDE_opt!(dx, x, p, t, params, NNs, st)
     x′[5*coarse_size+2] = params.vw.scaled.top
     x′[5*coarse_size+3] = params.wT.scaled.top
     x′[5*coarse_size+4] = params.wS.scaled.top
+    x′[5*coarse_size+5] = f_scaled
 
     uw_residual_interior .+= first(NNs.uw(x′, p.uw, st.uw))
     vw_residual_interior .+= first(NNs.vw(x′, p.vw, st.vw))
@@ -574,8 +581,8 @@ priors = combine_distributions(vcat(priors_uw, priors_vw, priors_wT, priors_wS, 
 
 y = vec(vcat([vcat(data.profile.u.scaled, data.profile.v.scaled, data.profile.T.scaled, data.profile.S.scaled) for data in train_data.data]...))
 
-N_ensemble = 720
-N_iterations = 10
+N_ensemble = 96
+N_iterations = 2
 Γ = 1e-6 * I
 
 initial_ensemble = EKP.construct_initial_ensemble(rng, priors, N_ensemble)
@@ -589,6 +596,7 @@ for i in 1:N_iterations
     @info "$(Dates.now()), iteration $i/$N_iterations"
     Threads.@threads for j in 1:N_ensemble
         threadid = Threads.threadid()
+        @info "$(Dates.now()), particle $j, thread $threadid"
         ps_particle = ComponentArray(ps_eki[:, j], ax_ps_NN)
         probs = [ODEProblem((x, p′, t) -> NDE_opt(x, p′, t, param, NNs, st_NN), x₀, (param.scaled_time[1], param.scaled_time[end]), ps_particle) for (x₀, param) in zip(_x₀s, params_ekp[threadid])]
         sols = [Array(solve(prob, ROCK2(), saveat=param.scaled_time, reltol=1e-3)) for (param, prob) in zip(params_ekp[threadid], probs)]

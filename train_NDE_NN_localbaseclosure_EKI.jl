@@ -1,17 +1,17 @@
-using SaltyOceanParameterizations
-using SaltyOceanParameterizations.DataWrangling
-using Oceananigans
-using ComponentArrays, Lux, DiffEqFlux, OrdinaryDiffEq, Optimization, OptimizationOptimJL, OptimizationOptimisers, Random, SciMLSensitivity, LuxCUDA
-using Statistics
+using Distributed
+addprocs(1)
+@everywhere begin
+    using SaltyOceanParameterizations, SaltyOceanParameterizations.DataWrangling
+    using Oceananigans, SeawaterPolynomials.TEOS10
+    using ComponentArrays, Lux, OrdinaryDiffEq, Optimization, Random, LuxCUDA
+    using Statistics
+    using Printf
+    using Dates
+    using JLD2
+    using SciMLBase
+    using LinearAlgebra
+end
 using CairoMakie
-using SeawaterPolynomials.TEOS10
-using Printf
-using Dates
-using JLD2
-using SciMLBase
-using Colors
-using ModelingToolkit
-using LinearAlgebra
 using EnsembleKalmanProcesses
 using EnsembleKalmanProcesses.ParameterDistributions
 const EKP = EnsembleKalmanProcesses
@@ -24,7 +24,7 @@ function find_max(a...)
     return maximum(maximum.([a...]))
 end
 
-FILE_DIR = "./training_output/NN_small_local_diffusivity_NDE_gradient_relu_noclamp_ROCK4_EKI_fast_test"
+FILE_DIR = "./training_output/NN_small_local_diffusivity_NDE_gradient_relu_noclamp_ROCK4_EKI_fast_test_diffeqensemble"
 mkpath(FILE_DIR)
 
 LES_FILE_DIRS = [
@@ -59,15 +59,15 @@ dev = cpu_device()
 
 rng = Random.default_rng(123)
 
+# uw_NN = Chain(Dense(165, 32, leakyrelu), Dense(32, 31))
+# vw_NN = Chain(Dense(165, 32, leakyrelu), Dense(32, 31))
+# wT_NN = Chain(Dense(165, 32, leakyrelu), Dense(32, 31))
+# wS_NN = Chain(Dense(165, 32, leakyrelu), Dense(32, 31))
+
 uw_NN = Chain(Dense(165, 32, leakyrelu), Dense(32, 31))
 vw_NN = Chain(Dense(165, 32, leakyrelu), Dense(32, 31))
 wT_NN = Chain(Dense(165, 32, leakyrelu), Dense(32, 31))
 wS_NN = Chain(Dense(165, 32, leakyrelu), Dense(32, 31))
-
-# uw_NN = Chain(Dense(164, 4, leakyrelu), Dense(4, 31))
-# vw_NN = Chain(Dense(164, 4, leakyrelu), Dense(4, 31))
-# wT_NN = Chain(Dense(164, 4, leakyrelu), Dense(4, 31))
-# wS_NN = Chain(Dense(164, 4, leakyrelu), Dense(4, 31))
 
 ps_uw, st_uw = Lux.setup(rng, uw_NN)
 ps_vw, st_vw = Lux.setup(rng, vw_NN)
@@ -90,100 +90,14 @@ st_wT = st_wT
 st_wS = st_wS
 
 NNs = (uw=uw_NN, vw=vw_NN, wT=wT_NN, wS=wS_NN, baseclosure=baseclosure_NN)
+@everywhere NNs = $NNs
 ps_NN = ComponentArray(uw=ps_uw, vw=ps_vw, wT=ps_wT, wS=ps_wS, baseclosure=ps_baseclosure)
 ax_ps_NN = getaxes(ps_NN)
+@everywhere ax_ps_NN = $ax_ps_NN
 st_NN = (uw=st_uw, vw=st_vw, wT=st_wT, wS=st_wS, baseclosure=st_baseclosure)
+@everywhere st_NN = $st_NN
 
-params = [(                   f = data.metadata["coriolis_parameter"],
-                                τ = data.times[end] - data.times[1],
-                    scaled_time = (data.times .- data.times[1]) ./ (data.times[end] - data.times[1]),
-            scaled_original_time = data.metadata["original_times"] ./ (data.metadata["original_times"][end] - data.metadata["original_times"][1]),
-                                zC = data.metadata["zC"],
-                                H = data.metadata["original_grid"].Lz,
-                                g = data.metadata["gravitational_acceleration"],
-                    coarse_size = coarse_size, 
-                                Dᶜ = Dᶜ(coarse_size, data.metadata["zC"][2] - data.metadata["zC"][1]),
-                                Dᶠ = Dᶠ(coarse_size, data.metadata["zF"][3] - data.metadata["zF"][2]),
-                            Dᶜ_hat = Dᶜ(coarse_size, data.metadata["zC"][2] - data.metadata["zC"][1]) .* data.metadata["original_grid"].Lz,
-                            Dᶠ_hat = Dᶠ(coarse_size, data.metadata["zF"][3] - data.metadata["zF"][2]) .* data.metadata["original_grid"].Lz,
-                                uw = (scaled = (top=data.flux.uw.surface.scaled, bottom=data.flux.uw.bottom.scaled),
-                                    unscaled = (top=data.flux.uw.surface.unscaled, bottom=data.flux.uw.bottom.unscaled)),
-                                vw = (scaled = (top=data.flux.vw.surface.scaled, bottom=data.flux.vw.bottom.scaled),
-                                    unscaled = (top=data.flux.vw.surface.unscaled, bottom=data.flux.vw.bottom.unscaled)),
-                                wT = (scaled = (top=data.flux.wT.surface.scaled, bottom=data.flux.wT.bottom.scaled),
-                                    unscaled = (top=data.flux.wT.surface.unscaled, bottom=data.flux.wT.bottom.unscaled)),
-                                wS = (scaled = (top=data.flux.wS.surface.scaled, bottom=data.flux.wS.bottom.scaled),
-                                    unscaled = (top=data.flux.wS.surface.unscaled, bottom=data.flux.wS.bottom.unscaled)),           
-                                    scaling = merge(train_data.scaling, (; diffusivity=DiffusivityScaling()))
-            ) for data in train_data.data] |> dev
-
-x₀s = [vcat(data.profile.u.scaled[:, 1], data.profile.v.scaled[:, 1], data.profile.T.scaled[:, 1], data.profile.S.scaled[:, 1]) for data in train_data.data] |> dev
-eos = TEOS10EquationOfState()
-
-function NDE!(dx, x, p, t, params, st)
-    f = params.f
-    Dᶜ_hat = params.Dᶜ_hat
-    Dᶠ_hat = params.Dᶠ_hat
-    scaling = params.scaling
-    τ, H = params.τ, params.H
-
-    u_hat = x[1:params.coarse_size]
-    v_hat = x[params.coarse_size+1:2*params.coarse_size]
-    T_hat = x[2*params.coarse_size+1:3*params.coarse_size]
-    S_hat = x[3*params.coarse_size+1:4*params.coarse_size]
-
-    u = inv(params.scaling.u).(u_hat)
-    v = inv(params.scaling.v).(v_hat)
-    T = inv(params.scaling.T).(T_hat)
-    S = inv(params.scaling.S).(S_hat)
-    
-    ρ = TEOS10.ρ.(T, S, 0, Ref(eos))
-    ρ_hat = params.scaling.ρ.(ρ)
-
-    du = @view dx[1:params.coarse_size]
-    dv = @view dx[params.coarse_size+1:2*params.coarse_size]
-    dT = @view dx[2*params.coarse_size+1:3*params.coarse_size]
-    dS = @view dx[3*params.coarse_size+1:4*params.coarse_size]
-
-    x′ = vcat(u_hat, v_hat, T_hat, S_hat, ρ_hat, params.uw.scaled.top, params.vw.scaled.top, params.wT.scaled.top, params.wS.scaled.top)
-    uw_residual = vcat(0, first(NNs.uw(x′, p.uw, st.uw)), 0)
-    vw_residual = vcat(0, first(NNs.vw(x′, p.vw, st.vw)), 0)
-    wT_residual = vcat(0, first(NNs.wT(x′, p.wT, st.wT)), 0)
-    wS_residual = vcat(0, first(NNs.wS(x′, p.wS, st.wS)), 0)
-
-    Ris = calculate_Ri(u, v, ρ, params.Dᶠ, params.g, eos.reference_density, clamp_lims=(-Inf, Inf))
-    diffusivities = [params.scaling.diffusivity(first(NNs.baseclosure([Ri], p.baseclosure, st.baseclosure))) for Ri in Ris]
-
-    νs = [diffusivity[1] for diffusivity in diffusivities]
-    κs = [diffusivity[2] for diffusivity in diffusivities]
-
-    ∂u∂z_hat = Dᶠ_hat * u_hat
-    ∂v∂z_hat = Dᶠ_hat * v_hat
-    ∂T∂z_hat = Dᶠ_hat * T_hat
-    ∂S∂z_hat = Dᶠ_hat * S_hat
-
-    uw_diffusive = -νs .* ∂u∂z_hat
-    vw_diffusive = -νs .* ∂v∂z_hat
-    wT_diffusive = -κs .* ∂T∂z_hat
-    wS_diffusive = -κs .* ∂S∂z_hat
-
-    uw_boundary = vcat(fill(params.uw.scaled.bottom, coarse_size), params.uw.scaled.top)
-    vw_boundary = vcat(fill(params.vw.scaled.bottom, coarse_size), params.vw.scaled.top)
-    wT_boundary = vcat(fill(params.wT.scaled.bottom, coarse_size), params.wT.scaled.top)
-    wS_boundary = vcat(fill(params.wS.scaled.bottom, coarse_size), params.wS.scaled.top)
-
-    du .= -τ / H^2 .* (Dᶜ_hat * uw_diffusive) .- τ / H * scaling.uw.σ / scaling.u.σ .* (Dᶜ_hat * (uw_boundary .+ uw_residual)) .+ f * τ ./ scaling.u.σ .* v
-    dv .= -τ / H^2 .* (Dᶜ_hat * vw_diffusive) .- τ / H * scaling.vw.σ / scaling.v.σ .* (Dᶜ_hat * (vw_boundary .+ vw_residual)) .- f * τ ./ scaling.v.σ .* u
-    dT .= -τ / H^2 .* (Dᶜ_hat * wT_diffusive) .- τ / H * scaling.wT.σ / scaling.T.σ .* (Dᶜ_hat * (wT_boundary .+ wT_residual))
-    dS .= -τ / H^2 .* (Dᶜ_hat * wS_diffusive) .- τ / H * scaling.wS.σ / scaling.S.σ .* (Dᶜ_hat * (wS_boundary .+ wS_residual))
-
-    return dx
-end
-
-# probs = [ODEProblem((dx, x, p′, t) -> NDE!(dx, x, p′, t, param, st_NN), x₀, (param.scaled_time[1], param.scaled_time[end]), ps_NN) for (x₀, param) in zip(x₀s, params)]
-# sols = [Array(solve(prob, ROCK4(), saveat=param.scaled_time, reltol=1e-3)) for (param, prob) in zip(params, probs)]
-
-_params = [(                   f = data.metadata["coriolis_parameter"],
+data_params = [(                   f = data.metadata["coriolis_parameter"],
                         f_scaled = data.coriolis.scaled,
                                 τ = data.times[end] - data.times[1],
                     scaled_time = (data.times .- data.times[1]) ./ (data.times[end] - data.times[1]),
@@ -219,7 +133,8 @@ _params = [(                   f = data.metadata["coriolis_parameter"],
                                                 u_RHS_residual=zeros(coarse_size), v_RHS_residual=zeros(coarse_size), T_RHS_residual=zeros(coarse_size), S_RHS_residual=zeros(coarse_size),)
             ) for data in train_data.data] |> dev
 
-function NDE_opt(x, p, t, params, NNs, st)
+@everywhere data_params = $data_params
+@everywhere function NDE_opt(x, p, t, params, NNs, st)
     eos = TEOS10EquationOfState()
     coarse_size = params.coarse_size
     f, f_scaled = params.f, params.f_scaled
@@ -432,8 +347,63 @@ function NDE_opt!(dx, x, p, t, params, NNs, st)
     @. dS = -τ / H^2 * S_RHS_diffusive - τ / H * scaling.wS.σ / scaling.S.σ * S_RHS_residual
 end
 
-# _x₀s = [ComponentArray(u=data.profile.u.scaled[:, 1], v=data.profile.v.scaled[:, 1], T=data.profile.T.scaled[:, 1], S=data.profile.S.scaled[:, 1]) for data in train_data.data]
-_x₀s = [vcat(data.profile.u.scaled[:, 1], data.profile.v.scaled[:, 1], data.profile.T.scaled[:, 1], data.profile.S.scaled[:, 1]) for data in train_data.data]
+
+@everywhere function NDE(x, p, t, params, NNs, st)
+    eos = TEOS10.TEOS10EquationOfState()
+    f = params.f
+    f_scaled = params.f_scaled
+    Dᶜ_hat = params.Dᶜ_hat
+    Dᶠ_hat = params.Dᶠ_hat
+    scaling = params.scaling
+    τ, H = params.τ, params.H
+
+    u_hat = x[1:params.coarse_size]
+    v_hat = x[params.coarse_size+1:2*params.coarse_size]
+    T_hat = x[2*params.coarse_size+1:3*params.coarse_size]
+    S_hat = x[3*params.coarse_size+1:4*params.coarse_size]
+
+    u = inv(params.scaling.u).(u_hat)
+    v = inv(params.scaling.v).(v_hat)
+    T = inv(params.scaling.T).(T_hat)
+    S = inv(params.scaling.S).(S_hat)
+    
+    ρ = TEOS10.ρ.(T, S, 0, Ref(eos))
+    ρ_hat = params.scaling.ρ.(ρ)
+
+    x′ = vcat(u_hat, v_hat, T_hat, S_hat, ρ_hat, params.uw.scaled.top, params.vw.scaled.top, params.wT.scaled.top, params.wS.scaled.top, params.f_scaled)
+    uw_residual = vcat(0, first(NNs.uw(x′, p.uw, st.uw)), 0)
+    vw_residual = vcat(0, first(NNs.vw(x′, p.vw, st.vw)), 0)
+    wT_residual = vcat(0, first(NNs.wT(x′, p.wT, st.wT)), 0)
+    wS_residual = vcat(0, first(NNs.wS(x′, p.wS, st.wS)), 0)
+
+    Ris = calculate_Ri(u, v, ρ, params.Dᶠ, params.g, eos.reference_density, clamp_lims=(-Inf, Inf))
+    diffusivities = [params.scaling.diffusivity(first(NNs.baseclosure([Ri], p.baseclosure, st.baseclosure))) for Ri in Ris]
+
+    νs = [diffusivity[1] for diffusivity in diffusivities]
+    κs = [diffusivity[2] for diffusivity in diffusivities]
+
+    ∂u∂z_hat = Dᶠ_hat * u_hat
+    ∂v∂z_hat = Dᶠ_hat * v_hat
+    ∂T∂z_hat = Dᶠ_hat * T_hat
+    ∂S∂z_hat = Dᶠ_hat * S_hat
+
+    uw_diffusive = -νs .* ∂u∂z_hat
+    vw_diffusive = -νs .* ∂v∂z_hat
+    wT_diffusive = -κs .* ∂T∂z_hat
+    wS_diffusive = -κs .* ∂S∂z_hat
+
+    uw_boundary = vcat(fill(params.uw.scaled.bottom, coarse_size), params.uw.scaled.top)
+    vw_boundary = vcat(fill(params.vw.scaled.bottom, coarse_size), params.vw.scaled.top)
+    wT_boundary = vcat(fill(params.wT.scaled.bottom, coarse_size), params.wT.scaled.top)
+    wS_boundary = vcat(fill(params.wS.scaled.bottom, coarse_size), params.wS.scaled.top)
+
+    du = -τ / H^2 .* (Dᶜ_hat * uw_diffusive) .- τ / H * scaling.uw.σ / scaling.u.σ .* (Dᶜ_hat * (uw_boundary .+ uw_residual)) .+ f * τ ./ scaling.u.σ .* v
+    dv = -τ / H^2 .* (Dᶜ_hat * vw_diffusive) .- τ / H * scaling.vw.σ / scaling.v.σ .* (Dᶜ_hat * (vw_boundary .+ vw_residual)) .- f * τ ./ scaling.v.σ .* u
+    dT = -τ / H^2 .* (Dᶜ_hat * wT_diffusive) .- τ / H * scaling.wT.σ / scaling.T.σ .* (Dᶜ_hat * (wT_boundary .+ wT_residual))
+    dS = -τ / H^2 .* (Dᶜ_hat * wS_diffusive) .- τ / H * scaling.wS.σ / scaling.S.σ .* (Dᶜ_hat * (wS_boundary .+ wS_residual))
+
+    return vcat(du, dv, dT, dS)
+end
 
 # dx = deepcopy(_x₀s[1])
 # x = deepcopy(_x₀s[1])
@@ -581,14 +551,50 @@ priors = combine_distributions(vcat(priors_uw, priors_vw, priors_wT, priors_wS, 
 
 y = vec(vcat([vcat(data.profile.u.scaled, data.profile.v.scaled, data.profile.T.scaled, data.profile.S.scaled) for data in train_data.data]...))
 
-N_ensemble = 96
-N_iterations = 2
+N_ensemble = 2
+N_iterations = 1
 Γ = 1e-6 * I
 
 initial_ensemble = EKP.construct_initial_ensemble(rng, priors, N_ensemble)
 ensemble_kalman_process = EKP.EnsembleKalmanProcess(initial_ensemble, y, Γ, Inversion(); rng = rng)
 
-params_ekp = [_params for _ in 1:Threads.nthreads()]
+params_ekp = [data_params for _ in 1:Threads.nthreads()]
+
+x₀s = [vcat(data.profile.u.scaled[:, 1], data.profile.v.scaled[:, 1], data.profile.T.scaled[:, 1], data.profile.S.scaled[:, 1]) for data in train_data.data]
+@everywhere x₀s = $x₀s
+@everywhere n_simulations = length(x₀s)
+
+total_ensemble = N_ensemble * n_simulations
+ps_eki = get_ϕ_final(priors, ensemble_kalman_process)
+for i in 1:2
+    ps_eki[:, i] .= ps_NN
+end
+
+@everywhere ps_eki = $ps_eki
+
+prob_base = ODEProblem((x, p′, t) -> NDE_opt(x, p′, t, data_params[1], NNs, st_NN), x₀s[1], (data_params[1].scaled_time[1], data_params[1].scaled_time[end]), ps_NN)
+solve(prob_base, VCABM3(), saveat=data_params[1].scaled_time, reltol=1e-3)
+
+@everywhere prob_func = let n_simulations = n_simulations, ps_eki = ps_eki, x₀s = x₀s, ax_ps_NN = ax_ps_NN, data_params = data_params, NNs = NNs, st_NN = st_NN
+    (prob, i, repeat) -> begin
+    sim_index = mod1(i, n_simulations)
+    particle_index = Int(ceil(i / n_simulations))
+    @info "$(Dates.now()), sim_index $sim_index, particle_index $particle_index, $i"
+    
+    ps_particle = ComponentArray(ps_eki[:, particle_index], ax_ps_NN)
+    x₀ = x₀s[sim_index]
+    remake(prob, f=(x, p′, t) -> NDE_opt(x, p′, t, data_params[sim_index], NNs, st_NN), u0=x₀, p=ps_particle)
+    end
+end
+
+ensemble_prob = EnsembleProblem(prob_base, prob_func=prob_func, safetycopy=true)
+
+probs = [ODEProblem((x, p′, t) -> NDE_opt(x, p′, t, param, NNs, st_NN), x₀, (param.scaled_time[1], param.scaled_time[end]), ps_NN) for (x₀, param) in zip(x₀s, data_params)]
+simtest = [solve(prob, ROCK2(), saveat=data_params[1].scaled_time, reltol=1e-3) for prob in probs]
+
+sim = solve(ensemble_prob, ROCK2(), EnsembleDistributed(), saveat=data_params[1].scaled_time, reltol=1e-3, trajectories=total_ensemble)
+simvec = hcat([vec(vcat([hcat(sim[i*n_simulations+j].u...) for j in 1:n_simulations]...)) for i in 0:N_ensemble-1]...)
+
 
 for i in 1:N_iterations
     ps_eki = get_ϕ_final(priors, ensemble_kalman_process)
@@ -598,7 +604,7 @@ for i in 1:N_iterations
         threadid = Threads.threadid()
         @info "$(Dates.now()), particle $j, thread $threadid"
         ps_particle = ComponentArray(ps_eki[:, j], ax_ps_NN)
-        probs = [ODEProblem((x, p′, t) -> NDE_opt(x, p′, t, param, NNs, st_NN), x₀, (param.scaled_time[1], param.scaled_time[end]), ps_particle) for (x₀, param) in zip(_x₀s, params_ekp[threadid])]
+        probs = [ODEProblem((x, p′, t) -> NDE_opt(x, p′, t, param, NNs, st_NN), x₀, (param.scaled_time[1], param.scaled_time[end]), ps_particle) for (x₀, param) in zip(x₀s, params_ekp[threadid])]
         sols = [Array(solve(prob, ROCK2(), saveat=param.scaled_time, reltol=1e-3)) for (param, prob) in zip(params_ekp[threadid], probs)]
         G_ens[:, j] .= vec(vcat(sols...))
     end

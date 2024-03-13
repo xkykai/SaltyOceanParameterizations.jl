@@ -24,7 +24,7 @@ function find_max(a...)
     return maximum(maximum.([a...]))
 end
 
-FILE_DIR = "./training_output/NN_local_diffusivity_NDE_gradient_relu_noclamp_ROCK4_EKI_fast_test"
+FILE_DIR = "./training_output/NN_local_diffusivity_NDE_gradient_relu_noclamp_ROCK4_EKI_fast_test_96"
 mkpath(FILE_DIR)
 
 LES_FILE_DIRS = [

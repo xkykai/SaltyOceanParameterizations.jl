@@ -20,7 +20,7 @@ function find_max(a...)
     return maximum(maximum.([a...]))
 end
 
-FILE_DIR = "./training_output/NN_local_diffusivity_NDE_gradient_relu_noclamp_ROCK4_InterpolatingAdjoint_fast"
+FILE_DIR = "./training_output/NN_small_local_diffusivity_NDE_gradient_relu_noclamp_ROCK4_GaussAdjoint_fast_test"
 mkpath(FILE_DIR)
 
 LES_FILE_DIRS = [
@@ -31,14 +31,17 @@ LES_FILE_DIRS = [
 ]
 
 BASECLOSURE_FILE_DIR = "./training_output/local_diffusivity_NDE_gradient_relu_noclamp/training_results_2.jld2"
+PS_BASECLOSURE_FILE_DIR = "./training_output/local_diffusivity_NDE_gradient_relu_noclamp/ps_baseclosure.jld2"
 
 field_datasets = [FieldDataset(FILE_DIR, backend=OnDisk()) for FILE_DIR in LES_FILE_DIRS]
 
 file_baseclosure = jldopen(BASECLOSURE_FILE_DIR, "r")
 baseclosure_NN = file_baseclosure["NN"]
 st_baseclosure = file_baseclosure["st_NN"]
-ps_baseclosure = file_baseclosure["res"].u
+# ps_baseclosure = file_baseclosure["res"].u
 close(file_baseclosure)
+
+ps_baseclosure = jldopen(PS_BASECLOSURE_FILE_DIR, "r")["ps_baseclosure"]
 
 full_timeframes = [1:length(data["ubar"].times) for data in field_datasets]
 timeframes = [5:5:length(data["ubar"].times) for data in field_datasets]
@@ -49,15 +52,15 @@ train_data_plot = LESDatasets(field_datasets, ZeroMeanUnitVarianceScaling, full_
 
 rng = Random.default_rng(123)
 
-uw_NN = Chain(Dense(164, 512, leakyrelu), Dense(512, 31))
-vw_NN = Chain(Dense(164, 512, leakyrelu), Dense(512, 31))
-wT_NN = Chain(Dense(164, 512, leakyrelu), Dense(512, 31))
-wS_NN = Chain(Dense(164, 512, leakyrelu), Dense(512, 31))
+uw_NN = Chain(Dense(165, 32, leakyrelu), Dense(32, 31))
+vw_NN = Chain(Dense(165, 32, leakyrelu), Dense(32, 31))
+wT_NN = Chain(Dense(165, 32, leakyrelu), Dense(32, 31))
+wS_NN = Chain(Dense(165, 32, leakyrelu), Dense(32, 31))
 
-# uw_NN = Chain(Dense(164, 4, leakyrelu), Dense(4, 31))
-# vw_NN = Chain(Dense(164, 4, leakyrelu), Dense(4, 31))
-# wT_NN = Chain(Dense(164, 4, leakyrelu), Dense(4, 31))
-# wS_NN = Chain(Dense(164, 4, leakyrelu), Dense(4, 31))
+# uw_NN = Chain(Dense(165, 4, leakyrelu), Dense(4, 31))
+# vw_NN = Chain(Dense(165, 4, leakyrelu), Dense(4, 31))
+# wT_NN = Chain(Dense(165, 4, leakyrelu), Dense(4, 31))
+# wS_NN = Chain(Dense(165, 4, leakyrelu), Dense(4, 31))
 
 ps_uw, st_uw = Lux.setup(rng, uw_NN)
 ps_vw, st_vw = Lux.setup(rng, vw_NN)
@@ -69,10 +72,10 @@ ps_vw = ps_vw |> ComponentArray .|> Float64
 ps_wT = ps_wT |> ComponentArray .|> Float64
 ps_wS = ps_wS |> ComponentArray .|> Float64
 
-ps_uw .*= 1e-5
-ps_vw .*= 1e-5
-ps_wT .*= 1e-5
-ps_wS .*= 1e-5
+ps_uw .*= 0
+ps_vw .*= 0
+ps_wT .*= 0
+ps_wS .*= 0
 
 st_uw = st_uw
 st_vw = st_vw
@@ -90,6 +93,7 @@ function train_NDE(train_data, train_data_plot, NNs, ps_NN, st_NN;
     eos = TEOS10EquationOfState()
 
     params = [(                   f = data.metadata["coriolis_parameter"],
+                           f_scaled = data.coriolis.scaled,
                                   τ = data.times[end] - data.times[1],
                         scaled_time = (data.times .- data.times[1]) ./ (data.times[end] - data.times[1]),
                scaled_original_time = data.metadata["original_times"] ./ (data.metadata["original_times"][end] - data.metadata["original_times"][1]),
@@ -113,7 +117,7 @@ function train_NDE(train_data, train_data_plot, NNs, ps_NN, st_NN;
                ) for data in train_data.data] |> dev
     
     function predict_residual_flux(u_hat, v_hat, T_hat, S_hat, ρ_hat, p, params, st)
-        x′ = vcat(u_hat, v_hat, T_hat, S_hat, ρ_hat, params.uw.scaled.top, params.vw.scaled.top, params.wT.scaled.top, params.wS.scaled.top)
+        x′ = vcat(u_hat, v_hat, T_hat, S_hat, ρ_hat, params.uw.scaled.top, params.vw.scaled.top, params.wT.scaled.top, params.wS.scaled.top, params.f_scaled)
 
         uw = vcat(0, first(NNs.uw(x′, p.uw, st.uw)), 0)
         vw = vcat(0, first(NNs.vw(x′, p.vw, st.vw)), 0)
@@ -670,7 +674,7 @@ end
 
 epoch = 1
 
-res, loss, sols, fluxes, losses, diffusivities = train_NDE(train_data, train_data_plot, NNs, ps_NN, st_NN, maxiter=100, solver=ROCK4())
+res, loss, sols, fluxes, losses, diffusivities = train_NDE(train_data, train_data_plot, NNs, ps_NN, st_NN, maxiter=50, solver=ROCK4(), sensealg=GaussAdjoint(autojacvec=ZygoteVJP()))
 
 jldsave("$(FILE_DIR)/training_results_$(epoch).jld2"; res, loss, sols, fluxes, losses, NNs, st_NN, diffusivities)
 plot_loss(losses, FILE_DIR, epoch=epoch)
@@ -680,11 +684,32 @@ end
 
 epoch += 1
 
-res, loss, sols, fluxes, losses, diffusivities = train_NDE(train_data, train_data_plot, NNs, res.u, st_NN, maxiter=100, solver=ROCK4())
+res, loss, sols, fluxes, losses, diffusivities = train_NDE(train_data, train_data_plot, NNs, res.u, st_NN, maxiter=50, solver=ROCK4(), sensealg=GaussAdjoint(autojacvec=ZygoteVJP()))
 
 jldsave("$(FILE_DIR)/training_results_$(epoch).jld2"; res, loss, sols, fluxes, losses, NNs, st_NN, diffusivities)
 plot_loss(losses, FILE_DIR, epoch=epoch)
 for i in eachindex(field_datasets)
     animate_data(train_data_plot, sols, fluxes, diffusivities, i, FILE_DIR, epoch=epoch)
 end
+
+epoch += 1
+
+res, loss, sols, fluxes, losses, diffusivities = train_NDE(train_data, train_data_plot, NNs, res.u, st_NN, maxiter=50, solver=ROCK4(), sensealg=GaussAdjoint(autojacvec=ZygoteVJP()))
+
+jldsave("$(FILE_DIR)/training_results_$(epoch).jld2"; res, loss, sols, fluxes, losses, NNs, st_NN, diffusivities)
+plot_loss(losses, FILE_DIR, epoch=epoch)
+for i in eachindex(field_datasets)
+    animate_data(train_data_plot, sols, fluxes, diffusivities, i, FILE_DIR, epoch=epoch)
+end
+
+epoch += 1
+
+res, loss, sols, fluxes, losses, diffusivities = train_NDE(train_data, train_data_plot, NNs, res.u, st_NN, maxiter=50, solver=ROCK4())
+
+jldsave("$(FILE_DIR)/training_results_$(epoch).jld2"; res, loss, sols, fluxes, losses, NNs, st_NN, diffusivities)
+plot_loss(losses, FILE_DIR, epoch=epoch)
+for i in eachindex(field_datasets)
+    animate_data(train_data_plot, sols, fluxes, diffusivities, i, FILE_DIR, epoch=epoch)
+end
+
 

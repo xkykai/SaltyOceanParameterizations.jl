@@ -22,6 +22,18 @@ function calculate_Ri(u, v, ρ, Dᶠ, g, ρ₀; clamp_lims=(-Inf, Inf))
     return clamp.(∂b∂z ./ (∂u∂z.^2 .+ ∂v∂z.^2 .+ ϵ), clamp_lims[1], clamp_lims[2])
 end
 
+function calculate_Ri!(Ri, u, v, ρ, ∂b∂z, ∂u∂z, ∂v∂z, g, ρ₀, Δ; clamp_lims=(-Inf, Inf))
+    ϵ = 1e-7
+    
+    Dᶠ!(∂u∂z, u, Δ)
+    Dᶠ!(∂v∂z, v, Δ)
+    
+    Dᶠ!(∂b∂z, ρ, Δ)
+    @. ∂b∂z = -g / ρ₀ * ∂b∂z
+
+    @. Ri = clamp(∂b∂z / (∂u∂z^2 + ∂v∂z^2 + ϵ), clamp_lims[1], clamp_lims[2])
+end
+
 function local_Ri_diffusivity(Ri, ν₁, Riᶜ, ΔRi, Pr)
     ν₀ = 1e-5
     ν_conv = ν₁ / 2 * (1 - tanh((Ri - Riᶜ)/ΔRi))

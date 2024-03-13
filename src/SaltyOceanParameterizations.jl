@@ -1,5 +1,5 @@
 module SaltyOceanParameterizations
-export Dᶜ, Dᶠ
+export Dᶜ, Dᶠ, Dᶜ!, Dᶠ!, calculate_Ri, calculate_Ri!
 
 # Write your package code here.
 include("differentiation_operators.jl")

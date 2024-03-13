@@ -14,6 +14,17 @@ function Dᶜ(N, Δ)
 end
 
 """
+    Dᶜ!(C, F, Δ)
+
+Takes the derivative of a face-centered field `F` with `N+1` grid points and `Δ` grid spacing and stores the result in a cell-centered field `C` with `N` grid points.
+"""
+function Dᶜ!(C, F, Δ)
+    for k in eachindex(C)
+        C[k] = (F[k+1] - F[k]) / Δ
+    end
+end
+
+"""
     Dᶠ(N, Δ)
 
 Returns a discrete 1D derivative operator for taking the derivative of a cell-centered field with `N` grid points and `Δ` grid spacing and producing a face-centered field with `N+1` grid points.
@@ -26,4 +37,17 @@ function Dᶠ(N, Δ)
     end
     D .= 1/Δ .* D
     return D
+end
+
+"""
+    Dᶠ!(F, C, Δ)
+
+Takes the derivative of a cell-centered field `C` with `N` grid points and `Δ` grid spacing and stores the result in a face-centered field `F` with `N+1` grid points.
+"""
+function Dᶠ!(F, C, Δ)
+    for k in 2:length(F)-1
+        F[k] = (C[k] - C[k-1]) / Δ
+    end
+    F[1] = 0
+    F[end] = 0
 end

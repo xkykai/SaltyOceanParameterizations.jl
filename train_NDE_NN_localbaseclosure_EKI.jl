@@ -1,5 +1,5 @@
 using Distributed
-addprocs()
+addprocs(40)
 @everywhere begin
     using SaltyOceanParameterizations, SaltyOceanParameterizations.DataWrangling
     using Oceananigans, SeawaterPolynomials.TEOS10

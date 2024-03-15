@@ -10,6 +10,11 @@ addprocs(40)
     using JLD2
     using SciMLBase
     using LinearAlgebra
+    using SharedArrays
+    using SeawaterPolynomials.TEOS10:ΔS
+    import SeawaterPolynomials.TEOS10: s, ΔS, Sₐᵤ
+
+    s(Sᴬ) = Sᴬ + ΔS >= 0 ? √((Sᴬ + ΔS) / Sₐᵤ) : NaN
 end
 using CairoMakie
 using EnsembleKalmanProcesses
@@ -87,6 +92,8 @@ st_wS = st_wS
 NNs = (uw=uw_NN, vw=vw_NN, wT=wT_NN, wS=wS_NN, baseclosure=baseclosure_NN)
 @everywhere NNs = $NNs
 ps_NN = ComponentArray(uw=ps_uw, vw=ps_vw, wT=ps_wT, wS=ps_wS, baseclosure=ps_baseclosure)
+N_parameters = length(ps_NN)
+@everywhere N_parameters = $N_parameters
 ax_ps_NN = getaxes(ps_NN)
 @everywhere ax_ps_NN = $ax_ps_NN
 st_NN = (uw=st_uw, vw=st_vw, wT=st_wT, wS=st_wS, baseclosure=st_baseclosure)
@@ -543,26 +550,33 @@ priors_baseline = [constrained_gaussian("baseline $i", p, 1e-6, -Inf, Inf) for (
 priors = combine_distributions(vcat(priors_uw, priors_vw, priors_wT, priors_wS, priors_baseline))
 
 function compute_losses(sim, i, train_data; coarse_size=32, n_simulations=4, losses_prefactor=(u=1, v=1, T=1, S=1, ρ=1))
-    sim_index = mod1(i, n_simulations)
-    sol = sim[i].u
-    u = hcat([sol[j][1:coarse_size] for j in eachindex(sol)]...)
-    v = hcat([sol[j][coarse_size+1:2*coarse_size] for j in eachindex(sol)]...)
-    T = hcat([sol[j][2*coarse_size+1:3*coarse_size] for j in eachindex(sol)]...)
-    S = hcat([sol[j][3*coarse_size+1:4*coarse_size] for j in eachindex(sol)]...)
-    ρ = train_data.scaling.ρ.(TEOS10.ρ.(inv(train_data.scaling.T).(T), inv(train_data.scaling.S).(S), 0, Ref(TEOS10EquationOfState())))
+    if sim[i].retcode == ReturnCode.Success
+        sim_index = mod1(i, n_simulations)
+        sol = sim[i].u
+        u = hcat([sol[j][1:coarse_size] for j in eachindex(sol)]...)
+        v = hcat([sol[j][coarse_size+1:2*coarse_size] for j in eachindex(sol)]...)
+        T = hcat([sol[j][2*coarse_size+1:3*coarse_size] for j in eachindex(sol)]...)
+        S = hcat([sol[j][3*coarse_size+1:4*coarse_size] for j in eachindex(sol)]...)
+        ρ = train_data.scaling.ρ.(TEOS10.ρ.(inv(train_data.scaling.T).(T), inv(train_data.scaling.S).(S), 0, Ref(TEOS10EquationOfState())))
 
-    u_truth = train_data.data[sim_index].profile.u.scaled
-    v_truth = train_data.data[sim_index].profile.v.scaled
-    T_truth = train_data.data[sim_index].profile.T.scaled
-    S_truth = train_data.data[sim_index].profile.S.scaled
-    ρ_truth = train_data.data[sim_index].profile.ρ.scaled
+        u_truth = train_data.data[sim_index].profile.u.scaled
+        v_truth = train_data.data[sim_index].profile.v.scaled
+        T_truth = train_data.data[sim_index].profile.T.scaled
+        S_truth = train_data.data[sim_index].profile.S.scaled
+        ρ_truth = train_data.data[sim_index].profile.ρ.scaled
 
-    u_loss = losses_prefactor.u * mean((u .- u_truth) .^ 2)
-    v_loss = losses_prefactor.v * mean((v .- v_truth) .^ 2)
-    T_loss = losses_prefactor.T * mean((T .- T_truth) .^ 2)
-    S_loss = losses_prefactor.S * mean((S .- S_truth) .^ 2)
-    ρ_loss = losses_prefactor.ρ * mean((ρ .- ρ_truth) .^ 2)
-
+        u_loss = losses_prefactor.u * mean((u .- u_truth) .^ 2)
+        v_loss = losses_prefactor.v * mean((v .- v_truth) .^ 2)
+        T_loss = losses_prefactor.T * mean((T .- T_truth) .^ 2)
+        S_loss = losses_prefactor.S * mean((S .- S_truth) .^ 2)
+        ρ_loss = losses_prefactor.ρ * mean((ρ .- ρ_truth) .^ 2)
+    else
+        u_loss = NaN
+        v_loss = NaN
+        T_loss = NaN
+        S_loss = NaN
+        ρ_loss = NaN
+    end
     return (u=u_loss, v=v_loss, T=T_loss, S=S_loss, ρ=ρ_loss)
 end
 
@@ -609,12 +623,31 @@ end
 
 target = [0.]
 
-N_ensemble = 4000
-N_iterations = 100
+N_ensemble = 2000
+N_iterations = 2
 Γ = 1e-8 * I
 
-initial_ensemble = EKP.construct_initial_ensemble(rng, priors, N_ensemble)
-ensemble_kalman_process = EKP.EnsembleKalmanProcess(initial_ensemble, target, Γ, Inversion(); rng = rng)
+# ps_eki = SharedArray{Float64}(length(ps_NN), N_ensemble)
+
+# for proc in procs(ps_eki)
+#     @fetchfrom proc identity(ps_eki)
+# end
+
+# ps_eki .= EKP.construct_initial_ensemble(rng, priors, N_ensemble)
+# initial_ensemble = EKP.construct_initial_ensemble(rng, priors, N_ensemble)
+# jldsave("$(FILE_DIR)/initial_ensemble.jld2"; initial_ensemble)
+# initial_ensemble_sa = SharedArray{Float64, 2}("C:\\Users\\xinle\\MIT\\SaltyOceanParameterizations.jl\\training_output\\NN_small_local_diffusivity_NDE_gradient_relu_noclamp_ROCK4_EKI_fast_test_diffeqensemble\\initial_ensemble.jld2", (length(ps_NN), N_ensemble); mode="r")
+
+# for proc in procs(initial_ensemble_sa)
+#     @fetchfrom proc identity(initial_ensemble_sa)
+# end
+ps_eki = EKP.construct_initial_ensemble(rng, priors, N_ensemble)
+@everywhere ps_eki = $ps_eki
+
+ensemble_kalman_process = EKP.EnsembleKalmanProcess(ps_eki, target, Γ, Inversion(); 
+                                                    rng = rng, 
+                                                    failure_handler_method = SampleSuccGauss(), 
+                                                    scheduler = DataMisfitController(on_terminate="continue"))
 
 x₀s = [vcat(data.profile.u.scaled[:, 1], data.profile.v.scaled[:, 1], data.profile.T.scaled[:, 1], data.profile.S.scaled[:, 1]) for data in train_data.data]
 @everywhere x₀s = $x₀s
@@ -624,14 +657,18 @@ total_ensemble = N_ensemble * n_simulations
 
 prob_base = ODEProblem((x, p′, t) -> NDE_opt(x, p′, t, data_params[1], NNs, st_NN), x₀s[1], (data_params[1].scaled_time[1], data_params[1].scaled_time[end]), ps_NN)
 
-ps_eki = initial_ensemble
-@everywhere ps_eki = $ps_eki
-
 @info "$(Dates.now()), First forward solve to obtain losses prefactor"
-@everywhere prob_func = let n_simulations = n_simulations, ps_eki = ps_eki, x₀s = x₀s, ax_ps_NN = ax_ps_NN, data_params = data_params, NNs = NNs, st_NN = st_NN
+
+@everywhere prob_func = let n_simulations = n_simulations, x₀s = x₀s, ax_ps_NN = ax_ps_NN, data_params = data_params, NNs = NNs, st_NN = st_NN, ps_eki = ps_eki
     (prob, i, repeat) -> begin
         sim_index = mod1(i, n_simulations)
         particle_index = Int(ceil(i / n_simulations))
+        @info "$(Dates.now()), i = $i, sim_index = $sim_index, particle_index = $particle_index"
+        # global ps_local .= ps_eki[:, particle_index]
+        # global ps_local .= initial_ensemble_sa[:, particle_index]
+        # ps_thing = initial_ensemble_sa[:, particle_index]
+        # @info length(ps_thing)
+        # ps_particle = ComponentArray(ps_thing, ax_ps_NN)
         ps_particle = ComponentArray(ps_eki[:, particle_index], ax_ps_NN)
         x₀ = x₀s[sim_index]
         params = data_params[sim_index]
@@ -639,38 +676,40 @@ ps_eki = initial_ensemble
     end
 end
 
-ensemble_prob = EnsembleProblem(prob_base, prob_func=prob_func, safetycopy=false)
-sim = solve(ensemble_prob, VCABM3(), EnsembleDistributed(), saveat=data_params[1].scaled_time, reltol=1e-3, trajectories=total_ensemble, maxiters=1e6)
+ensemble_prob = EnsembleProblem(prob_base, prob_func=prob_func, safetycopy=true)
+sim = solve(ensemble_prob, VCABM3(), EnsembleDistributed(), saveat=data_params[1].scaled_time, reltol=1e-3, trajectories=total_ensemble, maxiters=1e5)
 sim_losses = [compute_losses(sim, i, train_data, coarse_size=32, n_simulations=length(train_data.data)) for i in eachindex(sim)]
 losses_prefactor = compute_loss_prefactor(mean([losses.u for losses in sim_losses]), mean([losses.v for losses in sim_losses]), mean([losses.T for losses in sim_losses]), mean([losses.S for losses in sim_losses]), mean([losses.ρ for losses in sim_losses]))
 
 for i in 1:N_iterations
+    @info "Pre-garbage collection..."
     @info "$(Dates.now()), iteration $i/$N_iterations"
     @info "$(Dates.now()), obtaining weights"
-    ps_eki = get_ϕ_final(priors, ensemble_kalman_process)
+    ps_eki .= get_ϕ_final(priors, ensemble_kalman_process)
     @everywhere ps_eki = $ps_eki
 
-    @everywhere prob_func = let n_simulations = n_simulations, ps_eki = ps_eki, x₀s = x₀s, ax_ps_NN = ax_ps_NN, data_params = data_params, NNs = NNs, st_NN = st_NN
-        (prob, i, repeat) -> begin
-            sim_index = mod1(i, n_simulations)
-            particle_index = Int(ceil(i / n_simulations))
-            ps_particle = ComponentArray(ps_eki[:, particle_index], ax_ps_NN)
-            x₀ = x₀s[sim_index]
-            params = data_params[sim_index]
-            remake(prob, f=(x, p′, t) -> NDE_opt(x, p′, t, params, NNs, st_NN), u0=x₀, p=ps_particle)
-        end
-    end
+    # @everywhere prob_func = let n_simulations = n_simulations, ps_eki = ps_eki, x₀s = x₀s, ax_ps_NN = ax_ps_NN, data_params = data_params, NNs = NNs, st_NN = st_NN
+    #     (prob, i, repeat) -> begin
+    #         sim_index = mod1(i, n_simulations)
+    #         particle_index = Int(ceil(i / n_simulations))
+    #         @info "$(Dates.now()), i = $i, sim_index = $sim_index, particle_index = $particle_index"
+    #         ps_particle = ComponentArray(ps_eki[:, particle_index], ax_ps_NN)
+    #         x₀ = x₀s[sim_index]
+    #         params = data_params[sim_index]
+    #         remake(prob, f=(x, p′, t) -> NDE_opt(x, p′, t, params, NNs, st_NN), u0=x₀, p=ps_particle)
+    #     end
+    # end
 
-    ensemble_prob = EnsembleProblem(prob_base, prob_func=prob_func, safetycopy=false)
     @info "$(Dates.now()), Begin solving ensemble problem"
-    sim = solve(ensemble_prob, VCABM3(), EnsembleDistributed(), saveat=data_params[1].scaled_time, reltol=1e-3, trajectories=total_ensemble, maxiters=1e6)
+    sim2 = solve(ensemble_prob, VCABM3(), EnsembleDistributed(), saveat=data_params[1].scaled_time, reltol=1e-3, trajectories=total_ensemble, maxiters=1e5)
 
     @info "$(Dates.now()), computing loss"
-    sim_losses = [compute_loss(sim, i, train_data, coarse_size=32, n_simulations=length(train_data.data), losses_prefactor=losses_prefactor) for i in eachindex(sim)]
-    losses = hcat([mean(sim_losses[i*n_simulations+1:i*n_simulations+n_simulations]) for i in 0:N_ensemble-1]...)
-    @info "$(Dates.now()), mean loss: $(mean(sim_losses))"
+    sim_losses2 = [compute_loss(sim2, i, train_data, coarse_size=32, n_simulations=length(train_data.data), losses_prefactor=losses_prefactor) for i in eachindex(sim2)]
+    
+    losses2 = hcat([mean(sim_losses2[i*n_simulations+1:i*n_simulations+n_simulations]) for i in 0:N_ensemble-1]...)
+    @info "$(Dates.now()), mean loss: $(mean(sim_losses2))"
     @info "$(Dates.now()), updating ensemble"
-    EKP.update_ensemble!(ensemble_kalman_process, losses)
+    EKP.update_ensemble!(ensemble_kalman_process, losses2)
 
     if i % 10 == 0
         @info "$(Dates.now()), obtaining posterior"
@@ -678,6 +717,42 @@ for i in 1:N_iterations
         jldsave("$(FILE_DIR)/training_results_$(i).jld2"; final_ensemble, ax_ps_NN, NNs, st_NN)
     end
 end
+
+# ps_eki .= get_ϕ_final(priors, ensemble_kalman_process)
+# @everywhere @info ps_eki[1:5, 1]
+
+# @everywhere prob_func = let n_simulations = n_simulations, x₀s = x₀s, ax_ps_NN = ax_ps_NN, data_params = data_params, NNs = NNs, st_NN = st_NN
+#     (prob, i, repeat) -> begin
+#         sim_index = mod1(i, n_simulations)
+#         particle_index = Int(ceil(i / n_simulations))
+#         @info "$(Dates.now()), i = $i, sim_index = $sim_index, particle_index = $particle_index"
+#         global ps_local .= ps_eki[:, particle_index]
+#         ps_particle = ComponentArray(ps_local, ax_ps_NN)
+#         x₀ = x₀s[sim_index]
+#         params = data_params[sim_index]
+#         remake(prob, f=(x, p′, t) -> NDE_opt(x, p′, t, params, NNs, st_NN), u0=x₀, p=ps_particle)
+#     end
+# end
+
+# # sim2 = solve(ensemble_prob, VCABM3(), EnsembleDistributed(), saveat=data_params[1].scaled_time, reltol=1e-3, trajectories=total_ensemble, maxiters=1e5)
+# @everywhere ps_local .= ps_eki[:, 1]
+# @everywhere base_prob = $prob_base
+
+# @distributed for i in 1:total_ensemble
+#     sim_index = mod1(i, n_simulations)
+#     particle_index = Int(ceil(i / n_simulations))
+#     @info "Before reference to ps_eki"
+#     global ps_local .= ps_eki[:, particle_index]
+#     @info "After reference to ps_eki"
+#     @info "$(Dates.now()), i = $i, sim_index = $sim_index, particle_index = $particle_index"
+#     ps_particle = ComponentArray(ps_local, ax_ps_NN)
+#     @info "after construction of ps_particle"
+#     x₀ = x₀s[sim_index]
+#     params = data_params[sim_index]
+#     prob = remake(base_prob, f=(x, p′, t) -> NDE_opt(x, p′, t, params, NNs, st_NN), u0=x₀, p=ps_particle)
+#     sim = solve(prob, VCABM3(), saveat=data_params[sim_index].scaled_time, reltol=1e-3)
+#     sim
+# end
 
 #%%
 #=

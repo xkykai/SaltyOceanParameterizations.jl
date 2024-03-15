@@ -1,5 +1,5 @@
 using Distributed
-addprocs(40)
+addprocs(80)
 @everywhere begin
     using SaltyOceanParameterizations, SaltyOceanParameterizations.DataWrangling
     using Oceananigans, SeawaterPolynomials.TEOS10
@@ -247,15 +247,49 @@ priors_baseline = [constrained_gaussian("baseline $i", p, 1e-3, -Inf, Inf) for (
 
 priors = combine_distributions(vcat(priors_uw, priors_vw, priors_wT, priors_wS, priors_baseline))
 
-function compute_losses(sim, i, train_data; coarse_size=32, n_simulations=4, losses_prefactor=(u=1, v=1, T=1, S=1, ρ=1))
+function compute_losses(sim, i, train_data; coarse_size=32, n_simulations=4, losses_prefactor=(u=1, v=1, T=1, S=1, ρ=1, ∂u∂z=1, ∂v∂z=1, ∂T∂z=1, ∂S∂z=1, ∂ρ∂z=1))
     if sim[i].retcode == ReturnCode.Success
         sim_index = mod1(i, n_simulations)
         sol = sim[i].u
+        Δ = train_data.data[sim_index].metadata["zC"][2] - train_data.data[sim_index].metadata["zC"][1]
+
         u = hcat([sol[j][1:coarse_size] for j in eachindex(sol)]...)
         v = hcat([sol[j][coarse_size+1:2*coarse_size] for j in eachindex(sol)]...)
         T = hcat([sol[j][2*coarse_size+1:3*coarse_size] for j in eachindex(sol)]...)
         S = hcat([sol[j][3*coarse_size+1:4*coarse_size] for j in eachindex(sol)]...)
         ρ = train_data.scaling.ρ.(TEOS10.ρ.(inv(train_data.scaling.T).(T), inv(train_data.scaling.S).(S), 0, Ref(TEOS10EquationOfState())))
+
+        ∂u∂z_hats = zeros(size(u, 1)+1, size(u, 2))
+        ∂v∂z_hats = zeros(size(v, 1)+1, size(v, 2))
+        ∂T∂z_hats = zeros(size(T, 1)+1, size(T, 2))
+        ∂S∂z_hats = zeros(size(S, 1)+1, size(S, 2))
+        ∂ρ∂z_hats = zeros(size(ρ, 1)+1, size(ρ, 2))
+
+        for j in axes(∂u∂z_hats, 2)
+            ∂u∂z_col =  @view ∂u∂z_hats[:, j]
+            ∂v∂z_col =  @view ∂v∂z_hats[:, j]
+            ∂T∂z_col =  @view ∂T∂z_hats[:, j]
+            ∂S∂z_col =  @view ∂S∂z_hats[:, j]
+            ∂ρ∂z_col =  @view ∂ρ∂z_hats[:, j]
+
+            u_col = @view u[:, j]
+            v_col = @view v[:, j]
+            T_col = @view T[:, j]
+            S_col = @view S[:, j]
+            ρ_col = @view ρ[:, j]
+
+            Dᶠ!(∂u∂z_col, inv(train_data.scaling.u).(u_col), Δ)
+            Dᶠ!(∂v∂z_col, inv(train_data.scaling.v).(v_col), Δ)
+            Dᶠ!(∂T∂z_col, inv(train_data.scaling.T).(T_col), Δ)
+            Dᶠ!(∂S∂z_col, inv(train_data.scaling.S).(S_col), Δ)
+            Dᶠ!(∂ρ∂z_col, inv(train_data.scaling.ρ).(ρ_col), Δ)
+
+            ∂u∂z_col .= train_data.scaling.∂u∂z.(∂u∂z_col)
+            ∂v∂z_col .= train_data.scaling.∂v∂z.(∂v∂z_col)
+            ∂T∂z_col .= train_data.scaling.∂T∂z.(∂T∂z_col)
+            ∂S∂z_col .= train_data.scaling.∂S∂z.(∂S∂z_col)
+            ∂ρ∂z_col .= train_data.scaling.∂ρ∂z.(∂ρ∂z_col)
+        end
 
         u_truth = train_data.data[sim_index].profile.u.scaled
         v_truth = train_data.data[sim_index].profile.v.scaled
@@ -263,22 +297,40 @@ function compute_losses(sim, i, train_data; coarse_size=32, n_simulations=4, los
         S_truth = train_data.data[sim_index].profile.S.scaled
         ρ_truth = train_data.data[sim_index].profile.ρ.scaled
 
+        ∂u∂z_truth = train_data.data[sim_index].profile.∂u∂z.scaled
+        ∂v∂z_truth = train_data.data[sim_index].profile.∂v∂z.scaled
+        ∂T∂z_truth = train_data.data[sim_index].profile.∂T∂z.scaled
+        ∂S∂z_truth = train_data.data[sim_index].profile.∂S∂z.scaled
+        ∂ρ∂z_truth = train_data.data[sim_index].profile.∂ρ∂z.scaled
+
         u_loss = losses_prefactor.u * sum((u .- u_truth) .^ 2)
         v_loss = losses_prefactor.v * sum((v .- v_truth) .^ 2)
         T_loss = losses_prefactor.T * sum((T .- T_truth) .^ 2)
         S_loss = losses_prefactor.S * sum((S .- S_truth) .^ 2)
         ρ_loss = losses_prefactor.ρ * sum((ρ .- ρ_truth) .^ 2)
+
+        ∂u∂z_loss = losses_prefactor.∂u∂z * sum((∂u∂z_hats .- ∂u∂z_truth) .^ 2)
+        ∂v∂z_loss = losses_prefactor.∂v∂z * sum((∂v∂z_hats .- ∂v∂z_truth) .^ 2)
+        ∂T∂z_loss = losses_prefactor.∂T∂z * sum((∂T∂z_hats .- ∂T∂z_truth) .^ 2)
+        ∂S∂z_loss = losses_prefactor.∂S∂z * sum((∂S∂z_hats .- ∂S∂z_truth) .^ 2)
+        ∂ρ∂z_loss = losses_prefactor.∂ρ∂z * sum((∂ρ∂z_hats .- ∂ρ∂z_truth) .^ 2)
     else
         u_loss = NaN
         v_loss = NaN
         T_loss = NaN
         S_loss = NaN
         ρ_loss = NaN
+
+        ∂u∂z_loss = NaN
+        ∂v∂z_loss = NaN
+        ∂T∂z_loss = NaN
+        ∂S∂z_loss = NaN
+        ∂ρ∂z_loss = NaN
     end
-    return (u=u_loss, v=v_loss, T=T_loss, S=S_loss, ρ=ρ_loss)
+    return (u=u_loss, v=v_loss, T=T_loss, S=S_loss, ρ=ρ_loss, ∂u∂z=∂u∂z_loss, ∂v∂z=∂v∂z_loss, ∂T∂z=∂T∂z_loss, ∂S∂z=∂S∂z_loss, ∂ρ∂z=∂ρ∂z_loss)
 end
 
-function compute_loss(sim, i, train_data; coarse_size=32, n_simulations=4, losses_prefactor=(u=1, v=1, T=1, S=1, ρ=1))
+function compute_loss(sim, i, train_data; coarse_size=32, n_simulations=4, losses_prefactor=(u=1, v=1, T=1, S=1, ρ=1, ∂u∂z=1, ∂v∂z=1, ∂T∂z=1, ∂S∂z=1, ∂ρ∂z=1))
     return sum(values(compute_losses(sim, i, train_data; coarse_size=coarse_size, n_simulations=n_simulations, losses_prefactor=losses_prefactor)))
 end
 
@@ -359,7 +411,16 @@ end
 ensemble_prob = EnsembleProblem(prob_base, prob_func=prob_func, safetycopy=false)
 sim = solve(ensemble_prob, VCABM3(), EnsembleDistributed(), saveat=data_params[1].scaled_time, reltol=1e-3, trajectories=total_ensemble, maxiters=1e5)
 sim_losses = [compute_losses(sim, i, train_data, coarse_size=32, n_simulations=length(train_data.data)) for i in eachindex(sim)]
-losses_prefactor = compute_loss_prefactor(mean([losses.u for losses in sim_losses]), mean([losses.v for losses in sim_losses]), mean([losses.T for losses in sim_losses]), mean([losses.S for losses in sim_losses]), mean([losses.ρ for losses in sim_losses]))
+losses_prefactor = compute_loss_prefactor(mean([losses.u for losses in sim_losses]), 
+                                          mean([losses.v for losses in sim_losses]), 
+                                          mean([losses.T for losses in sim_losses]), 
+                                          mean([losses.S for losses in sim_losses]), 
+                                          mean([losses.ρ for losses in sim_losses]),
+                                          mean([losses.∂u∂z for losses in sim_losses]),
+                                          mean([losses.∂v∂z for losses in sim_losses]),
+                                          mean([losses.∂T∂z for losses in sim_losses]),
+                                          mean([losses.∂S∂z for losses in sim_losses]),
+                                          mean([losses.∂ρ∂z for losses in sim_losses]))
 
 for i in 1:N_iterations
     @info "$(Dates.now()), iteration $i/$N_iterations"

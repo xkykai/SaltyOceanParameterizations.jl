@@ -565,11 +565,11 @@ function compute_losses(sim, i, train_data; coarse_size=32, n_simulations=4, los
         S_truth = train_data.data[sim_index].profile.S.scaled
         ρ_truth = train_data.data[sim_index].profile.ρ.scaled
 
-        u_loss = losses_prefactor.u * mean((u .- u_truth) .^ 2)
-        v_loss = losses_prefactor.v * mean((v .- v_truth) .^ 2)
-        T_loss = losses_prefactor.T * mean((T .- T_truth) .^ 2)
-        S_loss = losses_prefactor.S * mean((S .- S_truth) .^ 2)
-        ρ_loss = losses_prefactor.ρ * mean((ρ .- ρ_truth) .^ 2)
+        u_loss = losses_prefactor.u * sum((u .- u_truth) .^ 2)
+        v_loss = losses_prefactor.v * sum((v .- v_truth) .^ 2)
+        T_loss = losses_prefactor.T * sum((T .- T_truth) .^ 2)
+        S_loss = losses_prefactor.S * sum((S .- S_truth) .^ 2)
+        ρ_loss = losses_prefactor.ρ * sum((ρ .- ρ_truth) .^ 2)
     else
         u_loss = NaN
         v_loss = NaN

@@ -19,7 +19,7 @@ function find_max(a...)
     return maximum(maximum.([a...]))
 end
 
-FILE_DIR = "./training_output/slightly_nonlocal_diffusivity_NDE_gradient_softplus_noclamp_small"
+FILE_DIR = "./training_output/slightly_nonlocal_diffusivity_NDE_gradient_swish_softplus_noclamp_small"
 @info FILE_DIR
 mkpath(FILE_DIR)
 
@@ -41,7 +41,7 @@ train_data_plot = LESDatasets(field_datasets, ZeroMeanUnitVarianceScaling, full_
 
 rng = Random.default_rng(123)
 
-NN = Chain(Dense(2, 4, tanh_fast), Dense(4, 2, softplus))
+NN = Chain(Dense(2, 4, swish), Dense(4, 2, softplus))
 
 ps_NN, st_NN = Lux.setup(rng, NN)
 ps_NN = ps_NN |> ComponentArray .|> Float64

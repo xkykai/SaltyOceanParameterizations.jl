@@ -19,7 +19,7 @@ function find_max(a...)
     return maximum(maximum.([a...]))
 end
 
-FILE_DIR = "./training_output/slightly_nonlocal_diffusivity_NDE_gradient_tanh_noclamp_small"
+FILE_DIR = "./training_output/slightly_nonlocal_diffusivity_NDE_gradient_relu_noclamp_small"
 @info FILE_DIR
 mkpath(FILE_DIR)
 

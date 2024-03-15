@@ -1,5 +1,5 @@
 using Distributed
-addprocs(1)
+addprocs(40)
 @everywhere begin
     using SaltyOceanParameterizations, SaltyOceanParameterizations.DataWrangling
     using Oceananigans, SeawaterPolynomials.TEOS10
@@ -59,10 +59,10 @@ coarse_size = 32
 
 rng = Random.MersenneTwister(123)
 
-uw_NN = Chain(Dense(165, 4, leakyrelu), Dense(4, 31))
-vw_NN = Chain(Dense(165, 4, leakyrelu), Dense(4, 31))
-wT_NN = Chain(Dense(165, 4, leakyrelu), Dense(4, 31))
-wS_NN = Chain(Dense(165, 4, leakyrelu), Dense(4, 31))
+uw_NN = Chain(Dense(165, 32, leakyrelu), Dense(32, 31))
+vw_NN = Chain(Dense(165, 32, leakyrelu), Dense(32, 31))
+wT_NN = Chain(Dense(165, 32, leakyrelu), Dense(32, 31))
+wS_NN = Chain(Dense(165, 32, leakyrelu), Dense(32, 31))
 
 ps_uw, st_uw = Lux.setup(rng, uw_NN)
 ps_vw, st_vw = Lux.setup(rng, vw_NN)
@@ -321,8 +321,8 @@ end
 
 target = [0.]
 
-N_ensemble = 100
-N_iterations = 2
+N_ensemble = 4000
+N_iterations = 100
 Γ = 1e-6 * I
 
 ps_eki = SharedArray{Float64}(N_parameters, N_ensemble)
@@ -341,7 +341,7 @@ ensemble_kalman_process = EKP.EnsembleKalmanProcess(ps_eki, target, Γ, Inversio
 
 total_ensemble = N_ensemble * n_simulations
 
-prob_base = ODEProblem((dx, x, p′, t) -> NDE(dx, x, p′, t, data_params[1], NNs, st_NN), x₀s[1], (data_params[1].scaled_time[1], data_params[1].scaled_time[end]), ps_NN)
+prob_base = ODEProblem((x, p′, t) -> NDE(x, p′, t, data_params[1], NNs, st_NN), x₀s[1], (data_params[1].scaled_time[1], data_params[1].scaled_time[end]), ps_NN)
 
 @everywhere function prob_func(prob, i, repeat)
     sim_index = mod1(i, n_simulations)
@@ -377,9 +377,7 @@ for i in 1:N_iterations
     @info "$(Dates.now()), updating ensemble"
     EKP.update_ensemble!(ensemble_kalman_process, loss)
 
-    # if i % 10 == 0
-    #     @info "$(Dates.now()), obtaining posterior"
-    #     final_ensemble = get_ϕ_final(priors, ensemble_kalman_process)
-    #     jldsave("$(FILE_DIR)/training_results_$(i).jld2"; final_ensemble, ax_ps_NN, NNs, st_NN)
-    # end
+    @info "$(Dates.now()), obtaining posterior"
+    final_ensemble = get_ϕ_final(priors, ensemble_kalman_process)
+    jldsave("$(FILE_DIR)/training_results_$(i).jld2"; final_ensemble, ax_ps_NN, NNs, st_NN)
 end

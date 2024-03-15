@@ -239,11 +239,11 @@ x₀s = [vcat(data.profile.u.scaled[:, 1], data.profile.v.scaled[:, 1], data.pro
     return vcat(du, dv, dT, dS)
 end
 
-priors_uw = [constrained_gaussian("uw $i", 0, 1e-6, -Inf, Inf) for i in eachindex(ps_NN.uw)]
-priors_vw = [constrained_gaussian("vw $i", 0, 1e-6, -Inf, Inf) for i in eachindex(ps_NN.vw)]
-priors_wT = [constrained_gaussian("wT $i", 0, 1e-6, -Inf, Inf) for i in eachindex(ps_NN.wT)]
-priors_wS = [constrained_gaussian("wS $i", 0, 1e-6, -Inf, Inf) for i in eachindex(ps_NN.wS)]
-priors_baseline = [constrained_gaussian("baseline $i", p, 1e-6, -Inf, Inf) for (i, p) in enumerate(ps_NN.baseclosure)]
+priors_uw = [constrained_gaussian("uw $i", 0, 1e-3, -Inf, Inf) for i in eachindex(ps_NN.uw)]
+priors_vw = [constrained_gaussian("vw $i", 0, 1e-3, -Inf, Inf) for i in eachindex(ps_NN.vw)]
+priors_wT = [constrained_gaussian("wT $i", 0, 1e-3, -Inf, Inf) for i in eachindex(ps_NN.wT)]
+priors_wS = [constrained_gaussian("wS $i", 0, 1e-3, -Inf, Inf) for i in eachindex(ps_NN.wS)]
+priors_baseline = [constrained_gaussian("baseline $i", p, 1e-3, -Inf, Inf) for (i, p) in enumerate(ps_NN.baseclosure)]
 
 priors = combine_distributions(vcat(priors_uw, priors_vw, priors_wT, priors_wS, priors_baseline))
 
@@ -331,13 +331,14 @@ for proc in procs(ps_eki)
     @fetchfrom proc identity(ps_eki)
 end
 
+@info "Constructing initial ensemble"
 ps_eki .= EKP.construct_initial_ensemble(rng, priors, N_ensemble)
 
 ensemble_kalman_process = EKP.EnsembleKalmanProcess(ps_eki, target, Γ, Inversion(); 
                                                     rng = rng, 
                                                     failure_handler_method = SampleSuccGauss(), 
-                                                    # scheduler = DataMisfitController(on_terminate="continue"))
-)
+                                                    scheduler = DataMisfitController(on_terminate="continue"))
+# )
 
 total_ensemble = N_ensemble * n_simulations
 
@@ -354,6 +355,7 @@ prob_base = ODEProblem((x, p′, t) -> NDE(x, p′, t, data_params[1], NNs, st_N
     remake(prob, f=(x, p′, t) -> NDE(x, p′, t, params, NNs, st_NN), u0=x₀, p=ps_particle)
 end
 
+@info "First solve to obtain losses prefactor"
 ensemble_prob = EnsembleProblem(prob_base, prob_func=prob_func, safetycopy=false)
 sim = solve(ensemble_prob, VCABM3(), EnsembleDistributed(), saveat=data_params[1].scaled_time, reltol=1e-3, trajectories=total_ensemble, maxiters=1e5)
 sim_losses = [compute_losses(sim, i, train_data, coarse_size=32, n_simulations=length(train_data.data)) for i in eachindex(sim)]
@@ -373,7 +375,7 @@ for i in 1:N_iterations
     
     loss = hcat([mean(sim_loss[i*n_simulations+1:i*n_simulations+n_simulations]) for i in 0:N_ensemble-1]...)
     @info "$(Dates.now()), mean loss: $(mean(sim_loss))"
-    @info "loss = $loss"
+    # @info "loss = $loss"
     @info "$(Dates.now()), updating ensemble"
     EKP.update_ensemble!(ensemble_kalman_process, loss)
 

@@ -624,7 +624,7 @@ end
 target = [0.]
 
 N_ensemble = 2000
-N_iterations = 2
+N_iterations = 300
 Γ = 1e-8 * I
 
 # ps_eki = SharedArray{Float64}(length(ps_NN), N_ensemble)

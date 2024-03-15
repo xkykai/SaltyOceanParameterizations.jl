@@ -663,7 +663,7 @@ prob_base = ODEProblem((x, p′, t) -> NDE_opt(x, p′, t, data_params[1], NNs, 
     (prob, i, repeat) -> begin
         sim_index = mod1(i, n_simulations)
         particle_index = Int(ceil(i / n_simulations))
-        @info "$(Dates.now()), i = $i, sim_index = $sim_index, particle_index = $particle_index"
+        # @info "$(Dates.now()), i = $i, sim_index = $sim_index, particle_index = $particle_index"
         # global ps_local .= ps_eki[:, particle_index]
         # global ps_local .= initial_ensemble_sa[:, particle_index]
         # ps_thing = initial_ensemble_sa[:, particle_index]

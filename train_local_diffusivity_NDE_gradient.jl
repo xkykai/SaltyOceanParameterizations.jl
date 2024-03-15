@@ -19,7 +19,7 @@ function find_max(a...)
     return maximum(maximum.([a...]))
 end
 
-FILE_DIR = "./training_output/local_diffusivity_NDE_gradient_relu_noclamp"
+FILE_DIR = "./training_output/local_diffusivity_NDE_gradient_relu_noclamp_small"
 @info FILE_DIR
 mkpath(FILE_DIR)
 
@@ -41,7 +41,7 @@ train_data_plot = LESDatasets(field_datasets, ZeroMeanUnitVarianceScaling, full_
 
 rng = Random.default_rng(123)
 
-NN = Chain(Dense(1, 16, tanh_fast), Dense(16, 2, relu))
+NN = Chain(Dense(1, 4, tanh_fast), Dense(4, 2, relu))
 
 ps_NN, st_NN = Lux.setup(rng, NN)
 ps_NN = ps_NN |> ComponentArray .|> Float64

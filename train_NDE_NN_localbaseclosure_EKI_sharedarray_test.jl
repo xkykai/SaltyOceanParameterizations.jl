@@ -118,14 +118,14 @@ data_params = [(                   f = data.metadata["coriolis_parameter"],
                                 wS = (scaled = (top=data.flux.wS.surface.scaled, bottom=data.flux.wS.bottom.scaled),
                                     unscaled = (top=data.flux.wS.surface.unscaled, bottom=data.flux.wS.bottom.unscaled)),           
                                      scaling = merge(train_data.scaling, (; diffusivity=DiffusivityScaling())),
-                                    #    cache = (u=zeros(coarse_size), v=zeros(coarse_size), T=zeros(coarse_size), S=zeros(coarse_size), ρ=zeros(coarse_size), ρ_hat=zeros(coarse_size), 
-                                    #             x′=zeros(5*coarse_size+5),
-                                    #             Ri=zeros(coarse_size+1), ν=zeros(coarse_size+1), κ=zeros(coarse_size+1),
-                                    #             ∂b∂z=zeros(coarse_size+1), ∂u∂z=zeros(coarse_size+1), ∂v∂z=zeros(coarse_size+1),
-                                    #             uw_diffusive=zeros(coarse_size+1), vw_diffusive=zeros(coarse_size+1), wT_diffusive=zeros(coarse_size+1), wS_diffusive=zeros(coarse_size+1),
-                                    #             uw_residual=zeros(coarse_size+1), vw_residual=zeros(coarse_size+1), wT_residual=zeros(coarse_size+1), wS_residual=zeros(coarse_size+1),
-                                    #             u_RHS_diffusive=zeros(coarse_size), v_RHS_diffusive=zeros(coarse_size), T_RHS_diffusive=zeros(coarse_size), S_RHS_diffusive=zeros(coarse_size),
-                                    #             u_RHS_residual=zeros(coarse_size), v_RHS_residual=zeros(coarse_size), T_RHS_residual=zeros(coarse_size), S_RHS_residual=zeros(coarse_size),)
+                                       cache = (u=zeros(coarse_size), v=zeros(coarse_size), T=zeros(coarse_size), S=zeros(coarse_size), ρ=zeros(coarse_size), ρ_hat=zeros(coarse_size), 
+                                                x′=zeros(5*coarse_size+5),
+                                                Ri=zeros(coarse_size+1), ν=zeros(coarse_size+1), κ=zeros(coarse_size+1),
+                                                ∂b∂z=zeros(coarse_size+1), ∂u∂z=zeros(coarse_size+1), ∂v∂z=zeros(coarse_size+1),
+                                                uw_diffusive=zeros(coarse_size+1), vw_diffusive=zeros(coarse_size+1), wT_diffusive=zeros(coarse_size+1), wS_diffusive=zeros(coarse_size+1),
+                                                uw_residual=zeros(coarse_size+1), vw_residual=zeros(coarse_size+1), wT_residual=zeros(coarse_size+1), wS_residual=zeros(coarse_size+1),
+                                                u_RHS_diffusive=zeros(coarse_size), v_RHS_diffusive=zeros(coarse_size), T_RHS_diffusive=zeros(coarse_size), S_RHS_diffusive=zeros(coarse_size),
+                                                u_RHS_residual=zeros(coarse_size), v_RHS_residual=zeros(coarse_size), T_RHS_residual=zeros(coarse_size), S_RHS_residual=zeros(coarse_size),)
             ) for data in train_data.data]
 
 @everywhere data_params = $data_params
@@ -135,64 +135,109 @@ x₀s = [vcat(data.profile.u.scaled[:, 1], data.profile.v.scaled[:, 1], data.pro
 @everywhere n_simulations = length(x₀s)
 
 @everywhere function NDE(x, p, t, params, NNs, st)
-    coarse_size = params.coarse_size
     eos = TEOS10EquationOfState()
+    coarse_size = params.coarse_size
     f, f_scaled = params.f, params.f_scaled
-    Dᶜ_hat = params.Dᶜ_hat
-    Dᶠ_hat = params.Dᶠ_hat
+    Δ, Δ_hat = params.Δ, params.Δ_hat
     scaling = params.scaling
     τ, H = params.τ, params.H
+    u, v, T, S, ρ, ρ_hat, x′ = params.cache.u, params.cache.v, params.cache.T, params.cache.S, params.cache.ρ, params.cache.ρ_hat, params.cache.x′
+    Ri, ν, κ = params.cache.Ri, params.cache.ν, params.cache.κ
+    ∂b∂z, ∂u∂z, ∂v∂z, g, ρ₀ = params.cache.∂b∂z, params.cache.∂u∂z, params.cache.∂v∂z, params.g, eos.reference_density
+    uw_diffusive, vw_diffusive, wT_diffusive, wS_diffusive = params.cache.uw_diffusive, params.cache.vw_diffusive, params.cache.wT_diffusive, params.cache.wS_diffusive
+    uw_residual, vw_residual, wT_residual, wS_residual = params.cache.uw_residual, params.cache.vw_residual, params.cache.wT_residual, params.cache.wS_residual
+    u_RHS_diffusive, v_RHS_diffusive, T_RHS_diffusive, S_RHS_diffusive = params.cache.u_RHS_diffusive, params.cache.v_RHS_diffusive, params.cache.T_RHS_diffusive, params.cache.S_RHS_diffusive
+    u_RHS_residual, v_RHS_residual, T_RHS_residual, S_RHS_residual = params.cache.u_RHS_residual, params.cache.v_RHS_residual, params.cache.T_RHS_residual, params.cache.S_RHS_residual
 
-    u_hat = x[1:coarse_size]
-    v_hat = x[coarse_size+1:2*coarse_size]
-    T_hat = x[2*coarse_size+1:3*coarse_size]
-    S_hat = x[3*coarse_size+1:4*coarse_size]
+    u_hat = @view x[1:coarse_size]
+    v_hat = @view x[coarse_size+1:2*coarse_size]
+    T_hat = @view x[2*coarse_size+1:3*coarse_size]
+    S_hat = @view x[3*coarse_size+1:4*coarse_size]
 
-    u = inv(params.scaling.u).(u_hat)
-    v = inv(params.scaling.v).(v_hat)
-    T = inv(params.scaling.T).(T_hat)
-    S = inv(params.scaling.S).(S_hat)
-    
-    ρ = TEOS10.ρ.(T, S, 0, Ref(eos))
-    ρ_hat = params.scaling.ρ.(ρ)
+    u .= inv(params.scaling.u).(u_hat)
+    v .= inv(params.scaling.v).(v_hat)
+    T .= inv(params.scaling.T).(T_hat)
+    S .= inv(params.scaling.S).(S_hat)
 
-    x′ = vcat(u_hat, v_hat, T_hat, S_hat, ρ_hat, params.uw.scaled.top, params.vw.scaled.top, params.wT.scaled.top, params.wS.scaled.top, f_scaled)
-    uw_residual = vcat(0, first(NNs.uw(x′, p.uw, st.uw)), 0)
-    vw_residual = vcat(0, first(NNs.vw(x′, p.vw, st.vw)), 0)
-    wT_residual = vcat(0, first(NNs.wT(x′, p.wT, st.wT)), 0)
-    wS_residual = vcat(0, first(NNs.wS(x′, p.wS, st.wS)), 0)
+    ρ .= TEOS10.ρ.(T, S, 0, Ref(eos))
+    ρ_hat .= params.scaling.ρ.(ρ)
 
-    Ris = calculate_Ri(u, v, ρ, params.Dᶠ, params.g, eos.reference_density, clamp_lims=(-Inf, Inf))
-    diffusivities = [params.scaling.diffusivity(first(NNs.baseclosure([Ri], p.baseclosure, st.baseclosure))) for Ri in Ris]
+    uw_residual_nottop = @view uw_residual[1:end-1]
+    vw_residual_nottop = @view vw_residual[1:end-1]
+    wT_residual_nottop = @view wT_residual[1:end-1]
+    wS_residual_nottop = @view wS_residual[1:end-1]
 
-    νs = [diffusivity[1] for diffusivity in diffusivities]
-    κs = [diffusivity[2] for diffusivity in diffusivities]
+    uw_residual_interior = @view uw_residual[2:end-1]
+    vw_residual_interior = @view vw_residual[2:end-1]
+    wT_residual_interior = @view wT_residual[2:end-1]
+    wS_residual_interior = @view wS_residual[2:end-1]
 
-    ∂u∂z_hat = Dᶠ_hat * u_hat
-    ∂v∂z_hat = Dᶠ_hat * v_hat
-    ∂T∂z_hat = Dᶠ_hat * T_hat
-    ∂S∂z_hat = Dᶠ_hat * S_hat
+    uw_residual[end] = params.uw.scaled.top
+    vw_residual[end] = params.vw.scaled.top
+    wT_residual[end] = params.wT.scaled.top
+    wS_residual[end] = params.wS.scaled.top
 
-    uw_diffusive = -νs .* ∂u∂z_hat
-    vw_diffusive = -νs .* ∂v∂z_hat
-    wT_diffusive = -κs .* ∂T∂z_hat
-    wS_diffusive = -κs .* ∂S∂z_hat
+    uw_residual_nottop .= params.uw.scaled.bottom
+    vw_residual_nottop .= params.vw.scaled.bottom
+    wT_residual_nottop .= params.wT.scaled.bottom
+    wS_residual_nottop .= params.wS.scaled.bottom
 
-    uw_boundary = vcat(fill(params.uw.scaled.bottom, coarse_size), params.uw.scaled.top)
-    vw_boundary = vcat(fill(params.vw.scaled.bottom, coarse_size), params.vw.scaled.top)
-    wT_boundary = vcat(fill(params.wT.scaled.bottom, coarse_size), params.wT.scaled.top)
-    wS_boundary = vcat(fill(params.wS.scaled.bottom, coarse_size), params.wS.scaled.top)
+    x′u = @view x′[1:coarse_size]
+    x′v = @view x′[coarse_size+1:2*coarse_size]
+    x′T = @view x′[2*coarse_size+1:3*coarse_size]
+    x′S = @view x′[3*coarse_size+1:4*coarse_size]
+    x′ρ = @view x′[4*coarse_size+1:5*coarse_size]
 
-    du = -τ / H^2 .* (Dᶜ_hat * uw_diffusive) .- τ / H * scaling.uw.σ / scaling.u.σ .* (Dᶜ_hat * (uw_boundary .+ uw_residual)) .+ f * τ ./ scaling.u.σ .* v
-    dv = -τ / H^2 .* (Dᶜ_hat * vw_diffusive) .- τ / H * scaling.vw.σ / scaling.v.σ .* (Dᶜ_hat * (vw_boundary .+ vw_residual)) .- f * τ ./ scaling.v.σ .* u
-    dT = -τ / H^2 .* (Dᶜ_hat * wT_diffusive) .- τ / H * scaling.wT.σ / scaling.T.σ .* (Dᶜ_hat * (wT_boundary .+ wT_residual))
-    dS = -τ / H^2 .* (Dᶜ_hat * wS_diffusive) .- τ / H * scaling.wS.σ / scaling.S.σ .* (Dᶜ_hat * (wS_boundary .+ wS_residual))
+    x′u .= u_hat
+    x′v .= v_hat
+    x′T .= T_hat
+    x′S .= S_hat
+    x′ρ .= ρ_hat
+
+    x′[5*coarse_size+1] = params.uw.scaled.top
+    x′[5*coarse_size+2] = params.vw.scaled.top
+    x′[5*coarse_size+3] = params.wT.scaled.top
+    x′[5*coarse_size+4] = params.wS.scaled.top
+    x′[5*coarse_size+5] = f_scaled
+
+    uw_residual_interior .+= first(NNs.uw(x′, p.uw, st.uw))
+    vw_residual_interior .+= first(NNs.vw(x′, p.vw, st.vw))
+    wT_residual_interior .+= first(NNs.wT(x′, p.wT, st.wT))
+    wS_residual_interior .+= first(NNs.wS(x′, p.wS, st.wS))
+
+    Dᶜ!(u_RHS_residual, uw_residual, Δ_hat)
+    Dᶜ!(v_RHS_residual, vw_residual, Δ_hat)
+    Dᶜ!(T_RHS_residual, wT_residual, Δ_hat)
+    Dᶜ!(S_RHS_residual, wS_residual, Δ_hat)
+
+    calculate_Ri!(Ri, u, v, ρ, ∂b∂z, ∂u∂z, ∂v∂z, g, ρ₀, Δ; clamp_lims=(-Inf, Inf))
+
+    for i in eachindex(ν)
+        ν[i], κ[i] = params.scaling.diffusivity(first(NNs.baseclosure(@view(Ri[i:i]), p.baseclosure, st.baseclosure)))
+    end
+
+    Dᶠ!(uw_diffusive, u_hat, Δ_hat)
+    Dᶠ!(vw_diffusive, v_hat, Δ_hat)
+    Dᶠ!(wT_diffusive, T_hat, Δ_hat)
+    Dᶠ!(wS_diffusive, S_hat, Δ_hat)
+
+    uw_diffusive .*= -ν
+    vw_diffusive .*= -ν
+    wT_diffusive .*= -κ
+    wS_diffusive .*= -κ
+
+    Dᶜ!(u_RHS_diffusive, uw_diffusive, Δ_hat)
+    Dᶜ!(v_RHS_diffusive, vw_diffusive, Δ_hat)
+    Dᶜ!(T_RHS_diffusive, wT_diffusive, Δ_hat)
+    Dᶜ!(S_RHS_diffusive, wS_diffusive, Δ_hat)
+
+    du = -τ / H^2 .* u_RHS_diffusive - τ / H * scaling.uw.σ / scaling.u.σ .* u_RHS_residual + f * τ / scaling.u.σ .* v
+    dv = -τ / H^2 .* v_RHS_diffusive - τ / H * scaling.vw.σ / scaling.v.σ .* v_RHS_residual - f * τ / scaling.v.σ .* u
+    dT = -τ / H^2 .* T_RHS_diffusive - τ / H * scaling.wT.σ / scaling.T.σ .* T_RHS_residual
+    dS = -τ / H^2 .* S_RHS_diffusive - τ / H * scaling.wS.σ / scaling.S.σ .* S_RHS_residual
 
     return vcat(du, dv, dT, dS)
 end
-
-probs = [ODEProblem((x, p′, t) -> NDE(x, p′, t, param, NNs, st_NN), x₀, (param.scaled_time[1], param.scaled_time[end]), ps_NN) for (x₀, param) in zip(x₀s, data_params)]
-sols = [Array(solve(prob, ROCK2(), saveat=param.scaled_time, reltol=1e-3)) for (param, prob) in zip(data_params, probs)]
 
 priors_uw = [constrained_gaussian("uw $i", 0, 1e-6, -Inf, Inf) for i in eachindex(ps_NN.uw)]
 priors_vw = [constrained_gaussian("vw $i", 0, 1e-6, -Inf, Inf) for i in eachindex(ps_NN.vw)]
@@ -296,12 +341,12 @@ ensemble_kalman_process = EKP.EnsembleKalmanProcess(ps_eki, target, Γ, Inversio
 
 total_ensemble = N_ensemble * n_simulations
 
-prob_base = ODEProblem((x, p′, t) -> NDE(x, p′, t, data_params[1], NNs, st_NN), x₀s[1], (data_params[1].scaled_time[1], data_params[1].scaled_time[end]), ps_NN)
+prob_base = ODEProblem((dx, x, p′, t) -> NDE(dx, x, p′, t, data_params[1], NNs, st_NN), x₀s[1], (data_params[1].scaled_time[1], data_params[1].scaled_time[end]), ps_NN)
 
 @everywhere function prob_func(prob, i, repeat)
     sim_index = mod1(i, n_simulations)
     particle_index = Int(ceil(i / n_simulations))
-    @info "$(Dates.now()), i = $i, sim_index = $sim_index, particle_index = $particle_index"
+    # @info "$(Dates.now()), i = $i, sim_index = $sim_index, particle_index = $particle_index"
 
     ps_particle = ComponentArray(ps_eki[:, particle_index], ax_ps_NN)
     x₀ = x₀s[sim_index]
@@ -319,7 +364,6 @@ for i in 1:N_iterations
     @info "$(Dates.now()), obtaining weights"
 
     ps_eki .= get_ϕ_final(priors, ensemble_kalman_process)
-    # @everywhere @info ps_eki[1, :]
 
     @info "$(Dates.now()), Begin solving ensemble problem"
     sim = solve(ensemble_prob, VCABM3(), EnsembleDistributed(), saveat=data_params[1].scaled_time, reltol=1e-3, trajectories=total_ensemble, maxiters=1e5)

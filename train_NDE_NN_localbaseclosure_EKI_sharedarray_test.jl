@@ -28,7 +28,7 @@ function find_max(a...)
     return maximum(maximum.([a...]))
 end
 
-FILE_DIR = "./training_output/NN_small_local_diffusivity_NDE_gradient_relu_noclamp_VCABM3_EKI_ensemble_5000"
+FILE_DIR = "./training_output/NN_small_local_diffusivity_NDE_gradient_relu_noclamp_VCABM3_EKI_ensemble_7500"
 mkpath(FILE_DIR)
 
 LES_FILE_DIRS = [
@@ -373,7 +373,7 @@ end
 
 target = [0.]
 
-N_ensemble = 5000
+N_ensemble = 7500
 N_iterations = 100
 Γ = 1e-6 * I
 

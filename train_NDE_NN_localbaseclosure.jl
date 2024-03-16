@@ -11,6 +11,8 @@ using Dates
 using JLD2
 using SciMLBase
 using Colors
+import SeawaterPolynomials.TEOS10: s, ΔS, Sₐᵤ
+s(Sᴬ) = Sᴬ + ΔS >= 0 ? √((Sᴬ + ΔS) / Sₐᵤ) : NaN
 
 function find_min(a...)
     return minimum(minimum.([a...]))
@@ -20,7 +22,7 @@ function find_max(a...)
     return maximum(maximum.([a...]))
 end
 
-FILE_DIR = "./training_output/NN_small_local_diffusivity_NDE_gradient_relu_noclamp_ROCK4_GaussAdjoint_fast_test"
+FILE_DIR = "./training_output/NN_small_swish_local_diffusivity_NDE_gradient_relu_noclamp_VCABM3_GaussAdjoint_fast_test"
 mkpath(FILE_DIR)
 
 LES_FILE_DIRS = [
@@ -52,10 +54,10 @@ train_data_plot = LESDatasets(field_datasets, ZeroMeanUnitVarianceScaling, full_
 
 rng = Random.default_rng(123)
 
-uw_NN = Chain(Dense(165, 32, leakyrelu), Dense(32, 31))
-vw_NN = Chain(Dense(165, 32, leakyrelu), Dense(32, 31))
-wT_NN = Chain(Dense(165, 32, leakyrelu), Dense(32, 31))
-wS_NN = Chain(Dense(165, 32, leakyrelu), Dense(32, 31))
+uw_NN = Chain(Dense(165, 32, swish), Dense(32, 31))
+vw_NN = Chain(Dense(165, 32, swish), Dense(32, 31))
+wT_NN = Chain(Dense(165, 32, swish), Dense(32, 31))
+wS_NN = Chain(Dense(165, 32, swish), Dense(32, 31))
 
 # uw_NN = Chain(Dense(165, 4, leakyrelu), Dense(4, 31))
 # vw_NN = Chain(Dense(165, 4, leakyrelu), Dense(4, 31))
@@ -674,7 +676,7 @@ end
 
 epoch = 1
 
-res, loss, sols, fluxes, losses, diffusivities = train_NDE(train_data, train_data_plot, NNs, ps_NN, st_NN, maxiter=50, solver=ROCK4(), sensealg=GaussAdjoint(autojacvec=ZygoteVJP()))
+res, loss, sols, fluxes, losses, diffusivities = train_NDE(train_data, train_data_plot, NNs, ps_NN, st_NN, maxiter=50, solver=VCABM3(), sensealg=GaussAdjoint(autojacvec=ZygoteVJP()))
 
 jldsave("$(FILE_DIR)/training_results_$(epoch).jld2"; res, loss, sols, fluxes, losses, NNs, st_NN, diffusivities)
 plot_loss(losses, FILE_DIR, epoch=epoch)
@@ -684,7 +686,7 @@ end
 
 epoch += 1
 
-res, loss, sols, fluxes, losses, diffusivities = train_NDE(train_data, train_data_plot, NNs, res.u, st_NN, maxiter=50, solver=ROCK4(), sensealg=GaussAdjoint(autojacvec=ZygoteVJP()))
+res, loss, sols, fluxes, losses, diffusivities = train_NDE(train_data, train_data_plot, NNs, res.u, st_NN, maxiter=50, solver=VCABM3(), sensealg=GaussAdjoint(autojacvec=ZygoteVJP()))
 
 jldsave("$(FILE_DIR)/training_results_$(epoch).jld2"; res, loss, sols, fluxes, losses, NNs, st_NN, diffusivities)
 plot_loss(losses, FILE_DIR, epoch=epoch)
@@ -694,7 +696,7 @@ end
 
 epoch += 1
 
-res, loss, sols, fluxes, losses, diffusivities = train_NDE(train_data, train_data_plot, NNs, res.u, st_NN, maxiter=50, solver=ROCK4(), sensealg=GaussAdjoint(autojacvec=ZygoteVJP()))
+res, loss, sols, fluxes, losses, diffusivities = train_NDE(train_data, train_data_plot, NNs, res.u, st_NN, maxiter=50, solver=VCABM3(), sensealg=GaussAdjoint(autojacvec=ZygoteVJP()))
 
 jldsave("$(FILE_DIR)/training_results_$(epoch).jld2"; res, loss, sols, fluxes, losses, NNs, st_NN, diffusivities)
 plot_loss(losses, FILE_DIR, epoch=epoch)
@@ -704,7 +706,7 @@ end
 
 epoch += 1
 
-res, loss, sols, fluxes, losses, diffusivities = train_NDE(train_data, train_data_plot, NNs, res.u, st_NN, maxiter=50, solver=ROCK4())
+res, loss, sols, fluxes, losses, diffusivities = train_NDE(train_data, train_data_plot, NNs, res.u, st_NN, maxiter=50, solver=VCABM3(), sensealg=GaussAdjoint(autojacvec=ZygoteVJP()))
 
 jldsave("$(FILE_DIR)/training_results_$(epoch).jld2"; res, loss, sols, fluxes, losses, NNs, st_NN, diffusivities)
 plot_loss(losses, FILE_DIR, epoch=epoch)

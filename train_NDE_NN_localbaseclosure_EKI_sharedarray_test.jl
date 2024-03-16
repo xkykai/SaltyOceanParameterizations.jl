@@ -239,11 +239,11 @@ x₀s = [vcat(data.profile.u.scaled[:, 1], data.profile.v.scaled[:, 1], data.pro
     return vcat(du, dv, dT, dS)
 end
 
-priors_uw = [constrained_gaussian("uw $i", 0, 1e-2, -Inf, Inf) for i in eachindex(ps_NN.uw)]
-priors_vw = [constrained_gaussian("vw $i", 0, 1e-2, -Inf, Inf) for i in eachindex(ps_NN.vw)]
-priors_wT = [constrained_gaussian("wT $i", 0, 1e-2, -Inf, Inf) for i in eachindex(ps_NN.wT)]
-priors_wS = [constrained_gaussian("wS $i", 0, 1e-2, -Inf, Inf) for i in eachindex(ps_NN.wS)]
-priors_baseline = [constrained_gaussian("baseline $i", p, 1e-3, -Inf, Inf) for (i, p) in enumerate(ps_NN.baseclosure)]
+priors_uw = [constrained_gaussian("uw $i", 0, 1e-1, -Inf, Inf) for i in eachindex(ps_NN.uw)]
+priors_vw = [constrained_gaussian("vw $i", 0, 1e-1, -Inf, Inf) for i in eachindex(ps_NN.vw)]
+priors_wT = [constrained_gaussian("wT $i", 0, 1e-1, -Inf, Inf) for i in eachindex(ps_NN.wT)]
+priors_wS = [constrained_gaussian("wS $i", 0, 1e-1, -Inf, Inf) for i in eachindex(ps_NN.wS)]
+priors_baseline = [constrained_gaussian("baseline $i", p, 1e-2, -Inf, Inf) for (i, p) in enumerate(ps_NN.baseclosure)]
 
 priors = combine_distributions(vcat(priors_uw, priors_vw, priors_wT, priors_wS, priors_baseline))
 
@@ -373,7 +373,7 @@ end
 
 target = [0.]
 
-N_ensemble = 2500
+N_ensemble = 4000
 N_iterations = 100
 Γ = 1e-6 * I
 
@@ -411,6 +411,7 @@ end
 ensemble_prob = EnsembleProblem(prob_base, prob_func=prob_func, safetycopy=false)
 sim = solve(ensemble_prob, VCABM3(), EnsembleDistributed(), saveat=data_params[1].scaled_time, reltol=1e-3, trajectories=total_ensemble, maxiters=1e5)
 sim_losses = [compute_losses(sim, i, train_data, coarse_size=32, n_simulations=length(train_data.data)) for i in eachindex(sim)]
+sim = nothing
 losses_prefactor = compute_loss_prefactor(mean([losses.u for losses in sim_losses]), 
                                           mean([losses.v for losses in sim_losses]), 
                                           mean([losses.T for losses in sim_losses]), 
@@ -433,6 +434,7 @@ for i in 1:N_iterations
 
     @info "$(Dates.now()), computing loss"
     sim_loss = [compute_loss(sim, i, train_data, coarse_size=32, n_simulations=length(train_data.data), losses_prefactor=losses_prefactor) for i in eachindex(sim)]
+    sim = nothing
     
     loss = hcat([mean(sim_loss[i*n_simulations+1:i*n_simulations+n_simulations]) for i in 0:N_ensemble-1]...)
     mean_loss = mean(sim_loss)
@@ -442,5 +444,6 @@ for i in 1:N_iterations
 
     @info "$(Dates.now()), obtaining posterior"
     final_ensemble = get_ϕ_final(priors, ensemble_kalman_process)
-    jldsave("$(FILE_DIR)/training_results_$(i).jld2"; final_ensemble, ax_ps_NN, NNs, st_NN, sim_loss, mean_loss)
+    jldsave("$(FILE_DIR)/training_results_$(i).jld2"; final_ensemble, ax_ps_NN, NNs, st_NN, sim_loss, mean_loss, ensemble_kalman_process)
+    GC.gc()
 end

@@ -43,7 +43,7 @@ train_data_plot = LESDatasets(field_datasets, ZeroMeanUnitVarianceScaling, full_
 
 rng = Random.default_rng(123)
 
-NN = Chain(Dense(3, 32, leakyrelu), Dense(32, 2, relu))
+NN = Chain(Dense(3, 32, tanh_fast), Dense(32, 2, relu))
 
 ps_NN, st_NN = Lux.setup(rng, NN)
 ps_NN = ps_NN |> ComponentArray .|> Float64

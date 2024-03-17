@@ -10,6 +10,8 @@ using Printf
 using Dates
 using JLD2
 using Colors
+import SeawaterPolynomials.TEOS10: s, ΔS, Sₐᵤ
+s(Sᴬ) = Sᴬ + ΔS >= 0 ? √((Sᴬ + ΔS) / Sₐᵤ) : NaN
 
 function find_min(a...)
     return minimum(minimum.([a...]))
@@ -524,7 +526,7 @@ end
 
 epoch = 1
 res, loss, sols, fluxes, losses, diffusivities = train_NDE(train_data, train_data_plot, NN, ps_NN, st_NN, Ri_clamp_lims=(-20, 20), 
-                                                           maxiter=500, optimizer=OptimizationOptimisers.ADAM(0.005), solver=VCABM3());
+                                                           maxiter=500, optimizer=OptimizationOptimisers.ADAM(0.001), solver=VCABM3());
 
 jldsave("$(FILE_DIR)/training_results_$(epoch).jld2"; res, loss, sols, fluxes, losses, diffusivities)
 plot_loss(losses, FILE_DIR, epoch=epoch)

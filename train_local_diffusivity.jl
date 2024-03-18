@@ -9,6 +9,8 @@ using SeawaterPolynomials.TEOS10
 using Printf
 using Dates
 using JLD2
+import SeawaterPolynomials.TEOS10: s, ΔS, Sₐᵤ
+s(Sᴬ) = Sᴬ + ΔS >= 0 ? √((Sᴬ + ΔS) / Sₐᵤ) : NaN
 
 function find_min(a...)
     return minimum(minimum.([a...]))
@@ -18,7 +20,7 @@ function find_max(a...)
     return maximum(maximum.([a...]))
 end
 
-FILE_DIR = "./training_output/local_diffusivity_clamp_-10_10"
+FILE_DIR = "./training_output/local_diffusivity_clamp_-20_20"
 mkpath(FILE_DIR)
 
 LES_FILE_DIRS = [
@@ -42,6 +44,7 @@ ps = ComponentArray(ν₁ = 0.1, Riᶜ = 0.25, ΔRi = 0.1, Pr = 1.0)
 function optimize_parameters(train_data, train_data_plot, ps; coarse_size=32, dev=cpu_device(), maxiter=10, optimizer=OptimizationOptimisers.ADAM(0.01), solver=DP5(), Ri_clamp_lims=(-Inf, Inf))
     train_data = train_data |> dev
     x₀s = [vcat(data.profile.u.scaled[:, 1], data.profile.v.scaled[:, 1], data.profile.T.scaled[:, 1], data.profile.S.scaled[:, 1]) for data in train_data.data] |> dev
+    x₀s_plot = [vcat(data.profile.u.unscaled[:, 1], data.profile.v.unscaled[:, 1], data.profile.T.unscaled[:, 1], data.profile.S.unscaled[:, 1]) for data in train_data_plot.data] |> dev
     eos = TEOS10EquationOfState()
 
     params = [(                   f = data.metadata["coriolis_parameter"],
@@ -156,12 +159,12 @@ function optimize_parameters(train_data, train_data_plot, ps; coarse_size=32, de
 
     function predict_DE(p)
         probs = [ODEProblem((x, p′, t) -> DE(x, p′, t, param), x₀, (param.scaled_time[1], param.scaled_time[end]), p) for (x₀, param) in zip(x₀s, params)]
-        sols = [Array(solve(prob, solver, saveat=param.scaled_time, sensealg=InterpolatingAdjoint(autojacvec=ZygoteVJP()), reltol=1e-3)) for (param, prob) in zip(params, probs)]
+        sols = [Array(solve(prob, solver, saveat=param.scaled_time, reltol=1e-3)) for (param, prob) in zip(params, probs)]
         return sols
     end
 
     function predict_DE_posttraining(p)
-        probs = [ODEProblem((x, p′, t) -> DE(x, p′, t, param), x₀, (param.scaled_original_time[1], param.scaled_original_time[end]), p) for (x₀, param) in zip(x₀s, params)]
+        probs = [ODEProblem((x, p′, t) -> DE(x, p′, t, param), x₀, (param.scaled_original_time[1], param.scaled_original_time[end]), p) for (x₀, param) in zip(x₀s_plot, params)]
         sols = [solve(prob, solver, saveat=param.scaled_original_time, reltol=1e-3) for (param, prob) in zip(params, probs)]
         return sols
     end
@@ -182,10 +185,10 @@ function optimize_parameters(train_data, train_data_plot, ps; coarse_size=32, de
         ρ_loss = mean(mean.([(data.profile.ρ.scaled .- ρ).^2 for (data, ρ) in zip(train_data.data, ρs)]))
 
         ρ_prefactor = 1
-        T_prefactor = ρ_loss / T_loss
-        S_prefactor = ρ_loss / S_loss
-        u_prefactor = ρ_loss / u_loss * (0.05/0.3)
-        v_prefactor = ρ_loss / v_loss * (0.05/0.3)
+        T_prefactor = ρ_loss / T_loss * (0.4/0.1)
+        S_prefactor = ρ_loss / S_loss * (0.4/0.1)
+        u_prefactor = ρ_loss / u_loss * (0.05/0.1)
+        v_prefactor = ρ_loss / v_loss * (0.05/0.1)
 
         return (u=u_prefactor, v=v_prefactor, T=T_prefactor, S=S_prefactor, ρ=ρ_prefactor)
     end
@@ -454,9 +457,10 @@ end
 
 epoch = 1
 
-res, loss, sols, fluxes, losses, diffusivities = optimize_parameters(train_data, train_data_plot, ps, maxiter=500, optimizer=OptimizationOptimisers.ADAM(0.01), Ri_clamp_lims=(-10, 10))
+res, loss, sols, fluxes, losses, diffusivities = optimize_parameters(train_data, train_data_plot, ps, maxiter=200, optimizer=OptimizationOptimisers.ADAM(0.01), Ri_clamp_lims=(-20, 20), solver=VCABM3())
 
-jldsave("$(FILE_DIR)/training_results_$(epoch).jld2"; res, loss, sols, fluxes, losses, diffusivities)
+u = res.u
+jldsave("$(FILE_DIR)/training_results_$(epoch).jld2"; res, u, loss, sols, fluxes, losses, diffusivities)
 plot_loss(losses, FILE_DIR, epoch=epoch)
 
 for i in eachindex(field_datasets)
@@ -465,9 +469,18 @@ end
 
 epoch += 1
 
-res, loss, sols, fluxes, losses, diffusivities = optimize_parameters(train_data, train_data_plot, res.u, maxiter=500, optimizer=OptimizationOptimisers.ADAM(0.005), Ri_clamp_lims=(-10, 10))
+res, loss, sols, fluxes, losses, diffusivities = optimize_parameters(train_data, train_data_plot, res.u, maxiter=200, optimizer=OptimizationOptimisers.ADAM(0.005), Ri_clamp_lims=(-20, 20), solver=VCABM3())
 
-jldsave("$(FILE_DIR)/training_results_$(epoch).jld2"; res, loss, sols, fluxes, losses, diffusivities)
+u = res.u
+jldsave("$(FILE_DIR)/training_results_$(epoch).jld2"; res, u, loss, sols, fluxes, losses, diffusivities)
+plot_loss(losses, FILE_DIR, epoch=epoch)
+
+epoch += 1
+
+res, loss, sols, fluxes, losses, diffusivities = optimize_parameters(train_data, train_data_plot, res.u, maxiter=500, optimizer=OptimizationOptimisers.ADAM(0.005), Ri_clamp_lims=(-20, 20), solver=VCABM3())
+
+u = res.u
+jldsave("$(FILE_DIR)/training_results_$(epoch).jld2"; res, u, loss, sols, fluxes, losses, diffusivities)
 plot_loss(losses, FILE_DIR, epoch=epoch)
 
 for i in eachindex(field_datasets)
@@ -476,9 +489,10 @@ end
 
 epoch += 1
 
-res, loss, sols, fluxes, losses, diffusivities = optimize_parameters(train_data, train_data_plot, res.u, maxiter=500, optimizer=OptimizationOptimisers.ADAM(0.001), Ri_clamp_lims=(-10, 10))
+res, loss, sols, fluxes, losses, diffusivities = optimize_parameters(train_data, train_data_plot, res.u, maxiter=500, optimizer=OptimizationOptimisers.ADAM(0.001), Ri_clamp_lims=(-20, 20), solver=VCABM3())
 
-jldsave("$(FILE_DIR)/training_results_$(epoch).jld2"; res, loss, sols, fluxes, losses, diffusivities)
+u = res.u
+jldsave("$(FILE_DIR)/training_results_$(epoch).jld2"; res, u, loss, sols, fluxes, losses, diffusivities)
 plot_loss(losses, FILE_DIR, epoch=epoch)
 
 for i in eachindex(field_datasets)

@@ -21,7 +21,7 @@ function find_max(a...)
     return maximum(maximum.([a...]))
 end
 
-FILE_DIR = "./training_output/slightly_nonlocal_diffusivity_rotation_NDE_gradient_tanh_relu_clamplim_-20_20_fast_sophia"
+FILE_DIR = "./training_output/slightly_nonlocal_diffusivity_rotation_NDE_gradient_tanh_relu_clamplim_-20_20_sophia"
 @info FILE_DIR
 mkpath(FILE_DIR)
 
@@ -361,8 +361,10 @@ end
 function plot_loss(losses, FILE_DIR; epoch=1)
     colors = distinguishable_colors(10, [RGB(1,1,1), RGB(0,0,0)], dropseed=true)
     fig = Figure(size=(1000, 600))
-    axtotalloss = CairoMakie.Axis(fig[1, 1], title="Total Loss", xlabel="Iterations", ylabel="Loss", yscale=log10)
-    axindividualloss = CairoMakie.Axis(fig[1, 2], title="Individual Loss", xlabel="Iterations", ylabel="Loss", yscale=log10)
+    # axtotalloss = CairoMakie.Axis(fig[1, 1], title="Total Loss", xlabel="Iterations", ylabel="Loss", yscale=log10)
+    axtotalloss = CairoMakie.Axis(fig[1, 1], title="Total Loss", xlabel="Iterations", ylabel="Loss")
+    # axindividualloss = CairoMakie.Axis(fig[1, 2], title="Individual Loss", xlabel="Iterations", ylabel="Loss", yscale=log10)
+    axindividualloss = CairoMakie.Axis(fig[1, 2], title="Individual Loss", xlabel="Iterations", ylabel="Loss")
 
     lines!(axtotalloss, losses.total, label="Total Loss")
 
@@ -527,7 +529,7 @@ end
 epoch = 1
 res, loss, sols, fluxes, losses, diffusivities = train_NDE(train_data, train_data_plot, NN, ps_NN, st_NN, Ri_clamp_lims=(-20, 20), 
                                                         #    maxiter=200, optimizer=OptimizationOptimisers.ADAM(0.001), solver=VCABM3());
-                                                        maxiter=200, optimizer=OptimizationOptimisers.Sophia(η=0.001), solver=VCABM3())
+                                                        maxiter=500, optimizer=OptimizationOptimisers.Sophia(η=0.0005), solver=VCABM3())
 
 jldsave("$(FILE_DIR)/training_results_$(epoch).jld2"; res, loss, sols, fluxes, losses, diffusivities)
 plot_loss(losses, FILE_DIR, epoch=epoch)
@@ -539,7 +541,7 @@ epoch += 1
 
 res, loss, sols, fluxes, losses, diffusivities = train_NDE(train_data, train_data_plot, NN, res.u, st_NN, Ri_clamp_lims=(-20, 20),
                                                         #    maxiter=200, optimizer=OptimizationOptimisers.ADAM(0.001), solver=VCABM3())
-                                                        maxiter=200, optimizer=OptimizationOptimisers.Sophia(η=0.0005), solver=VCABM3())
+                                                        maxiter=500, optimizer=OptimizationOptimisers.Sophia(η=0.0005), solver=VCABM3())
 
 @info "Training complete"
 
@@ -554,7 +556,7 @@ epoch += 1
 
 res, loss, sols, fluxes, losses, diffusivities = train_NDE(train_data, train_data_plot, NN, res.u, st_NN, Ri_clamp_lims=(-20, 20),
                                                         #    maxiter=200, optimizer=OptimizationOptimisers.ADAM(0.0005), solver=VCABM3())
-                                                        maxiter=200, optimizer=OptimizationOptimisers.Sophia(η=0.0005), solver=VCABM3())
+                                                        maxiter=500, optimizer=OptimizationOptimisers.Sophia(η=0.0002), solver=VCABM3())
 
 @info "Training complete"
 

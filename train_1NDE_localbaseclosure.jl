@@ -22,7 +22,7 @@ function find_max(a...)
     return maximum(maximum.([a...]))
 end
 
-FILE_DIR = "./training_output/1NN_relu_local_diffusivity_clamp_-20_20_VCABM3_test"
+FILE_DIR = "./training_output/1NN_relu_local_diffusivity_clamp_-20_20_fast_VCABM3_test"
 mkpath(FILE_DIR)
 @info "$(FILE_DIR)"
 
@@ -33,7 +33,7 @@ LES_FILE_DIRS = [
     "./LES_training/linearTS_dTdz_-0.025_dSdz_-0.0045_QU_-0.0002_QT_-0.0003_QS_-3.0e-5_T_-3.6_S_33.9_f_-0.000125_WENO9nu0_Lxz_512.0_256.0_Nxz_256_128/instantaneous_timeseries.jld2",
 ]
 
-BASECLOSURE_FILE_DIR = "./training_output/local_diffusivity_clamp_-20_20/training_results_1.jld2"
+BASECLOSURE_FILE_DIR = "./training_output/local_diffusivity_clamp_-20_20_fast/training_results_1.jld2"
 
 field_datasets = [FieldDataset(FILE_DIR, backend=OnDisk()) for FILE_DIR in LES_FILE_DIRS]
 

@@ -21,7 +21,7 @@ function find_max(a...)
     return maximum(maximum.([a...]))
 end
 
-FILE_DIR = "./training_output/slightly_nonlocal_diffusivity_rotation_NDE_gradient_tanh_relu_clamplim_-20_20"
+FILE_DIR = "./training_output/slightly_nonlocal_diffusivity_rotation_NDE_gradient_tanh_relu_clamplim_-20_20_fast"
 @info FILE_DIR
 mkpath(FILE_DIR)
 
@@ -526,7 +526,7 @@ end
 
 epoch = 1
 res, loss, sols, fluxes, losses, diffusivities = train_NDE(train_data, train_data_plot, NN, ps_NN, st_NN, Ri_clamp_lims=(-20, 20), 
-                                                           maxiter=500, optimizer=OptimizationOptimisers.ADAM(0.001), solver=VCABM3());
+                                                           maxiter=200, optimizer=OptimizationOptimisers.ADAM(0.001), solver=VCABM3());
 
 jldsave("$(FILE_DIR)/training_results_$(epoch).jld2"; res, loss, sols, fluxes, losses, diffusivities)
 plot_loss(losses, FILE_DIR, epoch=epoch)
@@ -537,7 +537,7 @@ end
 epoch += 1
 
 res, loss, sols, fluxes, losses, diffusivities = train_NDE(train_data, train_data_plot, NN, res.u, st_NN, Ri_clamp_lims=(-20, 20),
-                                                           maxiter=500, optimizer=OptimizationOptimisers.ADAM(0.001), solver=VCABM3())
+                                                           maxiter=200, optimizer=OptimizationOptimisers.ADAM(0.001), solver=VCABM3())
 @info "Training complete"
 
 jldsave("$(FILE_DIR)/training_results_$(epoch).jld2"; res, loss, sols, fluxes, losses)
@@ -550,7 +550,7 @@ end
 epoch += 1
 
 res, loss, sols, fluxes, losses, diffusivities = train_NDE(train_data, train_data_plot, NN, res.u, st_NN, Ri_clamp_lims=(-20, 20),
-                                                           maxiter=500, optimizer=OptimizationOptimisers.ADAM(0.0005), solver=VCABM3())
+                                                           maxiter=200, optimizer=OptimizationOptimisers.ADAM(0.0005), solver=VCABM3())
 @info "Training complete"
 
 jldsave("$(FILE_DIR)/training_results_$(epoch).jld2"; res, loss, sols, fluxes, losses)

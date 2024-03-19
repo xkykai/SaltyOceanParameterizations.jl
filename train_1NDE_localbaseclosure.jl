@@ -22,7 +22,7 @@ function find_max(a...)
     return maximum(maximum.([a...]))
 end
 
-FILE_DIR = "./training_output/1NN_leakyrelu_local_diffusivity_clamp_-20_20_fast_VCABM3_test"
+FILE_DIR = "./training_output/1NN_relu_local_diffusivity_clamp_-20_20_fast_VCABM3_test"
 mkpath(FILE_DIR)
 @info "$(FILE_DIR)"
 
@@ -48,7 +48,7 @@ train_data_plot = LESDatasets(field_datasets, ZeroMeanUnitVarianceScaling, full_
 
 rng = Random.default_rng(123)
 
-NN = Chain(Dense(320, 128, leakyrelu), Dense(128, 124))
+NN = Chain(Dense(320, 128, relu), Dense(128, 124))
 
 ps, st = Lux.setup(rng, NN)
 

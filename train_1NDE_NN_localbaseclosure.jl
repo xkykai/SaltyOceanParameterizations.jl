@@ -22,8 +22,9 @@ function find_max(a...)
     return maximum(maximum.([a...]))
 end
 
-FILE_DIR = "./training_output/1NN_leakyrelu_256_local_diffusivity_NDE_gradient_relu_noclamp_VCABM3_GaussAdjoint_fast_test"
+FILE_DIR = "./training_output/1NN_swish_512_local_diffusivity_NDE_gradient_relu_noclamp_VCABM3_GaussAdjoint_fast_test"
 mkpath(FILE_DIR)
+@info "$(FILE_DIR)"
 
 LES_FILE_DIRS = [
     "./LES_training/linearTS_dTdz_0.0013_dSdz_-0.0014_QU_-0.0002_QT_3.0e-5_QS_-3.0e-5_T_4.3_S_33.5_f_-0.00012_WENO9nu0_Lxz_512.0_256.0_Nxz_256_128/instantaneous_timeseries.jld2",
@@ -53,7 +54,7 @@ train_data_plot = LESDatasets(field_datasets, ZeroMeanUnitVarianceScaling, full_
 
 rng = Random.default_rng(123)
 
-NN = Chain(Dense(165, 256, leakyrelu), Dense(256, 124))
+NN = Chain(Dense(165, 512, swish), Dense(512, 124))
 
 ps, st = Lux.setup(rng, NN)
 

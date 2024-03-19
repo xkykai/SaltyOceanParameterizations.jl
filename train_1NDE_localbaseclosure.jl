@@ -22,7 +22,7 @@ function find_max(a...)
     return maximum(maximum.([a...]))
 end
 
-FILE_DIR = "./training_output/1NN_relu_local_diffusivity_clamp_-20_20_fast_VCABM3_test"
+FILE_DIR = "./training_output/1NN_leakyrelu_local_diffusivity_clamp_-20_20_fast_VCABM3_test"
 mkpath(FILE_DIR)
 @info "$(FILE_DIR)"
 
@@ -48,7 +48,7 @@ train_data_plot = LESDatasets(field_datasets, ZeroMeanUnitVarianceScaling, full_
 
 rng = Random.default_rng(123)
 
-NN = Chain(Dense(320, 128, relu), Dense(128, 124))
+NN = Chain(Dense(320, 128, leakyrelu), Dense(128, 124))
 
 ps, st = Lux.setup(rng, NN)
 
@@ -105,7 +105,7 @@ function train_NDE(train_data, train_data_plot, NNs, ps_training, st_NN;
         return uw, vw, wT, wS
     end
 
-    function predict_residual_flux_dimensional(u_hat, v_hat, T_hat, S_hat, ρ_hat, p, params, st)
+    function predict_residual_flux_dimensional(u_hat, v_hat, T_hat, S_hat, ρ_hat, ∂u∂z_hat, ∂v∂z_hat, ∂T∂z_hat, ∂S∂z_hat, ∂ρ∂z_hat, p, params, st)
         uw_hat, vw_hat, wT_hat, wS_hat = predict_residual_flux(u_hat, v_hat, T_hat, S_hat, ρ_hat, ∂u∂z_hat, ∂v∂z_hat, ∂T∂z_hat, ∂S∂z_hat, ∂ρ∂z_hat, p, params, st)
         uw = inv(params.scaling.uw).(uw_hat)
         vw = inv(params.scaling.vw).(vw_hat)
@@ -248,13 +248,13 @@ function train_NDE(train_data, train_data_plot, NNs, ps_training, st_NN;
 
     function predict_NDE(p)
         probs = [ODEProblem((x, p′, t) -> NDE(x, p′, t, param, st_NN), x₀, (param.scaled_time[1], param.scaled_time[end]), p) for (x₀, param) in zip(x₀s, params)]
-        sols = [Array(solve(prob, solver, saveat=param.scaled_time, reltol=1e-3)) for (param, prob) in zip(params, probs)]
+        sols = [Array(solve(prob, solver, saveat=param.scaled_time, reltol=1e-2)) for (param, prob) in zip(params, probs)]
         return sols
     end
 
     function predict_NDE_posttraining(p)
         probs = [ODEProblem((x, p′, t) -> NDE(x, p′, t, param, st_NN), x₀, (param.scaled_original_time[1], param.scaled_original_time[end]), p) for (x₀, param) in zip(x₀s, params)]
-        sols = [solve(prob, solver, saveat=param.scaled_original_time, reltol=1e-3) for (param, prob) in zip(params, probs)]
+        sols = [solve(prob, solver, saveat=param.scaled_original_time, reltol=1e-2) for (param, prob) in zip(params, probs)]
         return sols
     end
 
@@ -413,8 +413,10 @@ function train_NDE(train_data, train_data_plot, NNs, ps_training, st_NN;
             ρ = calculate_unscaled_density(T, S)
             ρ_hat = params[i].scaling.ρ.(ρ)
 
+            ∂u∂z_hat, ∂v∂z_hat, ∂T∂z_hat, ∂S∂z_hat, ∂ρ∂z_hat = calculate_scaled_profile_gradients(u, v, T, S, ρ, params[i])
+
             uw_diffusive_boundary, vw_diffusive_boundary, wT_diffusive_boundary, wS_diffusive_boundary = predict_diffusive_boundary_flux_dimensional(u, v, ρ, u_hat, v_hat, T_hat, S_hat, res.u, params[i], st_NN)
-            uw_residual, vw_residual, wT_residual, wS_residual = predict_residual_flux_dimensional(u_hat, v_hat, T_hat, S_hat, ρ_hat, res.u, params[i], st_NN)
+            uw_residual, vw_residual, wT_residual, wS_residual = predict_residual_flux_dimensional(u_hat, v_hat, T_hat, S_hat, ρ_hat, ∂u∂z_hat, ∂v∂z_hat, ∂T∂z_hat, ∂S∂z_hat, ∂ρ∂z_hat, res.u, params[i], st_NN)
 
             Ris = calculate_Ri(u, v, ρ, params[i].Dᶠ, params[i].g, eos.reference_density, clamp_lims=Ri_clamp_lims)
 
@@ -668,7 +670,8 @@ epoch = 1
 
 res, loss, sols, fluxes, losses, diffusivities = train_NDE(train_data, train_data_plot, NNs, ps_training, st_NN, maxiter=50, solver=VCABM3(), Ri_clamp_lims=(-20, 20), optimizer=OptimizationOptimisers.ADAM(0.001))
 
-jldsave("$(FILE_DIR)/training_results_$(epoch).jld2"; res, loss, sols, fluxes, losses, NNs, st_NN, diffusivities)
+u = res.u
+jldsave("$(FILE_DIR)/training_results_$(epoch).jld2"; res, u, loss, sols, fluxes, losses, NNs, st_NN, diffusivities)
 plot_loss(losses, FILE_DIR, epoch=epoch)
 for i in eachindex(field_datasets)
     animate_data(train_data_plot, sols, fluxes, diffusivities, i, FILE_DIR, epoch=epoch)
@@ -678,7 +681,8 @@ epoch += 1
 
 res, loss, sols, fluxes, losses, diffusivities = train_NDE(train_data, train_data_plot, NNs, res.u, st_NN, maxiter=50, solver=VCABM3(), Ri_clamp_lims=(-20, 20), optimizer=OptimizationOptimisers.ADAM(0.001))
 
-jldsave("$(FILE_DIR)/training_results_$(epoch).jld2"; res, loss, sols, fluxes, losses, NNs, st_NN, diffusivities)
+u = res.u
+jldsave("$(FILE_DIR)/training_results_$(epoch).jld2"; res, u, loss, sols, fluxes, losses, NNs, st_NN, diffusivities)
 plot_loss(losses, FILE_DIR, epoch=epoch)
 for i in eachindex(field_datasets)
     animate_data(train_data_plot, sols, fluxes, diffusivities, i, FILE_DIR, epoch=epoch)
@@ -688,7 +692,8 @@ epoch += 1
 
 res, loss, sols, fluxes, losses, diffusivities = train_NDE(train_data, train_data_plot, NNs, res.u, st_NN, maxiter=50, solver=VCABM3(), Ri_clamp_lims=(-20, 20), optimizer=OptimizationOptimisers.ADAM(0.001))
 
-jldsave("$(FILE_DIR)/training_results_$(epoch).jld2"; res, loss, sols, fluxes, losses, NNs, st_NN, diffusivities)
+u = res.u
+jldsave("$(FILE_DIR)/training_results_$(epoch).jld2"; res, u, loss, sols, fluxes, losses, NNs, st_NN, diffusivities)
 plot_loss(losses, FILE_DIR, epoch=epoch)
 for i in eachindex(field_datasets)
     animate_data(train_data_plot, sols, fluxes, diffusivities, i, FILE_DIR, epoch=epoch)
@@ -698,7 +703,8 @@ epoch += 1
 
 res, loss, sols, fluxes, losses, diffusivities = train_NDE(train_data, train_data_plot, NNs, res.u, st_NN, maxiter=50, solver=VCABM3(), Ri_clamp_lims=(-20, 20), optimizer=OptimizationOptimisers.ADAM(0.0005))
 
-jldsave("$(FILE_DIR)/training_results_$(epoch).jld2"; res, loss, sols, fluxes, losses, NNs, st_NN, diffusivities)
+u = res.u
+jldsave("$(FILE_DIR)/training_results_$(epoch).jld2"; res, u, loss, sols, fluxes, losses, NNs, st_NN, diffusivities)
 plot_loss(losses, FILE_DIR, epoch=epoch)
 for i in eachindex(field_datasets)
     animate_data(train_data_plot, sols, fluxes, diffusivities, i, FILE_DIR, epoch=epoch)

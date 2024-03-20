@@ -168,9 +168,9 @@ function train_NDE(train_data, train_data_plot, NNs, ps_training, ps_baseclosure
         wS = inv(params.scaling.wS).(wS_hat)
 
         uw = uw .- uw[1]
-        vw = uw .- vw[1]
-        wT = uw .- wT[1]
-        wS = uw .- wS[1]
+        vw = vw .- vw[1]
+        wT = wT .- wT[1]
+        wS = wS .- wS[1]
 
         return uw, vw, wT, wS
     end

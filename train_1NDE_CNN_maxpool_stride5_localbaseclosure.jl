@@ -49,14 +49,6 @@ train_data_plot = LESDatasets(field_datasets, ZeroMeanUnitVarianceScaling, full_
 
 rng = Random.default_rng(123)
 
-# NN = Chain(Conv(Tuple(3), 5 => 8, swish),
-#            MaxPool(Tuple(2), stride=2),
-#            Conv(Tuple(3), 8 => 16, swish),
-#            MaxPool(Tuple(2), stride=2),
-#            FlattenLayer(),
-#            Dense(6*16, 128, swish),
-#            Dense(128, 124))
-
 NN = Chain(Conv(Tuple(5), 10 => 16, swish),
            MaxPool(Tuple(2), stride=2),
            Conv(Tuple(5), 16 => 32, swish),
@@ -68,12 +60,14 @@ NN = Chain(Conv(Tuple(5), 10 => 16, swish),
 
 ps, st = Lux.setup(rng, NN)
 
-ps = ps |> ComponentArray .|> Float64
+# ps = ps |> ComponentArray .|> Float64
 
-ps .*= 1e-1
+# ps .*= 1e-1
+
 
 NNs = (; NDE=NN)
-ps_training = ComponentArray(NDE=ps)
+# ps_training = ComponentArray(NDE=ps)
+ps_training = jldopen("$(FILE_DIR)/training_results_3.jld2", "r")["u"]
 st_NN = (; NDE=st)
 
 function train_NDE(train_data, train_data_plot, NNs, ps_training, ps_baseclosure, st_NN, rng; 
@@ -166,9 +160,9 @@ function train_NDE(train_data, train_data_plot, NNs, ps_training, ps_baseclosure
         wS = inv(params.scaling.wS).(wS_hat)
 
         uw = uw .- uw[1]
-        vw = uw .- vw[1]
-        wT = uw .- wT[1]
-        wS = uw .- wS[1]
+        vw = vw .- vw[1]
+        wT = wT .- wT[1]
+        wS = wS .- wS[1]
 
         return uw, vw, wT, wS
     end
@@ -715,9 +709,9 @@ function animate_data(train_data, sols, fluxes, diffusivities, index, FILE_DIR; 
     end
 end
 
-epoch = 1
+epoch = 3
 
-res, loss, sols, fluxes, losses, diffusivities = train_NDE(train_data, train_data_plot, NNs, ps_training, ps_baseclosure, st_NN, rng, maxiter=100, solver=VCABM3(), Ri_clamp_lims=(-20, 20), optimizer=OptimizationOptimisers.ADAM(1e-4))
+res, loss, sols, fluxes, losses, diffusivities = train_NDE(train_data, train_data_plot, NNs, ps_training, ps_baseclosure, st_NN, rng, maxiter=1, solver=VCABM3(), Ri_clamp_lims=(-20, 20), optimizer=OptimizationOptimisers.ADAM(1e-4))
 
 u = res.u
 jldsave("$(FILE_DIR)/training_results_$(epoch).jld2"; res, u, loss, sols, fluxes, losses, NNs, st_NN, diffusivities)

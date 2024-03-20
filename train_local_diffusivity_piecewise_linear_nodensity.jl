@@ -296,7 +296,6 @@ function plot_loss(losses, FILE_DIR; epoch=1)
     lines!(axindividualloss, losses.v, label="v")
     lines!(axindividualloss, losses.T, label="T")
     lines!(axindividualloss, losses.S, label="S")
-    lines!(axindividualloss, losses.ρ, label="ρ")
 
     axislegend(axindividualloss, position=:rt)
     save("$(FILE_DIR)/losses_epoch$(epoch).png", fig, px_per_unit=8)
@@ -447,7 +446,7 @@ end
 
 epoch = 1
 
-res, loss, sols, fluxes, losses, diffusivities = optimize_parameters(train_data, train_data_plot, ps, maxiter=5, optimizer=OptimizationOptimisers.ADAM(0.005), Ri_clamp_lims=(-Inf, Inf), solver=VCABM3())
+res, loss, sols, fluxes, losses, diffusivities = optimize_parameters(train_data, train_data_plot, ps, maxiter=500, optimizer=OptimizationOptimisers.ADAM(0.005), Ri_clamp_lims=(-Inf, Inf), solver=VCABM3())
 
 u = res.u
 jldsave("$(FILE_DIR)/training_results_$(epoch).jld2"; res, u, loss, sols, fluxes, losses, diffusivities)

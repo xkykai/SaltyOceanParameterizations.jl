@@ -719,7 +719,7 @@ end
 
 epoch = 1
 
-res, loss, sols, fluxes, losses, diffusivities = train_NDE(train_data, train_data_plot, NNs, ps_training, ps_baseclosure, st_NN, rng, maxiter=3, solver=VCABM3(), Ri_clamp_lims=(-20, 20), optimizer=OptimizationOptimisers.ADAM(1e-4))
+res, loss, sols, fluxes, losses, diffusivities = train_NDE(train_data, train_data_plot, NNs, ps_training, ps_baseclosure, st_NN, rng, maxiter=200, solver=VCABM3(), Ri_clamp_lims=(-20, 20), optimizer=OptimizationOptimisers.ADAM(1e-4))
 
 u = res.u
 jldsave("$(FILE_DIR)/training_results_$(epoch).jld2"; res, u, loss, sols, fluxes, losses, NNs, st_NN, diffusivities)
@@ -730,7 +730,7 @@ end
 
 epoch += 1
 
-res, loss, sols, fluxes, losses, diffusivities = train_NDE(train_data, train_data_plot, NNs, res.u, ps_baseclosure, st_NN, rng, maxiter=100, solver=VCABM3(), Ri_clamp_lims=(-20, 20), optimizer=OptimizationOptimisers.ADAM(1e-4))
+res, loss, sols, fluxes, losses, diffusivities = train_NDE(train_data, train_data_plot, NNs, res.u, ps_baseclosure, st_NN, rng, maxiter=200, solver=VCABM3(), Ri_clamp_lims=(-20, 20), optimizer=OptimizationOptimisers.ADAM(1e-4))
 u = res.u
 jldsave("$(FILE_DIR)/training_results_$(epoch).jld2"; res, u, loss, sols, fluxes, losses, NNs, st_NN, diffusivities)
 plot_loss(losses, FILE_DIR, epoch=epoch)
@@ -740,7 +740,7 @@ end
 
 epoch += 1
 
-res, loss, sols, fluxes, losses, diffusivities = train_NDE(train_data, train_data_plot, NNs, res.u, ps_baseclosure, st_NN, rng, maxiter=100, solver=VCABM3(), Ri_clamp_lims=(-20, 20), optimizer=OptimizationOptimisers.ADAM(5e-5))
+res, loss, sols, fluxes, losses, diffusivities = train_NDE(train_data, train_data_plot, NNs, res.u, ps_baseclosure, st_NN, rng, maxiter=200, solver=VCABM3(), Ri_clamp_lims=(-20, 20), optimizer=OptimizationOptimisers.ADAM(5e-5))
 
 u = res.u
 jldsave("$(FILE_DIR)/training_results_$(epoch).jld2"; res, u, loss, sols, fluxes, losses, NNs, st_NN, diffusivities)
@@ -751,7 +751,7 @@ end
 
 epoch += 1
 
-res, loss, sols, fluxes, losses, diffusivities = train_NDE(train_data, train_data_plot, NNs, res.u, ps_baseclosure, st_NN, rng, maxiter=100, solver=VCABM3(), Ri_clamp_lims=(-20, 20), optimizer=OptimizationOptimisers.ADAM(5e-5))
+res, loss, sols, fluxes, losses, diffusivities = train_NDE(train_data, train_data_plot, NNs, res.u, ps_baseclosure, st_NN, rng, maxiter=200, solver=VCABM3(), Ri_clamp_lims=(-20, 20), optimizer=OptimizationOptimisers.ADAM(5e-5))
 
 u = res.u
 jldsave("$(FILE_DIR)/training_results_$(epoch).jld2"; res, u, loss, sols, fluxes, losses, NNs, st_NN, diffusivities)

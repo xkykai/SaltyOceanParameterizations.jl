@@ -42,6 +42,25 @@ function local_Ri_diffusivity(Ri, ν₁, Riᶜ, ΔRi, Pr)
     return ν, κ
 end
 
+function local_Ri_ν_piecewise_linear(Ri, ν₁, m)
+    m > 0 && return NaN
+    ν₀ = 1e-5
+
+    ν = clamp(m * Ri + ν₁ + ν₀, ν₀, ν₁)
+    return ν
+    
+end
+
+function local_Ri_κ_piecewise_linear(Ri, ν₁, m, Pr)
+    ν = local_Ri_ν_piecewise_linear(Ri, ν₁, m)
+    return ν / Pr
+end
+
+function local_Ri_κ_piecewise_linear(ν, Pr)
+    return ν / Pr
+end
+
+
 function nonlocal_Ri_diffusivity(ν, D⁺, ν₁_en, Δν_enᶜ, ΔΔν_en, Pr)
     ν⁺ = D⁺ * ν
     Δν = ν⁺ .- ν

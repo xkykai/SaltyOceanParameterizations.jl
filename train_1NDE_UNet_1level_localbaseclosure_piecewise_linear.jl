@@ -1,6 +1,6 @@
 using SaltyOceanParameterizations
 using SaltyOceanParameterizations.DataWrangling
-using SaltyOceanParameterizations: calculate_Ri, local_Ri_diffusivity
+using SaltyOceanParameterizations: calculate_Ri, local_Ri_ν_piecewise_linear, local_Ri_κ_piecewise_linear
 using Oceananigans
 using ComponentArrays, Lux, DiffEqFlux, OrdinaryDiffEq, Optimization, OptimizationOptimJL, OptimizationOptimisers, Random, SciMLSensitivity, LuxCUDA
 using Statistics

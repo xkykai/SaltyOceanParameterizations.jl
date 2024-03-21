@@ -20,7 +20,7 @@ function find_max(a...)
     return maximum(maximum.([a...]))
 end
 
-FILE_DIR = "./training_output/local_diffusivity_piecewise_linear_noclamp_lossequal"
+FILE_DIR = "./training_output/local_diffusivity_piecewise_linear_noclamp_lossequal_reltol1e-5"
 mkpath(FILE_DIR)
 
 LES_FILE_DIRS = [
@@ -32,8 +32,8 @@ LES_FILE_DIRS = [
 
 field_datasets = [FieldDataset(FILE_DIR, backend=OnDisk()) for FILE_DIR in LES_FILE_DIRS]
 
-full_timeframes = [1:length(data["ubar"].times) for data in field_datasets]
-timeframes = [5:5:length(data["ubar"].times) for data in field_datasets]
+full_timeframes = [25:length(data["ubar"].times) for data in field_datasets]
+timeframes = [25:5:length(data["ubar"].times) for data in field_datasets]
 train_data = LESDatasets(field_datasets, ZeroMeanUnitVarianceScaling, timeframes)
 coarse_size = 32
 
@@ -50,7 +50,7 @@ function optimize_parameters(train_data, train_data_plot, ps; coarse_size=32, de
     params = [(                   f = data.metadata["coriolis_parameter"],
                                   τ = data.times[end] - data.times[1],
                         scaled_time = (data.times .- data.times[1]) ./ (data.times[end] - data.times[1]),
-               scaled_original_time = data.metadata["original_times"] ./ (data.metadata["original_times"][end] - data.metadata["original_times"][1]),
+               scaled_original_time = (plot_data.times .- plot_data.times[1]) ./ (plot_data.times[end] - plot_data.times[1]),
                                  zC = data.metadata["zC"],
                                   H = data.metadata["original_grid"].Lz,
                                   g = data.metadata["gravitational_acceleration"],
@@ -68,7 +68,7 @@ function optimize_parameters(train_data, train_data_plot, ps; coarse_size=32, de
                                  wS = (scaled = (top=data.flux.wS.surface.scaled, bottom=data.flux.wS.bottom.scaled),
                                        unscaled = (top=data.flux.wS.surface.unscaled, bottom=data.flux.wS.bottom.unscaled)),                                    
                             scaling = train_data.scaling
-               ) for data in train_data.data] |> dev
+               ) for (data, plot_data) in zip(train_data.data, train_data_plot.data)] |> dev
 
     function predict_diffusivities(Ris, p)
         νs = local_Ri_ν_piecewise_linear.(Ris, p.ν₁, p.m)
@@ -156,13 +156,13 @@ function optimize_parameters(train_data, train_data_plot, ps; coarse_size=32, de
 
     function predict_DE(p)
         probs = [ODEProblem((x, p′, t) -> DE(x, p′, t, param), x₀, (param.scaled_time[1], param.scaled_time[end]), p) for (x₀, param) in zip(x₀s, params)]
-        sols = [Array(solve(prob, solver, saveat=param.scaled_time, reltol=1e-3)) for (param, prob) in zip(params, probs)]
+        sols = [Array(solve(prob, solver, saveat=param.scaled_time, reltol=1e-5)) for (param, prob) in zip(params, probs)]
         return sols
     end
 
     function predict_DE_posttraining(p)
         probs = [ODEProblem((x, p′, t) -> DE(x, p′, t, param), x₀, (param.scaled_original_time[1], param.scaled_original_time[end]), p) for (x₀, param) in zip(x₀s_plot, params)]
-        sols = [solve(prob, solver, saveat=param.scaled_original_time, reltol=1e-3) for (param, prob) in zip(params, probs)]
+        sols = [solve(prob, solver, saveat=param.scaled_original_time, reltol=1e-5) for (param, prob) in zip(params, probs)]
         return sols
     end
 
@@ -383,7 +383,7 @@ function animate_data(train_data, sols, fluxes, diffusivities, index, FILE_DIR; 
     Qᵀ = train_data.data[index].metadata["temperature_flux"]
     Qˢ = train_data.data[index].metadata["salinity_flux"]
     f = train_data.data[index].metadata["coriolis_parameter"]
-    times = train_data.data[index].metadata["original_times"]
+    times = train_data.data[index].times
     Nt = length(times)
 
     time_str = @lift "Qᵁ = $(Qᵁ) m² s⁻², Qᵀ = $(Qᵀ) m s⁻¹ °C, Qˢ = $(Qˢ) m s⁻¹ g kg⁻¹, f = $(f) s⁻¹, Time = $(round(times[$n]/24/60^2, digits=3)) days"

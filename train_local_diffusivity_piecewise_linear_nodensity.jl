@@ -20,7 +20,7 @@ function find_max(a...)
     return maximum(maximum.([a...]))
 end
 
-FILE_DIR = "./training_output/local_diffusivity_piecewise_linear_nodensity_noclamp"
+FILE_DIR = "./training_output/local_diffusivity_piecewise_linear_nodensity_noclamp_lossequal"
 mkpath(FILE_DIR)
 
 LES_FILE_DIRS = [
@@ -181,8 +181,8 @@ function optimize_parameters(train_data, train_data_plot, ps; coarse_size=32, de
 
         T_prefactor = 1
         S_prefactor = T_loss / S_loss
-        u_prefactor = T_loss / u_loss * (0.1 / 0.4)
-        v_prefactor = T_loss / v_loss * (0.1 / 0.4)
+        u_prefactor = T_loss / u_loss
+        v_prefactor = T_loss / v_loss
 
         return (u=u_prefactor, v=v_prefactor, T=T_prefactor, S=S_prefactor)
     end

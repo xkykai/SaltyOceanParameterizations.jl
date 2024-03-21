@@ -23,7 +23,7 @@ function find_max(a...)
     return maximum(maximum.([a...]))
 end
 
-FILE_DIR = "./training_output/UNet_1level_128_swish_local_diffusivity_piecewise_linear_noclamp_VCABM3_ADAM1e-4_rho0.3_test"
+FILE_DIR = "./training_output/UNet_1level_128_swish_local_diffusivity_piecewise_linear_noclamp_VCABM3_reltol1e-5_ADAM1e-3_lossequal_test"
 mkpath(FILE_DIR)
 @info "$(FILE_DIR)"
 
@@ -34,14 +34,14 @@ LES_FILE_DIRS = [
     "./LES_training/linearTS_dTdz_-0.025_dSdz_-0.0045_QU_-0.0002_QT_-0.0003_QS_-3.0e-5_T_-3.6_S_33.9_f_-0.000125_WENO9nu0_Lxz_512.0_256.0_Nxz_256_128/instantaneous_timeseries.jld2",
 ]
 
-BASECLOSURE_FILE_DIR = "./training_output/local_diffusivity_piecewise_linear_noclamp/training_results_2.jld2"
+BASECLOSURE_FILE_DIR = "./training_output/local_diffusivity_piecewise_linear_nodensity_noclamp_lossequal/training_results_2.jld2"
 
 field_datasets = [FieldDataset(FILE_DIR, backend=OnDisk()) for FILE_DIR in LES_FILE_DIRS]
 
 ps_baseclosure = jldopen(BASECLOSURE_FILE_DIR, "r")["u"]
 
-full_timeframes = [1:length(data["ubar"].times) for data in field_datasets]
-timeframes = [5:5:length(data["ubar"].times) for data in field_datasets]
+full_timeframes = [25:length(data["ubar"].times) for data in field_datasets]
+timeframes = [25:5:length(data["ubar"].times) for data in field_datasets]
 train_data = LESDatasets(field_datasets, ZeroMeanUnitVarianceScaling, timeframes)
 coarse_size = 32
 
@@ -75,7 +75,7 @@ ps, st = Lux.setup(rng, NN)
 
 ps = ps |> ComponentArray .|> Float64
 
-ps .*= 0.3
+ps .*= 0
 
 NNs = (; NDE=NN)
 ps_training = ComponentArray(NDE=ps)
@@ -125,10 +125,9 @@ function train_NDE(train_data, train_data_plot, NNs, ps_training, ps_baseclosure
     wS_features = construct_gaussian_fourier_features(wSs_top_scaled, coarse_size, rng) |> dev
 
     params = [(                   f = data.metadata["coriolis_parameter"],
-                           f_scaled = data.coriolis.scaled,
                                   τ = data.times[end] - data.times[1],
                         scaled_time = (data.times .- data.times[1]) ./ (data.times[end] - data.times[1]),
-               scaled_original_time = data.metadata["original_times"] ./ (data.metadata["original_times"][end] - data.metadata["original_times"][1]),
+               scaled_original_time = (plot_data.times .- plot_data.times[1]) ./ (plot_data.times[end] - plot_data.times[1]),
                                  zC = data.metadata["zC"],
                                   H = data.metadata["original_grid"].Lz,
                                   g = data.metadata["gravitational_acceleration"],
@@ -138,17 +137,17 @@ function train_NDE(train_data, train_data_plot, NNs, ps_training, ps_baseclosure
                              Dᶜ_hat = Dᶜ(coarse_size, data.metadata["zC"][2] - data.metadata["zC"][1]) .* data.metadata["original_grid"].Lz,
                              Dᶠ_hat = Dᶠ(coarse_size, data.metadata["zF"][3] - data.metadata["zF"][2]) .* data.metadata["original_grid"].Lz,
                                  uw = (scaled = (top=data.flux.uw.surface.scaled, bottom=data.flux.uw.bottom.scaled),
-                                     unscaled = (top=data.flux.uw.surface.unscaled, bottom=data.flux.uw.bottom.unscaled)),
+                                       unscaled = (top=data.flux.uw.surface.unscaled, bottom=data.flux.uw.bottom.unscaled)),
                                  vw = (scaled = (top=data.flux.vw.surface.scaled, bottom=data.flux.vw.bottom.scaled),
-                                     unscaled = (top=data.flux.vw.surface.unscaled, bottom=data.flux.vw.bottom.unscaled)),
+                                       unscaled = (top=data.flux.vw.surface.unscaled, bottom=data.flux.vw.bottom.unscaled)),
                                  wT = (scaled = (top=data.flux.wT.surface.scaled, bottom=data.flux.wT.bottom.scaled),
-                                     unscaled = (top=data.flux.wT.surface.unscaled, bottom=data.flux.wT.bottom.unscaled)),
+                                       unscaled = (top=data.flux.wT.surface.unscaled, bottom=data.flux.wT.bottom.unscaled)),
                                  wS = (scaled = (top=data.flux.wS.surface.scaled, bottom=data.flux.wS.bottom.scaled),
-                                     unscaled = (top=data.flux.wS.surface.unscaled, bottom=data.flux.wS.bottom.unscaled)),           
-                                     scaling = merge(train_data.scaling, (; diffusivity=DiffusivityScaling())),
-                                     feature = (f=f_feature, uw=uw_feature, vw=vw_feature, wT=wT_feature, wS=wS_feature),
-               ) for (data, f_feature, uw_feature, vw_feature, wT_feature, wS_feature) in zip(train_data.data, f_features, uw_features, vw_features, wT_features, wS_features)] |> dev
-    
+                                       unscaled = (top=data.flux.wS.surface.unscaled, bottom=data.flux.wS.bottom.unscaled)),                                    
+                            scaling = train_data.scaling,
+                            feature = (f=f_feature, uw=uw_feature, vw=vw_feature, wT=wT_feature, wS=wS_feature),
+                            ) for (data, plot_data, f_feature, uw_feature, vw_feature, wT_feature, wS_feature) in zip(train_data.data, train_data_plot.data, f_features, uw_features, vw_features, wT_features, wS_features)] |> dev
+
     function predict_residual_flux(u_hat, v_hat, T_hat, S_hat, ρ_hat, p, params, st)
         x′ = reshape(hcat(u_hat, v_hat, T_hat, S_hat, ρ_hat, params.feature.uw, params.feature.vw, params.feature.wT, params.feature.wS, params.feature.f), coarse_size, 10, 1)
         
@@ -301,13 +300,13 @@ function train_NDE(train_data, train_data_plot, NNs, ps_training, ps_baseclosure
 
     function predict_NDE(p)
         probs = [ODEProblem((x, p′, t) -> NDE(x, p′, t, param, st_NN), x₀, (param.scaled_time[1], param.scaled_time[end]), p) for (x₀, param) in zip(x₀s, params)]
-        sols = [Array(solve(prob, solver, saveat=param.scaled_time, reltol=1e-3)) for (param, prob) in zip(params, probs)]
+        sols = [Array(solve(prob, solver, saveat=param.scaled_time, reltol=1e-5)) for (param, prob) in zip(params, probs)]
         return sols
     end
 
     function predict_NDE_posttraining(p)
         probs = [ODEProblem((x, p′, t) -> NDE(x, p′, t, param, st_NN), x₀, (param.scaled_original_time[1], param.scaled_original_time[end]), p) for (x₀, param) in zip(x₀s, params)]
-        sols = [solve(prob, solver, saveat=param.scaled_original_time, reltol=1e-3) for (param, prob) in zip(params, probs)]
+        sols = [solve(prob, solver, saveat=param.scaled_original_time, reltol=1e-5) for (param, prob) in zip(params, probs)]
         return sols
     end
 
@@ -637,7 +636,7 @@ function animate_data(train_data, sols, fluxes, diffusivities, index, FILE_DIR; 
     Qᵀ = train_data.data[index].metadata["temperature_flux"]
     Qˢ = train_data.data[index].metadata["salinity_flux"]
     f = train_data.data[index].metadata["coriolis_parameter"]
-    times = train_data.data[index].metadata["original_times"]
+    times = train_data.data[index].times
     Nt = length(times)
 
     time_str = @lift "Qᵁ = $(Qᵁ) m² s⁻², Qᵀ = $(Qᵀ) m s⁻¹ °C, Qˢ = $(Qˢ) m s⁻¹ g kg⁻¹, f = $(f) s⁻¹, Time = $(round(times[$n]/24/60^2, digits=3)) days"
@@ -701,25 +700,14 @@ function animate_data(train_data, sols, fluxes, diffusivities, index, FILE_DIR; 
     xlims!(axRi, Rilim)
     xlims!(axdiffusivity, diffusivitylim)
 
-    # display(fig)
-
     CairoMakie.record(fig, "$(FILE_DIR)/training_$(index)_epoch$(epoch).mp4", 1:Nt, framerate=15) do nn
-        # xlims!(axu, nothing, nothing)
-        # xlims!(axv, nothing, nothing)
-        # xlims!(axT, nothing, nothing)
-        # xlims!(axS, nothing, nothing)
-        # xlims!(axρ, nothing, nothing)
-        # xlims!(axuw, nothing, nothing)
-        # xlims!(axvw, nothing, nothing)
-        # xlims!(axwT, nothing, nothing)
-        # xlims!(axwS, nothing, nothing)
         n[] = nn
     end
 end
 
 epoch = 1
 
-res, loss, sols, fluxes, losses, diffusivities = train_NDE(train_data, train_data_plot, NNs, ps_training, ps_baseclosure, st_NN, rng, maxiter=100, solver=VCABM3(), optimizer=OptimizationOptimisers.ADAM(1e-4))
+res, loss, sols, fluxes, losses, diffusivities = train_NDE(train_data, train_data_plot, NNs, ps_training, ps_baseclosure, st_NN, rng, maxiter=200, solver=VCABM3(), optimizer=OptimizationOptimisers.ADAM(1e-3))
 
 u = res.u
 jldsave("$(FILE_DIR)/training_results_$(epoch).jld2"; res, u, loss, sols, fluxes, losses, NNs, st_NN, diffusivities)
@@ -730,7 +718,7 @@ end
 
 epoch += 1
 
-res, loss, sols, fluxes, losses, diffusivities = train_NDE(train_data, train_data_plot, NNs, res.u, ps_baseclosure, st_NN, rng, maxiter=100, solver=VCABM3(), optimizer=OptimizationOptimisers.ADAM(1e-4))
+res, loss, sols, fluxes, losses, diffusivities = train_NDE(train_data, train_data_plot, NNs, res.u, ps_baseclosure, st_NN, rng, maxiter=200, solver=VCABM3(), Ri_clamp_lims=(-20, 20), optimizer=OptimizationOptimisers.ADAM(1e-3))
 u = res.u
 jldsave("$(FILE_DIR)/training_results_$(epoch).jld2"; res, u, loss, sols, fluxes, losses, NNs, st_NN, diffusivities)
 plot_loss(losses, FILE_DIR, epoch=epoch)
@@ -740,7 +728,7 @@ end
 
 epoch += 1
 
-res, loss, sols, fluxes, losses, diffusivities = train_NDE(train_data, train_data_plot, NNs, res.u, ps_baseclosure, st_NN, rng, maxiter=100, solver=VCABM3(), optimizer=OptimizationOptimisers.ADAM(5e-5))
+res, loss, sols, fluxes, losses, diffusivities = train_NDE(train_data, train_data_plot, NNs, res.u, ps_baseclosure, st_NN, rng, maxiter=200, solver=VCABM3(), Ri_clamp_lims=(-20, 20), optimizer=OptimizationOptimisers.ADAM(5e-4))
 
 u = res.u
 jldsave("$(FILE_DIR)/training_results_$(epoch).jld2"; res, u, loss, sols, fluxes, losses, NNs, st_NN, diffusivities)
@@ -751,7 +739,7 @@ end
 
 epoch += 1
 
-res, loss, sols, fluxes, losses, diffusivities = train_NDE(train_data, train_data_plot, NNs, res.u, ps_baseclosure, st_NN, rng, maxiter=100, solver=VCABM3(), optimizer=OptimizationOptimisers.ADAM(5e-5))
+res, loss, sols, fluxes, losses, diffusivities = train_NDE(train_data, train_data_plot, NNs, res.u, ps_baseclosure, st_NN, rng, maxiter=100, solver=VCABM3(), Ri_clamp_lims=(-20, 20), optimizer=OptimizationOptimisers.ADAM(5e-4))
 
 u = res.u
 jldsave("$(FILE_DIR)/training_results_$(epoch).jld2"; res, u, loss, sols, fluxes, losses, NNs, st_NN, diffusivities)

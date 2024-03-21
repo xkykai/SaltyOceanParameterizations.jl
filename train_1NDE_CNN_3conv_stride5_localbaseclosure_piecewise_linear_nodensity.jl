@@ -23,7 +23,7 @@ function find_max(a...)
     return maximum(maximum.([a...]))
 end
 
-FILE_DIR = "./training_output/UNet_1level_128_swish_local_diffusivity_piecewise_linear_nodensity_noclamp_VCABM3_reltol1e-5_ADAM1e-3_lossequal_test"
+FILE_DIR = "./training_output/1CNN_3conv_stride5_128_swish_local_diffusivity_piecewise_linear_nodensity_noclamp_VCABM3_ADAM1e-3_lossequal_test"
 mkpath(FILE_DIR)
 @info "$(FILE_DIR)"
 
@@ -49,33 +49,19 @@ train_data_plot = LESDatasets(field_datasets, ZeroMeanUnitVarianceScaling, full_
 
 rng = Random.default_rng(123)
 
-layer1 = Chain(Conv(Tuple(5), 10 => 8, swish, pad=SamePad()),
-               Conv(Tuple(5), 8 => 8, swish, pad=SamePad()),)
-
-layer2 = Chain(MaxPool(Tuple(2), stride=2), 
-               Conv(Tuple(5), 8 => 16, swish, pad=SamePad()),
-               Upsample(2),
-               Conv(Tuple(5), 16 => 8, swish, pad=SamePad()))
-
-layer3 = Chain(Conv(Tuple(5), 16 => 16, swish, pad=SamePad()),
-               Conv(Tuple(5), 16 => 8, swish, pad=SamePad()),
-               Conv(Tuple(1), 8 => 5, pad=SamePad()),
-               FlattenLayer(),)
-
-layer4 = Chain(Dense(32*5, 128, swish),
-               Dense(128, 124))
-
-function concat_two_layers(output, input)
-    return cat(output, input, dims=2)
-end
-
-NN = Chain(layer1, SkipConnection(layer2, concat_two_layers), layer3, layer4)
+NN = Chain(Conv(Tuple(5), 10 => 10, swish),
+           Conv(Tuple(5), 10 => 10, swish),
+           Conv(Tuple(5), 10 => 10, swish),
+           FlattenLayer(),
+           Dense(20*10, 128, swish),
+           Dense(128, 124)
+)
 
 ps, st = Lux.setup(rng, NN)
 
 ps = ps |> ComponentArray .|> Float64
 
-ps .*= 0.3
+ps .*= 0
 
 NNs = (; NDE=NN)
 ps_training = ComponentArray(NDE=ps)
@@ -724,7 +710,7 @@ end
 
 epoch += 1
 
-res, loss, sols, fluxes, losses, diffusivities = train_NDE(train_data, train_data_plot, NNs, res.u, ps_baseclosure, st_NN, rng, maxiter=100, solver=VCABM3(), optimizer=OptimizationOptimisers.ADAM(5e-4))
+res, loss, sols, fluxes, losses, diffusivities = train_NDE(train_data, train_data_plot, NNs, res.u, ps_baseclosure, st_NN, rng, maxiter=100, solver=VCABM3(), Ri_clamp_lims=(-20, 20), optimizer=OptimizationOptimisers.ADAM(5e-4))
 
 u = res.u
 jldsave("$(FILE_DIR)/training_results_$(epoch).jld2"; res, u, loss, sols, fluxes, losses, NNs, st_NN, diffusivities)

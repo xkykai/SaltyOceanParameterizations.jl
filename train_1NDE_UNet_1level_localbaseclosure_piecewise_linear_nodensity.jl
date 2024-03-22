@@ -23,7 +23,7 @@ function find_max(a...)
     return maximum(maximum.([a...]))
 end
 
-FILE_DIR = "./training_output/UNet_1level_128_swish_local_diffusivity_piecewise_linear_nodensity_noclamp_VCABM3_reltol1e-5_ADAM1e-3_lossequal_test"
+FILE_DIR = "./training_output/UNet_1level_128_swish_local_diffusivity_piecewise_linear_nodensity_noclamp_VCABM3_reltol1e-5_ADAM1e-4_lossequal_gradient0.8_test"
 mkpath(FILE_DIR)
 @info "$(FILE_DIR)"
 
@@ -34,7 +34,7 @@ LES_FILE_DIRS = [
     "./LES_training/linearTS_dTdz_-0.025_dSdz_-0.0045_QU_-0.0002_QT_-0.0003_QS_-3.0e-5_T_-3.6_S_33.9_f_-0.000125_WENO9nu0_Lxz_512.0_256.0_Nxz_256_128/instantaneous_timeseries.jld2",
 ]
 
-BASECLOSURE_FILE_DIR = "./training_output/local_diffusivity_piecewise_linear_nodensity_noclamp_lossequal/training_results_2.jld2"
+BASECLOSURE_FILE_DIR = "./training_output/local_diffusivity_piecewise_linear_nodensity_noclamp_lossequal_reltol1e-5/training_results_4.jld2"
 
 field_datasets = [FieldDataset(FILE_DIR, backend=OnDisk()) for FILE_DIR in LES_FILE_DIRS]
 
@@ -358,7 +358,7 @@ function train_NDE(train_data, train_data_plot, NNs, ps_training, ps_baseclosure
         profile_loss = u_prefactor * u_loss + v_prefactor * v_loss + T_prefactor * T_loss + S_prefactor * S_loss
         gradient_loss = ∂u∂z_prefactor * ∂u∂z_loss + ∂v∂z_prefactor * ∂v∂z_loss + ∂T∂z_prefactor * ∂T∂z_loss + ∂S∂z_prefactor * ∂S∂z_loss
 
-        gradient_prefactor = profile_loss / gradient_loss
+        gradient_prefactor = profile_loss / gradient_loss * (0.8/0.2)
 
         ∂T∂z_prefactor *= gradient_prefactor
         ∂S∂z_prefactor *= gradient_prefactor
@@ -692,7 +692,7 @@ end
 
 epoch = 1
 
-res, loss, sols, fluxes, losses, diffusivities = train_NDE(train_data, train_data_plot, NNs, ps_training, ps_baseclosure, st_NN, rng, maxiter=200, solver=VCABM3(), optimizer=OptimizationOptimisers.ADAM(1e-3))
+res, loss, sols, fluxes, losses, diffusivities = train_NDE(train_data, train_data_plot, NNs, ps_training, ps_baseclosure, st_NN, rng, maxiter=200, solver=VCABM3(), optimizer=OptimizationOptimisers.ADAM(1e-4))
 
 u = res.u
 jldsave("$(FILE_DIR)/training_results_$(epoch).jld2"; res, u, loss, sols, fluxes, losses, NNs, st_NN, diffusivities)
@@ -703,7 +703,7 @@ end
 
 epoch += 1
 
-res, loss, sols, fluxes, losses, diffusivities = train_NDE(train_data, train_data_plot, NNs, res.u, ps_baseclosure, st_NN, rng, maxiter=200, solver=VCABM3(), optimizer=OptimizationOptimisers.ADAM(1e-3))
+res, loss, sols, fluxes, losses, diffusivities = train_NDE(train_data, train_data_plot, NNs, res.u, ps_baseclosure, st_NN, rng, maxiter=200, solver=VCABM3(), optimizer=OptimizationOptimisers.ADAM(1e-4))
 u = res.u
 jldsave("$(FILE_DIR)/training_results_$(epoch).jld2"; res, u, loss, sols, fluxes, losses, NNs, st_NN, diffusivities)
 plot_loss(losses, FILE_DIR, epoch=epoch)
@@ -713,7 +713,7 @@ end
 
 epoch += 1
 
-res, loss, sols, fluxes, losses, diffusivities = train_NDE(train_data, train_data_plot, NNs, res.u, ps_baseclosure, st_NN, rng, maxiter=200, solver=VCABM3(), optimizer=OptimizationOptimisers.ADAM(5e-4))
+res, loss, sols, fluxes, losses, diffusivities = train_NDE(train_data, train_data_plot, NNs, res.u, ps_baseclosure, st_NN, rng, maxiter=200, solver=VCABM3(), optimizer=OptimizationOptimisers.ADAM(5e-5))
 
 u = res.u
 jldsave("$(FILE_DIR)/training_results_$(epoch).jld2"; res, u, loss, sols, fluxes, losses, NNs, st_NN, diffusivities)
@@ -724,7 +724,7 @@ end
 
 epoch += 1
 
-res, loss, sols, fluxes, losses, diffusivities = train_NDE(train_data, train_data_plot, NNs, res.u, ps_baseclosure, st_NN, rng, maxiter=100, solver=VCABM3(), optimizer=OptimizationOptimisers.ADAM(5e-4))
+res, loss, sols, fluxes, losses, diffusivities = train_NDE(train_data, train_data_plot, NNs, res.u, ps_baseclosure, st_NN, rng, maxiter=100, solver=VCABM3(), optimizer=OptimizationOptimisers.ADAM(5e-5))
 
 u = res.u
 jldsave("$(FILE_DIR)/training_results_$(epoch).jld2"; res, u, loss, sols, fluxes, losses, NNs, st_NN, diffusivities)

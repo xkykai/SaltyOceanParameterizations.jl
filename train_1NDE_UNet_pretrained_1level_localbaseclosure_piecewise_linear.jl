@@ -23,7 +23,7 @@ function find_max(a...)
     return maximum(maximum.([a...]))
 end
 
-FILE_DIR = "./training_output/UNet_pretrained_1level_128_swish_local_diffusivity_piecewise_linear_noclamp_VCABM3_reltol1e-5_ADAM1e-4_lossequal_gradient0.9_test"
+FILE_DIR = "./training_output/UNet_pretrained_1level_128_swish_local_diffusivity_piecewise_linear_noclamp_VCABM3_reltol1e-5_ADAM1e-4_lossequal_gradient0.99_test"
 mkpath(FILE_DIR)
 @info "$(FILE_DIR)"
 
@@ -65,7 +65,7 @@ layer3 = Chain(Conv(Tuple(5), 16 => 16, swish, pad=SamePad()),
 
 layer4 = Chain(Dense(32*5, 128, swish),
                Dense(128, 124))
-               
+
 function concat_two_layers(output, input)
     return cat(output, input, dims=2)
 end
@@ -367,7 +367,7 @@ function train_NDE(train_data, train_data_plot, NNs, ps_training, ps_baseclosure
         profile_loss = u_prefactor * u_loss + v_prefactor * v_loss + T_prefactor * T_loss + S_prefactor * S_loss + ρ_prefactor * ρ_loss
         gradient_loss = ∂u∂z_prefactor * ∂u∂z_loss + ∂v∂z_prefactor * ∂v∂z_loss + ∂T∂z_prefactor * ∂T∂z_loss + ∂S∂z_prefactor * ∂S∂z_loss + ∂ρ∂z_prefactor * ∂ρ∂z_loss
 
-        gradient_prefactor = profile_loss / gradient_loss * (0.9/0.1)
+        gradient_prefactor = profile_loss / gradient_loss * (0.99/0.01)
 
         ∂ρ∂z_prefactor *= gradient_prefactor
         ∂T∂z_prefactor *= gradient_prefactor

@@ -23,7 +23,7 @@ function find_max(a...)
     return maximum(maximum.([a...]))
 end
 
-FILE_DIR = "./training_output/UNet_1level_128_swish_local_diffusivity_piecewise_linear_nodensity_noclamp_VCABM3_reltol1e-5_ADAM1e-4_lossequal_gradient0.8_test"
+FILE_DIR = "./training_output/UNet_1level_128_swish_local_diffusivity_piecewise_linear_nodensity_noclamp_VCABM3_reltol1e-5_ADAM1e-4_lossequal_gradient0.99_uv0.05_test"
 mkpath(FILE_DIR)
 @info "$(FILE_DIR)"
 
@@ -347,18 +347,18 @@ function train_NDE(train_data, train_data_plot, NNs, ps_training, ps_baseclosure
     function compute_loss_prefactor(u_loss, v_loss, T_loss, S_loss, ∂u∂z_loss, ∂v∂z_loss, ∂T∂z_loss, ∂S∂z_loss)
         T_prefactor = 1
         S_prefactor = T_loss / S_loss
-        u_prefactor = T_loss / u_loss
-        v_prefactor = T_loss / v_loss
+        u_prefactor = T_loss / u_loss * (0.05 / 0.45)
+        v_prefactor = T_loss / v_loss * (0.05 / 0.45)
 
         ∂T∂z_prefactor = 1
         ∂S∂z_prefactor = ∂T∂z_loss / ∂S∂z_loss
-        ∂u∂z_prefactor = ∂T∂z_loss / ∂u∂z_loss
-        ∂v∂z_prefactor = ∂T∂z_loss / ∂v∂z_loss
+        ∂u∂z_prefactor = ∂T∂z_loss / ∂u∂z_loss * (0.05 / 0.45)
+        ∂v∂z_prefactor = ∂T∂z_loss / ∂v∂z_loss * (0.05 / 0.45)
 
         profile_loss = u_prefactor * u_loss + v_prefactor * v_loss + T_prefactor * T_loss + S_prefactor * S_loss
         gradient_loss = ∂u∂z_prefactor * ∂u∂z_loss + ∂v∂z_prefactor * ∂v∂z_loss + ∂T∂z_prefactor * ∂T∂z_loss + ∂S∂z_prefactor * ∂S∂z_loss
 
-        gradient_prefactor = profile_loss / gradient_loss * (0.8/0.2)
+        gradient_prefactor = profile_loss / gradient_loss * (0.99/0.01)
 
         ∂T∂z_prefactor *= gradient_prefactor
         ∂S∂z_prefactor *= gradient_prefactor

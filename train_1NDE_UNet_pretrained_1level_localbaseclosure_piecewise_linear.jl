@@ -65,14 +65,15 @@ layer3 = Chain(Conv(Tuple(5), 16 => 16, swish, pad=SamePad()),
 
 layer4 = Chain(Dense(32*5, 128, swish),
                Dense(128, 124))
+               
+function concat_two_layers(output, input)
+    return cat(output, input, dims=2)
+end
 
 NN = Chain(layer1, SkipConnection(layer2, concat_two_layers), layer3, layer4)
 
 ps, st = Lux.setup(rng, NN)
 
-function concat_two_layers(output, input)
-    return cat(output, input, dims=2)
-end
 
 ps_training = jldopen(NN_FILE_DIR, "r")["u"]
 st_NN = jldopen(NN_FILE_DIR, "r")["st_NN"]

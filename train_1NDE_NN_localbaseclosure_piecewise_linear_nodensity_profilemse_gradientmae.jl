@@ -22,7 +22,7 @@ function find_max(a...)
     return maximum(maximum.([a...]))
 end
 
-FILE_DIR = "./training_output/1NN_swish_512_local_diffusivity_piecewise_linear_nodensity_noclamp_VCABM3_reltol1e-5_lossequal_profilemse_gradientmae_test"
+FILE_DIR = "./training_output/1NN_swish_512_local_diffusivity_piecewise_linear_nodensity_noclamp_VCABM3_reltol1e-5_TS0.8_profilemse_gradientmae_test"
 
 mkpath(FILE_DIR)
 @info "$(FILE_DIR)"

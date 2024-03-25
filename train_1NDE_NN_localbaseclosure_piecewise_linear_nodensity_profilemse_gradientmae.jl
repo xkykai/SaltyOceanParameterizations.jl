@@ -290,13 +290,13 @@ function train_NDE(train_data, train_data_plot, NNs, ps_training, ps_baseclosure
     function compute_loss_prefactor(u_loss, v_loss, T_loss, S_loss, ∂u∂z_loss, ∂v∂z_loss, ∂T∂z_loss, ∂S∂z_loss)
         T_prefactor = 1
         S_prefactor = T_loss / S_loss
-        u_prefactor = T_loss / u_loss
-        v_prefactor = T_loss / v_loss
+        u_prefactor = T_loss / u_loss * (0.1/0.4)
+        v_prefactor = T_loss / v_loss * (0.1/0.4)
 
         ∂T∂z_prefactor = 1
         ∂S∂z_prefactor = ∂T∂z_loss / ∂S∂z_loss
-        ∂u∂z_prefactor = ∂T∂z_loss / ∂u∂z_loss
-        ∂v∂z_prefactor = ∂T∂z_loss / ∂v∂z_loss
+        ∂u∂z_prefactor = ∂T∂z_loss / ∂u∂z_loss * (0.1/0.4)
+        ∂v∂z_prefactor = ∂T∂z_loss / ∂v∂z_loss * (0.1/0.4)
 
         profile_loss = u_prefactor * u_loss + v_prefactor * v_loss + T_prefactor * T_loss + S_prefactor * S_loss
         gradient_loss = ∂u∂z_prefactor * ∂u∂z_loss + ∂v∂z_prefactor * ∂v∂z_loss + ∂T∂z_prefactor * ∂T∂z_loss + ∂S∂z_prefactor * ∂S∂z_loss

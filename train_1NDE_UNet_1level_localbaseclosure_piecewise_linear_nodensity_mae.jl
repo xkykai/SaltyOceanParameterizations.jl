@@ -23,7 +23,7 @@ function find_max(a...)
     return maximum(maximum.([a...]))
 end
 
-FILE_DIR = "./training_output/UNet_1level_128_swish_local_diffusivity_piecewise_linear_noclamp_VCABM3_reltol1e-5_ADAM2e-5_lossequal_mae_test"
+FILE_DIR = "./training_output/UNet_1level_128_swish_local_diffusivity_piecewise_linear_nodensity_noclamp_VCABM3_reltol1e-5_ADAM2e-5_lossequal_test"
 mkpath(FILE_DIR)
 @info "$(FILE_DIR)"
 
@@ -34,7 +34,7 @@ LES_FILE_DIRS = [
     "./LES_training/linearTS_dTdz_-0.025_dSdz_-0.0045_QU_-0.0002_QT_-0.0003_QS_-3.0e-5_T_-3.6_S_33.9_f_-0.000125_WENO9nu0_Lxz_512.0_256.0_Nxz_256_128/instantaneous_timeseries.jld2",
 ]
 
-BASECLOSURE_FILE_DIR = "./training_output/local_diffusivity_piecewise_linear_noclamp_lossequal_reltol1e-5/training_results_4.jld2"
+BASECLOSURE_FILE_DIR = "./training_output/local_diffusivity_piecewise_linear_nodensity_noclamp_lossequal_reltol1e-5/training_results_4.jld2"
 
 field_datasets = [FieldDataset(FILE_DIR, backend=OnDisk()) for FILE_DIR in LES_FILE_DIRS]
 
@@ -322,64 +322,55 @@ function train_NDE(train_data, train_data_plot, NNs, ps_training, ps_baseclosure
         Ts = [inv(param.scaling.T).(T_hat) for (T_hat, param) in zip(T_hats, params)]
         Ss = [inv(param.scaling.S).(S_hat) for (S_hat, param) in zip(S_hats, params)]
 
-        ρs = [calculate_unscaled_density(T, S) for (T, S) in zip(Ts, Ss)]
-        ρ_hats = [param.scaling.ρ.(ρ) for (ρ, param) in zip(ρs, params)]
-
         ∂u∂z_hats = [hcat([param.scaling.∂u∂z.(param.Dᶠ * @view(u[:, i])) for i in axes(u, 2)]...) for (param, u) in zip(params, us)]
         ∂v∂z_hats = [hcat([param.scaling.∂v∂z.(param.Dᶠ * @view(v[:, i])) for i in axes(v, 2)]...) for (param, v) in zip(params, vs)]
         ∂T∂z_hats = [hcat([param.scaling.∂T∂z.(param.Dᶠ * @view(T[:, i])) for i in axes(T, 2)]...) for (param, T) in zip(params, Ts)]
         ∂S∂z_hats = [hcat([param.scaling.∂S∂z.(param.Dᶠ * @view(S[:, i])) for i in axes(S, 2)]...) for (param, S) in zip(params, Ss)]
-        ∂ρ∂z_hats = [hcat([param.scaling.∂ρ∂z.(param.Dᶠ * @view(ρ[:, i])) for i in axes(ρ, 2)]...) for (param, ρ) in zip(params, ρs)]
 
-        return u_hats, v_hats, T_hats, S_hats, ρ_hats, ∂u∂z_hats, ∂v∂z_hats, ∂T∂z_hats, ∂S∂z_hats, ∂ρ∂z_hats, preds
+        return u_hats, v_hats, T_hats, S_hats, ∂u∂z_hats, ∂v∂z_hats, ∂T∂z_hats, ∂S∂z_hats, preds
     end
 
-    function predict_losses(u, v, T, S, ρ, ∂u∂z, ∂v∂z, ∂T∂z, ∂S∂z, ∂ρ∂z, loss_scaling=(; u=1, v=1, T=1, S=1, ρ=1, ∂u∂z=1, ∂v∂z=1, ∂T∂z=1, ∂S∂z=1, ∂ρ∂z=1))
+    function predict_losses(u, v, T, S, ∂u∂z, ∂v∂z, ∂T∂z, ∂S∂z, loss_scaling=(; u=1, v=1, T=1, S=1, ∂u∂z=1, ∂v∂z=1, ∂T∂z=1, ∂S∂z=1))
         u_loss = loss_scaling.u * mean(mean.([abs.(data.profile.u.scaled .- u) for (data, u) in zip(train_data.data, u)]))
         v_loss = loss_scaling.v * mean(mean.([abs.(data.profile.v.scaled .- v) for (data, v) in zip(train_data.data, v)]))
         T_loss = loss_scaling.T * mean(mean.([abs.(data.profile.T.scaled .- T) for (data, T) in zip(train_data.data, T)]))
         S_loss = loss_scaling.S * mean(mean.([abs.(data.profile.S.scaled .- S) for (data, S) in zip(train_data.data, S)]))
-        ρ_loss = loss_scaling.ρ * mean(mean.([abs.(data.profile.ρ.scaled .- ρ) for (data, ρ) in zip(train_data.data, ρ)]))
 
         ∂u∂z_loss = loss_scaling.∂u∂z * mean(mean.([abs.(data.profile.∂u∂z.scaled .- ∂u∂z) for (data, ∂u∂z) in zip(train_data.data, ∂u∂z)]))
         ∂v∂z_loss = loss_scaling.∂v∂z * mean(mean.([abs.(data.profile.∂v∂z.scaled .- ∂v∂z) for (data, ∂v∂z) in zip(train_data.data, ∂v∂z)]))
         ∂T∂z_loss = loss_scaling.∂T∂z * mean(mean.([abs.(data.profile.∂T∂z.scaled .- ∂T∂z) for (data, ∂T∂z) in zip(train_data.data, ∂T∂z)]))
         ∂S∂z_loss = loss_scaling.∂S∂z * mean(mean.([abs.(data.profile.∂S∂z.scaled .- ∂S∂z) for (data, ∂S∂z) in zip(train_data.data, ∂S∂z)]))
-        ∂ρ∂z_loss = loss_scaling.∂ρ∂z * mean(mean.([abs.(data.profile.∂ρ∂z.scaled .- ∂ρ∂z) for (data, ∂ρ∂z) in zip(train_data.data, ∂ρ∂z)]))
 
-        return (u=u_loss, v=v_loss, T=T_loss, S=S_loss, ρ=ρ_loss, ∂u∂z=∂u∂z_loss, ∂v∂z=∂v∂z_loss, ∂T∂z=∂T∂z_loss, ∂S∂z=∂S∂z_loss, ∂ρ∂z=∂ρ∂z_loss)
+        return (u=u_loss, v=v_loss, T=T_loss, S=S_loss, ∂u∂z=∂u∂z_loss, ∂v∂z=∂v∂z_loss, ∂T∂z=∂T∂z_loss, ∂S∂z=∂S∂z_loss)
     end
 
-    function compute_loss_prefactor(u_loss, v_loss, T_loss, S_loss, ρ_loss, ∂u∂z_loss, ∂v∂z_loss, ∂T∂z_loss, ∂S∂z_loss, ∂ρ∂z_loss)
-        ρ_prefactor = 1
-        T_prefactor = ρ_loss / T_loss
-        S_prefactor = ρ_loss / S_loss
-        u_prefactor = ρ_loss / u_loss
-        v_prefactor = ρ_loss / v_loss
+    function compute_loss_prefactor(u_loss, v_loss, T_loss, S_loss, ∂u∂z_loss, ∂v∂z_loss, ∂T∂z_loss, ∂S∂z_loss)
+        T_prefactor = 1
+        S_prefactor = T_loss / S_loss
+        u_prefactor = T_loss / u_loss * (0.05 / 0.45)
+        v_prefactor = T_loss / v_loss * (0.05 / 0.45)
 
-        ∂ρ∂z_prefactor = 1
-        ∂T∂z_prefactor = ∂ρ∂z_loss / ∂T∂z_loss
-        ∂S∂z_prefactor = ∂ρ∂z_loss / ∂S∂z_loss
-        ∂u∂z_prefactor = ∂ρ∂z_loss / ∂u∂z_loss
-        ∂v∂z_prefactor = ∂ρ∂z_loss / ∂v∂z_loss
+        ∂T∂z_prefactor = 1
+        ∂S∂z_prefactor = ∂T∂z_loss / ∂S∂z_loss
+        ∂u∂z_prefactor = ∂T∂z_loss / ∂u∂z_loss * (0.05 / 0.45)
+        ∂v∂z_prefactor = ∂T∂z_loss / ∂v∂z_loss * (0.05 / 0.45)
 
-        profile_loss = u_prefactor * u_loss + v_prefactor * v_loss + T_prefactor * T_loss + S_prefactor * S_loss + ρ_prefactor * ρ_loss
-        gradient_loss = ∂u∂z_prefactor * ∂u∂z_loss + ∂v∂z_prefactor * ∂v∂z_loss + ∂T∂z_prefactor * ∂T∂z_loss + ∂S∂z_prefactor * ∂S∂z_loss + ∂ρ∂z_prefactor * ∂ρ∂z_loss
+        profile_loss = u_prefactor * u_loss + v_prefactor * v_loss + T_prefactor * T_loss + S_prefactor * S_loss
+        gradient_loss = ∂u∂z_prefactor * ∂u∂z_loss + ∂v∂z_prefactor * ∂v∂z_loss + ∂T∂z_prefactor * ∂T∂z_loss + ∂S∂z_prefactor * ∂S∂z_loss
 
-        gradient_prefactor = profile_loss / gradient_loss
+        gradient_prefactor = profile_loss / gradient_loss * (0.99/0.01)
 
-        ∂ρ∂z_prefactor *= gradient_prefactor
         ∂T∂z_prefactor *= gradient_prefactor
         ∂S∂z_prefactor *= gradient_prefactor
         ∂u∂z_prefactor *= gradient_prefactor
         ∂v∂z_prefactor *= gradient_prefactor
 
-        return (ρ=ρ_prefactor, T=T_prefactor, S=S_prefactor, u=u_prefactor, v=v_prefactor, ∂ρ∂z=∂ρ∂z_prefactor, ∂T∂z=∂T∂z_prefactor, ∂S∂z=∂S∂z_prefactor, ∂u∂z=∂u∂z_prefactor, ∂v∂z=∂v∂z_prefactor)
+        return (T=T_prefactor, S=S_prefactor, u=u_prefactor, v=v_prefactor, ∂T∂z=∂T∂z_prefactor, ∂S∂z=∂S∂z_prefactor, ∂u∂z=∂u∂z_prefactor, ∂v∂z=∂v∂z_prefactor)
     end
 
     function compute_loss_prefactor(p)
-        u, v, T, S, ρ, ∂u∂z, ∂v∂z, ∂T∂z, ∂S∂z, ∂ρ∂z, _ = predict_scaled_profiles(p)
-        losses = predict_losses(u, v, T, S, ρ, ∂u∂z, ∂v∂z, ∂T∂z, ∂S∂z, ∂ρ∂z)
+        u, v, T, S, ∂u∂z, ∂v∂z, ∂T∂z, ∂S∂z, _ = predict_scaled_profiles(p)
+        losses = predict_losses(u, v, T, S, ∂u∂z, ∂v∂z, ∂T∂z, ∂S∂z)
         return compute_loss_prefactor(losses...)
     end
 
@@ -388,8 +379,8 @@ function train_NDE(train_data, train_data_plot, NNs, ps_training, ps_baseclosure
     losses_prefactor = compute_loss_prefactor(ps_training)
 
     function loss_NDE(p)
-        u, v, T, S, ρ, ∂u∂z, ∂v∂z, ∂T∂z, ∂S∂z, ∂ρ∂z, preds = predict_scaled_profiles(p)
-        individual_loss = predict_losses(u, v, T, S, ρ, ∂u∂z, ∂v∂z, ∂T∂z, ∂S∂z, ∂ρ∂z, losses_prefactor)
+        u, v, T, S, ∂u∂z, ∂v∂z, ∂T∂z, ∂S∂z, preds = predict_scaled_profiles(p)
+        individual_loss = predict_losses(u, v, T, S, ∂u∂z, ∂v∂z, ∂T∂z, ∂S∂z, losses_prefactor)
         loss = sum(values(individual_loss))
 
         return loss, preds, individual_loss
@@ -402,31 +393,27 @@ function train_NDE(train_data, train_data_plot, NNs, ps_training, ps_baseclosure
     v_losses = zeros(maxiter+1)
     T_losses = zeros(maxiter+1)
     S_losses = zeros(maxiter+1)
-    ρ_losses = zeros(maxiter+1)
     ∂u∂z_losses = zeros(maxiter+1)
     ∂v∂z_losses = zeros(maxiter+1)
     ∂T∂z_losses = zeros(maxiter+1)
     ∂S∂z_losses = zeros(maxiter+1)
-    ∂ρ∂z_losses = zeros(maxiter+1)
 
     wall_clock = [time_ns()]
 
     callback = function (p, l, pred, ind_loss)
-        @printf("%s, Δt %s, iter %d/%d, loss total %6.10e, u %6.5e, v %6.5e, T %6.5e, S %6.5e, ρ %6.5e, ∂u∂z %6.5e, ∂v∂z %6.5e, ∂T∂z %6.5e, ∂S∂z %6.5e, ∂ρ∂z %6.5e,\n",
+        @printf("%s, Δt %s, iter %d/%d, loss total %6.10e, u %6.5e, v %6.5e, T %6.5e, S %6.5e, ∂u∂z %6.5e, ∂v∂z %6.5e, ∂T∂z %6.5e, ∂S∂z %6.5e\n",
                 Dates.now(), prettytime(1e-9 * (time_ns() - wall_clock[1])), iter, maxiter, l, 
-                ind_loss.u, ind_loss.v, ind_loss.T, ind_loss.S, ind_loss.ρ, 
-                ind_loss.∂u∂z, ind_loss.∂v∂z, ind_loss.∂T∂z, ind_loss.∂S∂z, ind_loss.∂ρ∂z)
+                ind_loss.u, ind_loss.v, ind_loss.T, ind_loss.S,
+                ind_loss.∂u∂z, ind_loss.∂v∂z, ind_loss.∂T∂z, ind_loss.∂S∂z,)
         losses[iter+1] = l
         u_losses[iter+1] = ind_loss.u
         v_losses[iter+1] = ind_loss.v
         T_losses[iter+1] = ind_loss.T
         S_losses[iter+1] = ind_loss.S
-        ρ_losses[iter+1] = ind_loss.ρ
         ∂u∂z_losses[iter+1] = ind_loss.∂u∂z
         ∂v∂z_losses[iter+1] = ind_loss.∂v∂z
         ∂T∂z_losses[iter+1] = ind_loss.∂T∂z
         ∂S∂z_losses[iter+1] = ind_loss.∂S∂z
-        ∂ρ∂z_losses[iter+1] = ind_loss.∂ρ∂z
 
         iter += 1
         wall_clock[1] = time_ns()
@@ -507,7 +494,7 @@ function train_NDE(train_data, train_data_plot, NNs, ps_training, ps_baseclosure
                          
     diffusivities_posttraining = (ν=νs_posttraining, κ=κs_posttraining, Ri=Ri_posttraining, Ri_truth=Ri_truth)
 
-    losses = (total=losses, u=u_losses, v=v_losses, T=T_losses, S=S_losses, ρ=ρ_losses, ∂u∂z=∂u∂z_losses, ∂v∂z=∂v∂z_losses, ∂T∂z=∂T∂z_losses, ∂S∂z=∂S∂z_losses, ∂ρ∂z=∂ρ∂z_losses)
+    losses = (total=losses, u=u_losses, v=v_losses, T=T_losses, S=S_losses, ∂u∂z=∂u∂z_losses, ∂v∂z=∂v∂z_losses, ∂T∂z=∂T∂z_losses, ∂S∂z=∂S∂z_losses)
 
     return res, loss_NDE(res.u), sols_posttraining, flux_posttraining, losses, diffusivities_posttraining
 end
@@ -526,12 +513,10 @@ function plot_loss(losses, FILE_DIR; epoch=1)
     lines!(axindividualloss, losses.v, label="v", color=colors[2])
     lines!(axindividualloss, losses.T, label="T", color=colors[3])
     lines!(axindividualloss, losses.S, label="S", color=colors[4])
-    lines!(axindividualloss, losses.ρ, label="ρ", color=colors[5])
     lines!(axindividualloss, losses.∂u∂z, label="∂u∂z", color=colors[6])
     lines!(axindividualloss, losses.∂v∂z, label="∂v∂z", color=colors[7])
     lines!(axindividualloss, losses.∂T∂z, label="∂T∂z", color=colors[8])
     lines!(axindividualloss, losses.∂S∂z, label="∂S∂z", color=colors[9])
-    lines!(axindividualloss, losses.∂ρ∂z, label="∂ρ∂z", color=colors[10])
 
     axislegend(axindividualloss, position=:rt)
     save("$(FILE_DIR)/losses_epoch$(epoch).png", fig, px_per_unit=8)

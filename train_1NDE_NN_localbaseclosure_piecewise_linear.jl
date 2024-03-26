@@ -273,8 +273,7 @@ function train_NDE(train_data, train_data_plot, NNs, ps_training, ps_baseclosure
         ∂v∂z_hats = [hcat([param.scaling.∂v∂z.(param.Dᶠ * @view(v[:, i])) for i in axes(v, 2)]...) for (param, v) in zip(params, vs)]
         ∂T∂z_hats = [hcat([param.scaling.∂T∂z.(param.Dᶠ * @view(T[:, i])) for i in axes(T, 2)]...) for (param, T) in zip(params, Ts)]
         ∂S∂z_hats = [hcat([param.scaling.∂S∂z.(param.Dᶠ * @view(S[:, i])) for i in axes(S, 2)]...) for (param, S) in zip(params, Ss)]
-        ∂ρ∂z_hats = [hcat([param.scaling.∂ρ∂z.(param.Dᶠ * @view(ρ[:, i])) for i in axes(ρ, 2)]..
-        .) for (param, ρ) in zip(params, ρs)]
+        ∂ρ∂z_hats = [hcat([param.scaling.∂ρ∂z.(param.Dᶠ * @view(ρ[:, i])) for i in axes(ρ, 2)]...) for (param, ρ) in zip(params, ρs)]
 
         return u_hats, v_hats, T_hats, S_hats, ρ_hats, ∂u∂z_hats, ∂v∂z_hats, ∂T∂z_hats, ∂S∂z_hats, ∂ρ∂z_hats, preds
     end

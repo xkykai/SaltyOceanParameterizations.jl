@@ -22,7 +22,7 @@ function find_max(a...)
     return maximum(maximum.([a...]))
 end
 
-FILE_DIR = "./training_output/1NN_leakyrelu_512_local_diffusivity_piecewise_linear_noclamp_VCABM3_reltol1e-5_lossequal_mae_glorot_smalllastlayer_ADAM1e-3"
+FILE_DIR = "./training_output/1NN_leakyrelu_512_local_diffusivity_piecewise_linear_noclamp_VCABM3_reltol1e-5_lossequal_mae_glorot_1e-3lastlayer_ADAM1e-4"
 
 mkpath(FILE_DIR)
 @info "$(FILE_DIR)"
@@ -56,7 +56,7 @@ ps, st = Lux.setup(rng, NN)
 ps = ps |> ComponentArray .|> Float64
 ps .= glorot_uniform(rng, Float64, length(ps))
 
-ps.layer_2 .*= 1e-6
+ps.layer_2 .*= 1e-3
 
 NNs = (; NDE=NN)
 ps_training = ComponentArray(NDE=ps)
@@ -651,7 +651,7 @@ end
 
 epoch = 1
 
-res, loss, sols, fluxes, losses, diffusivities = train_NDE(train_data, train_data_plot, NNs, ps_training, ps_baseclosure, st_NN, rng, maxiter=200, solver=VCABM3(), optimizer=OptimizationOptimisers.ADAM(1e-3))
+res, loss, sols, fluxes, losses, diffusivities = train_NDE(train_data, train_data_plot, NNs, ps_training, ps_baseclosure, st_NN, rng, maxiter=200, solver=VCABM3(), optimizer=OptimizationOptimisers.ADAM(1e-4))
 
 u = res.u
 jldsave("$(FILE_DIR)/training_results_$(epoch).jld2"; res, u, loss, sols, fluxes, losses, NNs, st_NN, diffusivities)

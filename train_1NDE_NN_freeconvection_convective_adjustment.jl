@@ -61,7 +61,7 @@ function convective_adjustment(dρdz)
     return ifelse(dρdz > 0, 0.2, 1e-5)
 end
 
-function train_NDE(train_data, train_data_plot, NNs, ps_training, ps_baseclosure, st_NN, rng; 
+function train_NDE(train_data, train_data_plot, NNs, ps_training, st_NN, rng; 
                    coarse_size=32, dev=cpu_device(), maxiter=10, optimizer=OptimizationOptimisers.ADAM(0.001), solver=ROCK2(), Ri_clamp_lims=(-Inf, Inf))
     train_data = train_data |> dev
     x₀s = [vcat(data.profile.T.scaled[:, 1], data.profile.S.scaled[:, 1]) for data in train_data.data] |> dev
@@ -574,7 +574,7 @@ end
 
 epoch = 1
 
-res, loss, sols, fluxes, losses, diffusivities = train_NDE(train_data, train_data_plot, NNs, ps_training, ps_baseclosure, st_NN, rng, maxiter=1000, solver=ROCK2(), optimizer=OptimizationOptimisers.ADAM(5e-5))
+res, loss, sols, fluxes, losses, diffusivities = train_NDE(train_data, train_data_plot, NNs, ps_training, st_NN, rng, maxiter=1000, solver=ROCK2(), optimizer=OptimizationOptimisers.ADAM(5e-5))
 
 u = res.u
 jldsave("$(FILE_DIR)/training_results_$(epoch).jld2"; res, u, loss, sols, fluxes, losses, NNs, st_NN, diffusivities)
@@ -585,7 +585,7 @@ end
 
 epoch += 1
 
-res, loss, sols, fluxes, losses, diffusivities = train_NDE(train_data, train_data_plot, NNs, res.u, ps_baseclosure, st_NN, rng, maxiter=1000, solver=ROCK2(), optimizer=OptimizationOptimisers.ADAM(5e-5))
+res, loss, sols, fluxes, losses, diffusivities = train_NDE(train_data, train_data_plot, NNs, res.u, st_NN, rng, maxiter=1000, solver=ROCK2(), optimizer=OptimizationOptimisers.ADAM(5e-5))
 u = res.u
 jldsave("$(FILE_DIR)/training_results_$(epoch).jld2"; res, u, loss, sols, fluxes, losses, NNs, st_NN, diffusivities)
 plot_loss(losses, FILE_DIR, epoch=epoch)
@@ -595,7 +595,7 @@ end
 
 epoch += 1
 
-res, loss, sols, fluxes, losses, diffusivities = train_NDE(train_data, train_data_plot, NNs, res.u, ps_baseclosure, st_NN, rng, maxiter=1000, solver=ROCK2(), optimizer=OptimizationOptimisers.ADAM(2e-5))
+res, loss, sols, fluxes, losses, diffusivities = train_NDE(train_data, train_data_plot, NNs, res.u, st_NN, rng, maxiter=1000, solver=ROCK2(), optimizer=OptimizationOptimisers.ADAM(2e-5))
 
 u = res.u
 jldsave("$(FILE_DIR)/training_results_$(epoch).jld2"; res, u, loss, sols, fluxes, losses, NNs, st_NN, diffusivities)
@@ -606,7 +606,7 @@ end
 
 epoch += 1
 
-res, loss, sols, fluxes, losses, diffusivities = train_NDE(train_data, train_data_plot, NNs, res.u, ps_baseclosure, st_NN, rng, maxiter=1000, solver=ROCK2(), optimizer=OptimizationOptimisers.ADAM(2e-5))
+res, loss, sols, fluxes, losses, diffusivities = train_NDE(train_data, train_data_plot, NNs, res.u, st_NN, rng, maxiter=1000, solver=ROCK2(), optimizer=OptimizationOptimisers.ADAM(2e-5))
 
 u = res.u
 jldsave("$(FILE_DIR)/training_results_$(epoch).jld2"; res, u, loss, sols, fluxes, losses, NNs, st_NN, diffusivities)

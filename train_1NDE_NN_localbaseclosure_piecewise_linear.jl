@@ -56,7 +56,7 @@ ps, st = Lux.setup(rng, NN)
 ps = ps |> ComponentArray .|> Float64
 ps .= glorot_uniform(rng, Float64, length(ps))
 
-ps .*= 1e-1
+ps .*= 1e-2
 
 NNs = (; NDE=NN)
 ps_training = ComponentArray(NDE=ps)

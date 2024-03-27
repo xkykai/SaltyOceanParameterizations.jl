@@ -182,6 +182,7 @@ const pickup = args["pickup"]
 
 const eos = TEOS10EquationOfState()
 const ρ₀ = eos.reference_density
+const g = Oceananigans.BuoyancyModels.g_Earth
 
 FILE_NAME = "linearTS_tob_dTdz_$(dTdz)_dSdz_$(dSdz)_QU_$(Qᵁ)_QT_$(Qᵀ)_QS_$(Qˢ)_QB_$(Qᴮ)_T_$(T_surface)_S_$(S_surface)_f_$(f)_$(args["advection"])_Lxz_$(Lx)_$(Lz)_Nxz_$(Nx)_$(Nz)"
 FILE_DIR = "$(args["file_location"])/LES/$(FILE_NAME)"
@@ -212,7 +213,7 @@ S_initial(x, y, z) = dSdz * z + S_surface
 
 const dbdz_bottom = SeawaterPolynomials.thermal_expansion(T_initial(0, 0, -Lz), S_initial(0, 0, -Lz), 0, eos) * dTdz - SeawaterPolynomials.haline_contraction(T_initial(0, 0, -Lz), S_initial(0, 0, -Lz), 0, eos) * dSdz
 
-function b_initial(x, y, z)
+@inline function b_initial(x, y, z)
     ρ = TEOS10.ρ(T_initial(x, y, z), S_initial(x, y, z), 0, eos)
     return -g * (ρ - ρ₀) / ρ₀
 end
@@ -241,8 +242,6 @@ model = NonhydrostaticModel(;
                             advection = advection,
                             forcing = (u=uvw_sponge, v=uvw_sponge, w=uvw_sponge, b=b_sponge),
                             boundary_conditions = (b=b_bcs, u=u_bcs))
-
-const g = model.buoyancy.model.gravitational_acceleration
 
 set!(model, b=b_initial_noisy)
 

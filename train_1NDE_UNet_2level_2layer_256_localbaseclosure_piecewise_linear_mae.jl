@@ -23,7 +23,7 @@ function find_max(a...)
     return maximum(maximum.([a...]))
 end
 
-FILE_DIR = "./training_output/UNet_2level_2layer_256_swish_local_diffusivity_piecewise_linear_noclamp_VCABM3_reltol1e-5_ADAM1e-4_glorotuniform_lossequal_mae"
+FILE_DIR = "./training_output/UNet_2level_2layer_256_swish_local_diffusivity_piecewise_linear_noclamp_VCABM3_reltol1e-5_ADAM1e-4_glorotuniform_1e-6lastlayer_lossequal_mae"
 mkpath(FILE_DIR)
 @info "$(FILE_DIR)"
 
@@ -95,8 +95,7 @@ ps, st = Lux.setup(rng, NN)
 
 ps = ps |> ComponentArray .|> Float64
 ps .= glorot_uniform(rng, Float64, length(ps))
-
-# ps.layer_9 .*= 1e-6
+ps.layer_10 .*= 1e-6
 
 NNs = (; NDE=NN)
 ps_training = ComponentArray(NDE=ps)

@@ -78,7 +78,7 @@ level1up = Chain(Conv(Tuple(5), level2_channel => level1_channel, swish, pad=Sam
 
 decoder = Chain(FlattenLayer(),
                 Dense(32*output_channel, 512, swish),
-                Dense(512, 124, swish))
+                Dense(512, 124))
 
 function concat_two_layers(output, input)
     return cat(output, input, dims=2)

@@ -166,6 +166,10 @@ elseif args["advection"] == "AMD"
     closure = AnisotropicMinimumDissipation()
 end
 
+const eos = TEOS10EquationOfState()
+const ρ₀ = eos.reference_density
+const g = Oceananigans.BuoyancyModels.g_Earth
+
 const f = args["f"]
 
 const dTdz = args["dTdz"]
@@ -176,13 +180,9 @@ const S_surface = args["S_surface"]
 
 const α_surface = SeawaterPolynomials.thermal_expansion(T_surface, S_surface, 0, TEOS10EquationOfState())
 const β_surface = SeawaterPolynomials.haline_contraction(T_surface, S_surface, 0, TEOS10EquationOfState())
-const Qᴮ = α_surface * Qᵀ - β_surface * Qˢ
+const Qᴮ = g * (α_surface * Qᵀ - β_surface * Qˢ)
 
 const pickup = args["pickup"]
-
-const eos = TEOS10EquationOfState()
-const ρ₀ = eos.reference_density
-const g = Oceananigans.BuoyancyModels.g_Earth
 
 FILE_NAME = "linearTS_tob_dTdz_$(dTdz)_dSdz_$(dSdz)_QU_$(Qᵁ)_QT_$(Qᵀ)_QS_$(Qˢ)_QB_$(Qᴮ)_T_$(T_surface)_S_$(S_surface)_f_$(f)_$(args["advection"])_Lxz_$(Lx)_$(Lz)_Nxz_$(Nx)_$(Nz)"
 FILE_DIR = "$(args["file_location"])/LES/$(FILE_NAME)"
@@ -211,7 +211,7 @@ noise(x, y, z) = rand() * exp(z / 8)
 T_initial(x, y, z) = dTdz * z + T_surface
 S_initial(x, y, z) = dSdz * z + S_surface
 
-const dbdz_bottom = SeawaterPolynomials.thermal_expansion(T_initial(0, 0, -Lz), S_initial(0, 0, -Lz), 0, eos) * dTdz - SeawaterPolynomials.haline_contraction(T_initial(0, 0, -Lz), S_initial(0, 0, -Lz), 0, eos) * dSdz
+const dbdz_bottom = g * (SeawaterPolynomials.thermal_expansion(T_initial(0, 0, -Lz), S_initial(0, 0, -Lz), 0, eos) * dTdz - SeawaterPolynomials.haline_contraction(T_initial(0, 0, -Lz), S_initial(0, 0, -Lz), 0, eos) * dSdz)
 
 @inline function b_initial(x, y, z)
     ρ = TEOS10.ρ(T_initial(x, y, z), S_initial(x, y, z), 0, eos)

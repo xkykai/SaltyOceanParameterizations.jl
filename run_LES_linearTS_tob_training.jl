@@ -377,7 +377,7 @@ simulation.output_writers[:timeseries] = JLD2OutputWriter(model, timeseries_outp
                                                           with_halos = true,
                                                           init = init_save_some_metadata!)
 
-simulation.output_writers[:checkpointer] = Checkpointer(modebl, schedule=TimeInterval(args["checkpoint_interval"]days), prefix="$(FILE_DIR)/model_checkpoint")
+simulation.output_writers[:checkpointer] = Checkpointer(model, schedule=TimeInterval(args["checkpoint_interval"]days), prefix="$(FILE_DIR)/model_checkpoint")
 
 if pickup
     files = readdir(FILE_DIR)

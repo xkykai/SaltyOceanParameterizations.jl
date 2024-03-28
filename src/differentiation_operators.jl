@@ -1,3 +1,5 @@
+using SparseArrays
+
 """
     Dᶜ(N, Δ)
 
@@ -10,7 +12,7 @@ function Dᶜ(N, Δ)
         D[k, k+1] =  1.0
     end
     D .= 1/Δ .* D
-    return D
+    return sparse(D)
 end
 
 """
@@ -36,7 +38,7 @@ function Dᶠ(N, Δ)
         D[k, k]   =  1.0
     end
     D .= 1/Δ .* D
-    return D
+    return sparse(D)
 end
 
 """

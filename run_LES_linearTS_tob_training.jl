@@ -290,6 +290,7 @@ function init_save_some_metadata!(file, model)
     file["metadata/gravitational_acceleration"] = g
     file["metadata/reference_density"] = ρ₀
     file["metadata/buoyancy_flux"] = Qᴮ
+    file["metadata/density_flux"] = -ρ₀ * Qᴮ / g
     return nothing
 end
 
@@ -408,13 +409,13 @@ vw_data = FieldTimeSeries("$(FILE_DIR)/instantaneous_timeseries.jld2", "vw")
 wb_data = FieldTimeSeries("$(FILE_DIR)/instantaneous_timeseries.jld2", "wb")
 wρ_data = FieldTimeSeries("$(FILE_DIR)/instantaneous_timeseries.jld2", "wρ")
 
-xC = Tbar_data.grid.xᶜᵃᵃ[1:Nx]
-yC = Tbar_data.grid.yᵃᶜᵃ[1:Ny]
-zC = Tbar_data.grid.zᵃᵃᶜ[1:Nz]
+xC = bbar_data.grid.xᶜᵃᵃ[1:Nx]
+yC = bbar_data.grid.yᵃᶜᵃ[1:Ny]
+zC = bbar_data.grid.zᵃᵃᶜ[1:Nz]
 
 zF = uw_data.grid.zᵃᵃᶠ[1:Nz+1]
 
-Nt = length(Tbar_data.times)
+Nt = length(bbar_data.times)
 
 ##
 fig = Figure(size=(2500, 1500))
@@ -442,7 +443,7 @@ wρlim = (minimum(wρ_data[1, 1, :, startframe_lim:end]), maximum(wρ_data[1, 1,
 
 n = Observable(1)
 
-time_str = @lift "Qᵁ = $(Qᵁ), Qᵀ = $(Qᵀ), Qˢ = $(Qˢ), f = $(f), Time = $(round(Tbar_data.times[$n]/24/60^2, digits=3)) days"
+time_str = @lift "Qᵁ = $(Qᵁ), Qᵀ = $(Qᵀ), Qˢ = $(Qˢ), f = $(f), Time = $(round(bbar_data.times[$n]/24/60^2, digits=3)) days"
 title = Label(fig[0, :], time_str, font=:bold, tellwidth=false)
 
 ubarₙ = @lift interior(ubar_data[$n], 1, 1, :)

@@ -206,24 +206,24 @@ grid = RectilinearGrid(GPU(), Float64,
                        z = (-Lz, 0),
                        topology = (Periodic, Periodic, Bounded))
 
-noise(x, y, z) = rand() * exp(z / 8)
+noise(x, y, z) = rand() * exp(z / 8) * 1e-5
 
 T_initial(x, y, z) = dTdz * z + T_surface
 S_initial(x, y, z) = dSdz * z + S_surface
 
-const dbdz_bottom = g * (SeawaterPolynomials.thermal_expansion(T_initial(0, 0, -Lz), S_initial(0, 0, -Lz), 0, eos) * dTdz - SeawaterPolynomials.haline_contraction(T_initial(0, 0, -Lz), S_initial(0, 0, -Lz), 0, eos) * dSdz)
-
 @inline function b_initial(x, y, z)
-    ρ = TEOS10.ρ(T_initial(x, y, z), S_initial(x, y, z), 0, eos)
-    return -g * (ρ - ρ₀) / ρ₀
+  ρ = TEOS10.ρ(T_initial(x, y, z), S_initial(x, y, z), 0, eos)
+  return -g * (ρ - ρ₀) / ρ₀
 end
+
+const dbdz_bottom = (b_initial(0, 0, grid.zᵃᵃᶜ[1]) - b_initial(0, 0, grid.zᵃᵃᶜ[0])) / grid.Δzᵃᵃᶜ
 
 b_initial_noisy(x, y, z) = b_initial(x, y, z) + noise(x, y, z)
 
 b_bcs = FieldBoundaryConditions(top=FluxBoundaryCondition(Qᴮ), bottom=GradientBoundaryCondition(dbdz_bottom))
 u_bcs = FieldBoundaryConditions(top=FluxBoundaryCondition(Qᵁ))
 
-damping_rate = 1/15minute
+damping_rate = 1/5minute
 
 b_target(x, y, z, t) = b_initial(x, y, z)
 
@@ -377,7 +377,7 @@ simulation.output_writers[:timeseries] = JLD2OutputWriter(model, timeseries_outp
                                                           with_halos = true,
                                                           init = init_save_some_metadata!)
 
-simulation.output_writers[:checkpointer] = Checkpointer(model, schedule=TimeInterval(args["checkpoint_interval"]days), prefix="$(FILE_DIR)/model_checkpoint")
+simulation.output_writers[:checkpointer] = Checkpointer(modebl, schedule=TimeInterval(args["checkpoint_interval"]days), prefix="$(FILE_DIR)/model_checkpoint")
 
 if pickup
     files = readdir(FILE_DIR)

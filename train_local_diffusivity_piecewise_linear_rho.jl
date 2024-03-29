@@ -20,7 +20,7 @@ function find_max(a...)
     return maximum(maximum.([a...]))
 end
 
-FILE_DIR = "./training_output/local_diffusivity_piecewise_linear_rho_noclamp_rho0.8_SW_FC_BFGS"
+FILE_DIR = "./training_output/local_diffusivity_piecewise_linear_rho_noclamp_lossequal_SW_FC_BFGS_largeinitialdiffusivity"
 mkpath(FILE_DIR)
 
 LES_FILE_DIRS = [
@@ -45,7 +45,7 @@ coarse_size = 32
 train_data_plot = LESDatasetsB(field_datasets, ZeroMeanUnitVarianceScaling, full_timeframes)
 
 # ps = jldopen("./training_output/local_diffusivity_piecewise_linear_noclamp_lossequal_reltol1e-5/training_results_4.jld2", "r")["u"]
-ps = ComponentArray(ν₁=0.1, m=-0.1/0.25, Pr=1)
+ps = ComponentArray(ν₁=0.5, m=-0.5/0.25, Pr=1)
 
 function optimize_parameters(train_data, train_data_plot, ps; coarse_size=32, dev=cpu_device(), maxiter=10, optimizer=OptimizationOptimisers.ADAM(0.01), solver=DP5(), Ri_clamp_lims=(-Inf, Inf))
     train_data = train_data |> dev
@@ -174,8 +174,8 @@ function optimize_parameters(train_data, train_data_plot, ps; coarse_size=32, de
         ρ_loss = mean(mean.([(data.profile.ρ.scaled .- ρ).^2 for (data, ρ) in zip(train_data.data, ρs)]))
 
         ρ_prefactor = 1
-        u_prefactor = ρ_loss / u_loss * (0.1/0.8)
-        v_prefactor = ρ_loss / v_loss * (0.1/0.8)
+        u_prefactor = ρ_loss / u_loss
+        v_prefactor = ρ_loss / v_loss
 
         return (u=u_prefactor, v=v_prefactor, ρ=ρ_prefactor)
     end

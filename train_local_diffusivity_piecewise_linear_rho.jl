@@ -20,7 +20,7 @@ function find_max(a...)
     return maximum(maximum.([a...]))
 end
 
-FILE_DIR = "./training_output/local_diffusivity_piecewise_linear_rho_noclamp_lossequal_SW_FC_BFGS"
+FILE_DIR = "./training_output/local_diffusivity_piecewise_linear_rho_noclamp_rho0.8_SW_FC_BFGS"
 mkpath(FILE_DIR)
 
 LES_FILE_DIRS = [
@@ -44,6 +44,7 @@ coarse_size = 32
 
 train_data_plot = LESDatasetsB(field_datasets, ZeroMeanUnitVarianceScaling, full_timeframes)
 
+# ps = jldopen("./training_output/local_diffusivity_piecewise_linear_noclamp_lossequal_reltol1e-5/training_results_4.jld2", "r")["u"]
 ps = ComponentArray(ν₁=0.1, m=-0.1/0.25, Pr=1)
 
 function optimize_parameters(train_data, train_data_plot, ps; coarse_size=32, dev=cpu_device(), maxiter=10, optimizer=OptimizationOptimisers.ADAM(0.01), solver=DP5(), Ri_clamp_lims=(-Inf, Inf))
@@ -151,13 +152,13 @@ function optimize_parameters(train_data, train_data_plot, ps; coarse_size=32, de
 
     function predict_DE(p)
         probs = [ODEProblem((x, p′, t) -> DE(x, p′, t, param), x₀, (param.scaled_time[1], param.scaled_time[end]), p) for (x₀, param) in zip(x₀s, params)]
-        sols = [Array(solve(prob, solver, saveat=param.scaled_time, reltol=1e-5)) for (param, prob) in zip(params, probs)]
+        sols = [Array(solve(prob, solver, saveat=param.scaled_time, reltol=1e-6)) for (param, prob) in zip(params, probs)]
         return sols
     end
 
     function predict_DE_posttraining(p)
         probs = [ODEProblem((x, p′, t) -> DE(x, p′, t, param), x₀, (param.scaled_original_time[1], param.scaled_original_time[end]), p) for (x₀, param) in zip(x₀s, params)]
-        sols = [solve(prob, solver, saveat=param.scaled_original_time, reltol=1e-5) for (param, prob) in zip(params, probs)]
+        sols = [solve(prob, solver, saveat=param.scaled_original_time, reltol=1e-6) for (param, prob) in zip(params, probs)]
         return sols
     end
 
@@ -173,8 +174,8 @@ function optimize_parameters(train_data, train_data_plot, ps; coarse_size=32, de
         ρ_loss = mean(mean.([(data.profile.ρ.scaled .- ρ).^2 for (data, ρ) in zip(train_data.data, ρs)]))
 
         ρ_prefactor = 1
-        u_prefactor = ρ_loss / u_loss
-        v_prefactor = ρ_loss / v_loss
+        u_prefactor = ρ_loss / u_loss * (0.1/0.8)
+        v_prefactor = ρ_loss / v_loss * (0.1/0.8)
 
         return (u=u_prefactor, v=v_prefactor, ρ=ρ_prefactor)
     end
@@ -200,10 +201,10 @@ function optimize_parameters(train_data, train_data_plot, ps; coarse_size=32, de
 
     iter = 0
 
-    losses = zeros(maxiter+1)
-    u_losses = zeros(maxiter+1)
-    v_losses = zeros(maxiter+1)
-    ρ_losses = zeros(maxiter+1)
+    losses = fill(1e-8, maxiter+1)
+    u_losses = fill(1e-8, maxiter+1)
+    v_losses = fill(1e-8, maxiter+1)
+    ρ_losses = fill(1e-8, maxiter+1)
 
     wall_clock = [time_ns()]
 
@@ -393,13 +394,20 @@ end
 epoch = 1
 
 res, loss, sols, fluxes, losses, diffusivities = optimize_parameters(train_data, train_data_plot, ps, maxiter=500, optimizer=OptimizationOptimJL.BFGS(), Ri_clamp_lims=(-Inf, Inf), solver=VCABM3())
+# res, loss, sols, fluxes, losses, diffusivities = optimize_parameters(train_data, train_data_plot, ps, maxiter=1, optimizer=OptimizationOptimisers.Adam(), Ri_clamp_lims=(-Inf, Inf), solver=VCABM3())
 
 u = res.u
 jldsave("$(FILE_DIR)/training_results_$(epoch).jld2"; res, u, loss, sols, fluxes, losses, diffusivities)
 plot_loss(losses, FILE_DIR, epoch=epoch)
 
+# file = jldopen("$(FILE_DIR)/training_results_1.jld2", "r")
+# sols = file["sols"]
+# fluxes = file["fluxes"]
+# diffusivities = file["diffusivities"]
+# close(file)
+
 for i in eachindex(field_datasets)
-    animate_data(train_data_plot, train_data.scaling, sols, fluxes, diffusivities, i, FILE_DIR, epoch=epoch)
+    animate_data(train_data_plot, train_data.scaling, sols, fluxes, diffusivities, i, FILE_DIR, epoch="$(epoch)_prior")
 end
 
 epoch += 1

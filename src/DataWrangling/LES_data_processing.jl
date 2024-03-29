@@ -60,7 +60,7 @@ end
 struct ProfilesB{UU, VV, BB, ΡΡ, DU, DV, DB, DΡ}
        u :: UU
        v :: VV
-       B :: BB
+       b :: BB
        ρ :: ΡΡ
     ∂u∂z :: DU
     ∂v∂z :: DV
@@ -196,6 +196,13 @@ function LESData(data::FieldDataset, scalings::NamedTuple, timeframes, coarse_si
     wT = hcat([coarse_grain(interior(data["wT"][i], 1, 1, :), coarse_size+1, Face) for i in timeframes]...)
     wS = hcat([coarse_grain(interior(data["wS"][i], 1, 1, :), coarse_size+1, Face) for i in timeframes]...)
 
+    if data.metadata["momentum_flux"] == 0
+        u .= 0
+        v .= 0
+        uw .= 0
+        vw .= 0
+    end
+
     zC = coarse_grain(data["ubar"].grid.zᵃᵃᶜ[1:data["ubar"].grid.Nz], coarse_size, Center)
     D = Dᶠ(coarse_size, zC[2] - zC[1])
 
@@ -211,6 +218,7 @@ function LESData(data::FieldDataset, scalings::NamedTuple, timeframes, coarse_si
     wT_surface = get_surface_fluxes(data.metadata["temperature_flux"])
     wS_surface = get_surface_fluxes(data.metadata["salinity_flux"])
     
+    ## TODO: Ensure this is correct
     # uw_surface = 0
     # wT_surface = 0
     # wS_surface = 0
@@ -253,6 +261,13 @@ function LESDataB(data::FieldDataset, scalings::NamedTuple, timeframes, coarse_s
     wb = hcat([coarse_grain(interior(data["wb"][i], 1, 1, :), coarse_size+1, Face) for i in timeframes]...)
     wρ = hcat([coarse_grain(interior(data["wρ"][i], 1, 1, :), coarse_size+1, Face) for i in timeframes]...)
 
+    if data.metadata["momentum_flux"] == 0
+        u .= 0
+        v .= 0
+        uw .= 0
+        vw .= 0
+    end
+
     zC = coarse_grain(data["ubar"].grid.zᵃᵃᶜ[1:data["ubar"].grid.Nz], coarse_size, Center)
     D = Dᶠ(coarse_size, zC[2] - zC[1])
 
@@ -267,12 +282,13 @@ function LESDataB(data::FieldDataset, scalings::NamedTuple, timeframes, coarse_s
     wb_surface = get_surface_fluxes(data.metadata["buoyancy_flux"])
     wρ_surface = get_surface_fluxes(data.metadata["density_flux"])
     
+    ## TODO: Ensure this is correct
     vw_surface = 0
 
     uw_bottom = 0
     vw_bottom = 0
-    wT_bottom = 0
-    wS_bottom = 0
+    wb_bottom = 0
+    wρ_bottom = 0
 
     profile = ProfilesB(u, v, b, ρ, 
                        ∂u∂z, ∂v∂z, ∂b∂z, ∂ρ∂z, 
@@ -316,6 +332,15 @@ function LESDatasets(datasets::Vector, scaling::Type{<:AbstractFeatureScaling}, 
     wT = [hcat([coarse_grain(interior(data["wT"][i], 1, 1, :), coarse_size+1, Face) for i in timeframe]...) for (data, timeframe) in zip(datasets, timeframes)]
     wS = [hcat([coarse_grain(interior(data["wS"][i], 1, 1, :), coarse_size+1, Face) for i in timeframe]...) for (data, timeframe) in zip(datasets, timeframes)]
 
+    for i in eachindex(u)
+        if datasets[i].metadata["momentum_flux"] == 0
+            u[i] .= 0
+            v[i] .= 0
+            uw[i] .= 0
+            vw[i] .= 0
+        end
+    end
+
     zCs = [coarse_grain(data["ubar"].grid.zᵃᵃᶜ[1:data["ubar"].grid.Nz], coarse_size, Center) for data in datasets]
     Dᶠs = [Dᶠ(coarse_size, zC[2] - zC[1]) for zC in zCs]
 
@@ -357,12 +382,21 @@ function LESDatasetsB(datasets::Vector, scaling::Type{<:AbstractFeatureScaling},
     wb = [hcat([coarse_grain(interior(data["wb"][i], 1, 1, :), coarse_size+1, Face) for i in timeframe]...) for (data, timeframe) in zip(datasets, timeframes)]
     wρ = [hcat([coarse_grain(interior(data["wρ"][i], 1, 1, :), coarse_size+1, Face) for i in timeframe]...) for (data, timeframe) in zip(datasets, timeframes)]
 
+    for i in eachindex(u)
+        if datasets[i].metadata["momentum_flux"] == 0
+            u[i] .= 0
+            v[i] .= 0
+            uw[i] .= 0
+            vw[i] .= 0
+        end
+    end
+
     zCs = [coarse_grain(data["ubar"].grid.zᵃᵃᶜ[1:data["ubar"].grid.Nz], coarse_size, Center) for data in datasets]
     Dᶠs = [Dᶠ(coarse_size, zC[2] - zC[1]) for zC in zCs]
 
     ∂u∂z = [hcat([D * u′[:, i] for i in axes(u′, 2)]...) for (D, u′) in zip(Dᶠs, u)]
     ∂v∂z = [hcat([D * v′[:, i] for i in axes(v′, 2)]...) for (D, v′) in zip(Dᶠs, v)]
-    ∂b∂z = [hcat([D * T′[:, i] for i in axes(b′, 2)]...) for (D, b′) in zip(Dᶠs, b)]
+    ∂b∂z = [hcat([D * b′[:, i] for i in axes(b′, 2)]...) for (D, b′) in zip(Dᶠs, b)]
     ∂ρ∂z = [hcat([D * ρ′[:, i] for i in axes(ρ′, 2)]...) for (D, ρ′) in zip(Dᶠs, ρ)]
 
     f = [data.metadata["coriolis_parameter"] for data in datasets]

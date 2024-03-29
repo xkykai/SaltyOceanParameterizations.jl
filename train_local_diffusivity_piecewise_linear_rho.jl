@@ -20,7 +20,7 @@ function find_max(a...)
     return maximum(maximum.([a...]))
 end
 
-FILE_DIR = "./training_output/local_diffusivity_piecewise_linear_rho_noclamp_lossequal_SW_FC"
+FILE_DIR = "./training_output/local_diffusivity_piecewise_linear_rho_noclamp_lossequal_SW_FC_BFGS"
 mkpath(FILE_DIR)
 
 LES_FILE_DIRS = [
@@ -392,7 +392,7 @@ end
 
 epoch = 1
 
-res, loss, sols, fluxes, losses, diffusivities = optimize_parameters(train_data, train_data_plot, ps, maxiter=500, optimizer=OptimizationOptimisers.ADAM(0.005), Ri_clamp_lims=(-Inf, Inf), solver=VCABM3())
+res, loss, sols, fluxes, losses, diffusivities = optimize_parameters(train_data, train_data_plot, ps, maxiter=500, optimizer=OptimizationOptimJL.BFGS(), Ri_clamp_lims=(-Inf, Inf), solver=VCABM3())
 
 u = res.u
 jldsave("$(FILE_DIR)/training_results_$(epoch).jld2"; res, u, loss, sols, fluxes, losses, diffusivities)
@@ -404,7 +404,7 @@ end
 
 epoch += 1
 
-res, loss, sols, fluxes, losses, diffusivities = optimize_parameters(train_data, train_data_plot, res.u, maxiter=500, optimizer=OptimizationOptimisers.ADAM(0.002), Ri_clamp_lims=(-Inf, Inf), solver=VCABM3())
+res, loss, sols, fluxes, losses, diffusivities = optimize_parameters(train_data, train_data_plot, res.u, maxiter=500, optimizer=OptimizationOptimJL.BFGS(), Ri_clamp_lims=(-Inf, Inf), solver=VCABM3())
 
 u = res.u
 jldsave("$(FILE_DIR)/training_results_$(epoch).jld2"; res, u, loss, sols, fluxes, losses, diffusivities)
@@ -416,7 +416,7 @@ end
 
 epoch += 1
 
-res, loss, sols, fluxes, losses, diffusivities = optimize_parameters(train_data, train_data_plot, res.u, maxiter=500, optimizer=OptimizationOptimisers.ADAM(0.001), Ri_clamp_lims=(-Inf, Inf), solver=VCABM3())
+res, loss, sols, fluxes, losses, diffusivities = optimize_parameters(train_data, train_data_plot, res.u, maxiter=500, optimizer=OptimizationOptimJL.BFGS(), Ri_clamp_lims=(-Inf, Inf), solver=VCABM3())
 
 u = res.u
 jldsave("$(FILE_DIR)/training_results_$(epoch).jld2"; res, u, loss, sols, fluxes, losses, diffusivities)
@@ -428,7 +428,7 @@ end
 
 epoch += 1
 
-res, loss, sols, fluxes, losses, diffusivities = optimize_parameters(train_data, train_data_plot, res.u, maxiter=500, optimizer=OptimizationOptimisers.ADAM(0.001), Ri_clamp_lims=(-Inf, Inf), solver=VCABM3())
+res, loss, sols, fluxes, losses, diffusivities = optimize_parameters(train_data, train_data_plot, res.u, maxiter=500, optimizer=OptimizationOptimJL.BFGS(), Ri_clamp_lims=(-Inf, Inf), solver=VCABM3())
 
 u = res.u
 jldsave("$(FILE_DIR)/training_results_$(epoch).jld2"; res, u, loss, sols, fluxes, losses, diffusivities)

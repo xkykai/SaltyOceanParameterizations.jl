@@ -20,7 +20,7 @@ function find_max(a...)
     return maximum(maximum.([a...]))
 end
 
-FILE_DIR = "./training_output/local_diffusivity_piecewise_linear_rho_noclamp_lossequal_gradient_mae_Adam_SW_FC_largeinitialdiffusivity"
+FILE_DIR = "./training_output/local_diffusivity_piecewise_linear_rho_noclamp_rho0.8_gradient_mae_Adam_SW_FC_largeinitialdiffusivity"
 @info "Creating directory $(FILE_DIR)"
 mkpath(FILE_DIR)
 
@@ -183,12 +183,12 @@ function optimize_parameters(train_data, train_data_plot, ps; coarse_size=32, de
         ∂ρ∂z_loss = mean(mean.([abs.(data.profile.∂ρ∂z.scaled .- ∂ρ∂z_hat) for (data, ∂ρ∂z_hat) in zip(train_data.data, ∂ρ∂z_hats)]))
 
         ρ_prefactor = 1
-        u_prefactor = ρ_loss / u_loss
-        v_prefactor = ρ_loss / v_loss
+        u_prefactor = ρ_loss / u_loss * (0.1/0.8)
+        v_prefactor = ρ_loss / v_loss * (0.1/0.8)
 
         ∂ρ∂z_prefactor = 1
-        ∂u∂z_prefactor = ∂ρ∂z_loss / ∂u∂z_loss
-        ∂v∂z_prefactor = ∂ρ∂z_loss / ∂v∂z_loss
+        ∂u∂z_prefactor = ∂ρ∂z_loss / ∂u∂z_loss * (0.1/0.8)
+        ∂v∂z_prefactor = ∂ρ∂z_loss / ∂v∂z_loss * (0.1/0.8)
 
         profile_loss = u_prefactor * u_loss + v_prefactor * v_loss + ρ_prefactor * ρ_loss
         gradient_loss = ∂u∂z_prefactor * ∂u∂z_loss + ∂v∂z_prefactor * ∂v∂z_loss + ∂ρ∂z_prefactor * ∂ρ∂z_loss

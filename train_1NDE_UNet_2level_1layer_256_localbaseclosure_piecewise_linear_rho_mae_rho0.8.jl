@@ -301,19 +301,19 @@ function train_NDE(train_data, train_data_plot, NNs, ps_training, ps_baseclosure
 
     function predict_NDE(p)
         probs = [ODEProblem((x, p′, t) -> NDE(x, p′, t, param, st_NN), x₀, (param.scaled_time[1], param.scaled_time[end]), p) for (x₀, param) in zip(x₀s, params)]
-        sols = [Array(solve(prob, solver, saveat=param.scaled_time, reltol=1e-7)) for (param, prob) in zip(params, probs)]
+        sols = [Array(solve(prob, solver, saveat=param.scaled_time, reltol=1e-5)) for (param, prob) in zip(params, probs)]
         return sols
     end
 
     function predict_NDE_posttraining(p)
         probs = [ODEProblem((x, p′, t) -> NDE(x, p′, t, param, st_NN), x₀, (param.scaled_original_time[1], param.scaled_original_time[end]), p) for (x₀, param) in zip(x₀s, params)]
-        sols = [solve(prob, solver, saveat=param.scaled_original_time, reltol=1e-7) for (param, prob) in zip(params, probs)]
+        sols = [solve(prob, solver, saveat=param.scaled_original_time, reltol=1e-5) for (param, prob) in zip(params, probs)]
         return sols
     end
 
     function predict_NDE_noNN()
         probs = [ODEProblem((x, p′, t) -> NDE(x, p′, t, param, st_NN), x₀, (param.scaled_original_time[1], param.scaled_original_time[end]), ps_zeros) for (x₀, param) in zip(x₀s, params)]
-        sols = [solve(prob, solver, saveat=param.scaled_original_time, reltol=1e-7) for (param, prob) in zip(params, probs)]
+        sols = [solve(prob, solver, saveat=param.scaled_original_time, reltol=1e-5) for (param, prob) in zip(params, probs)]
         return sols
     end
 

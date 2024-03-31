@@ -23,7 +23,7 @@ function find_max(a...)
     return maximum(maximum.([a...]))
 end
 
-FILE_DIR = "./training_output/SW_FC_UNet_2level_128_swish_local_diffusivity_piecewise_linear_rho_BFGS_noclamp_lossequal_mae_ADAM1e-4_test"
+FILE_DIR = "./training_output/SW_FC_UNet_2level_128_swish_local_diffusivity_piecewise_linear_rho_rho0.8_gradient_Adam_noclamp_lossequal_mae_ADAM1e-4_test"
 mkpath(FILE_DIR)
 @info "$(FILE_DIR)"
 
@@ -39,7 +39,7 @@ LES_FILE_DIRS = [
     "./LES_training/linearTS_b_dTdz_-0.025_dSdz_-0.0045_QU_-0.0005_QB_0.0_T_-3.6_S_33.9_f_-0.000125_WENO9nu0_Lxz_512.0_256.0_Nxz_256_128/instantaneous_timeseries.jld2",
 ]
 
-BASECLOSURE_FILE_DIR = "./training_output/local_diffusivity_piecewise_linear_rho_noclamp_lossequal_SW_FC_BFGS/training_results_1.jld2"
+BASECLOSURE_FILE_DIR = "./training_output/local_diffusivity_piecewise_linear_rho_noclamp_rho0.8_gradient_Adam_SW_FC_largeinitialdiffusivity/training_results_4.jld2"
 
 field_datasets = [FieldDataset(FILE_DIR, backend=OnDisk()) for FILE_DIR in LES_FILE_DIRS]
 
@@ -301,19 +301,19 @@ function train_NDE(train_data, train_data_plot, NNs, ps_training, ps_baseclosure
 
     function predict_NDE(p)
         probs = [ODEProblem((x, p′, t) -> NDE(x, p′, t, param, st_NN), x₀, (param.scaled_time[1], param.scaled_time[end]), p) for (x₀, param) in zip(x₀s, params)]
-        sols = [Array(solve(prob, solver, saveat=param.scaled_time, reltol=1e-5)) for (param, prob) in zip(params, probs)]
+        sols = [Array(solve(prob, solver, saveat=param.scaled_time, reltol=1e-7)) for (param, prob) in zip(params, probs)]
         return sols
     end
 
     function predict_NDE_posttraining(p)
         probs = [ODEProblem((x, p′, t) -> NDE(x, p′, t, param, st_NN), x₀, (param.scaled_original_time[1], param.scaled_original_time[end]), p) for (x₀, param) in zip(x₀s, params)]
-        sols = [solve(prob, solver, saveat=param.scaled_original_time, reltol=1e-5) for (param, prob) in zip(params, probs)]
+        sols = [solve(prob, solver, saveat=param.scaled_original_time, reltol=1e-7) for (param, prob) in zip(params, probs)]
         return sols
     end
 
     function predict_NDE_noNN()
         probs = [ODEProblem((x, p′, t) -> NDE(x, p′, t, param, st_NN), x₀, (param.scaled_original_time[1], param.scaled_original_time[end]), ps_zeros) for (x₀, param) in zip(x₀s, params)]
-        sols = [solve(prob, solver, saveat=param.scaled_original_time, reltol=1e-5) for (param, prob) in zip(params, probs)]
+        sols = [solve(prob, solver, saveat=param.scaled_original_time, reltol=1e-7) for (param, prob) in zip(params, probs)]
         return sols
     end
 
@@ -651,43 +651,43 @@ function animate_data(train_data, scaling, sols, fluxes, diffusivities, sols_noN
     time_str = @lift "Qᵁ = $(Qᵁ) m² s⁻², Qᴿ = $(Qᴿ) m s⁻¹ kg m⁻³, f = $(f) s⁻¹, Time = $(round(times[$n]/24/60^2, digits=3)) days"
 
     lines!(axu, u_truthₙ, zC, label="Truth")
-    lines!(axu, u_NDEₙ, zC, label="NDE")
     lines!(axu, u_noNNₙ, zC, label="Base closure only")
+    lines!(axu, u_NDEₙ, zC, label="NDE")
 
     lines!(axv, v_truthₙ, zC, label="Truth")
-    lines!(axv, v_NDEₙ, zC, label="NDE")
     lines!(axv, v_noNNₙ, zC, label="Base closure only")
+    lines!(axv, v_NDEₙ, zC, label="NDE")
 
     lines!(axρ, ρ_truthₙ, zC, label="Truth")
-    lines!(axρ, ρ_NDEₙ, zC, label="NDE")
     lines!(axρ, ρ_noNNₙ, zC, label="Base closure only")
+    lines!(axρ, ρ_NDEₙ, zC, label="NDE")
 
     lines!(axuw, uw_truthₙ, zF, label="Truth")
-    lines!(axuw, uw_totalₙ, zF, label="NDE")
-    lines!(axuw, uw_residualₙ, zF, label="Residual")
-    lines!(axuw, uw_diffusive_boundaryₙ, zF, label="Base closure")
     lines!(axuw, uw_noNNₙ, zF, label="Base closure only")
+    lines!(axuw, uw_diffusive_boundaryₙ, zF, label="Base closure")
+    lines!(axuw, uw_residualₙ, zF, label="Residual")
+    lines!(axuw, uw_totalₙ, zF, label="NDE")
 
     lines!(axvw, vw_truthₙ, zF, label="Truth")
-    lines!(axvw, vw_totalₙ, zF, label="NDE")
-    lines!(axvw, vw_residualₙ, zF, label="Residual")
-    lines!(axvw, vw_diffusive_boundaryₙ, zF, label="Base closure")
     lines!(axvw, vw_noNNₙ, zF, label="Base closure only")
+    lines!(axvw, vw_diffusive_boundaryₙ, zF, label="Base closure")
+    lines!(axvw, vw_residualₙ, zF, label="Residual")
+    lines!(axvw, vw_totalₙ, zF, label="NDE")
 
     lines!(axwρ, wρ_truthₙ, zF, label="Truth")
-    lines!(axwρ, wρ_totalₙ, zF, label="NDE")
-    lines!(axwρ, wρ_residualₙ, zF, label="Residual")
-    lines!(axwρ, wρ_diffusive_boundaryₙ, zF, label="Base closure")
     lines!(axwρ, wρ_noNNₙ, zF, label="Base closure only")
+    lines!(axwρ, wρ_diffusive_boundaryₙ, zF, label="Base closure")
+    lines!(axwρ, wρ_residualₙ, zF, label="Residual")
+    lines!(axwρ, wρ_totalₙ, zF, label="NDE")
 
     lines!(axRi, Ri_truthₙ, zF, label="Truth")
-    lines!(axRi, Riₙ, zF, label="NDE")
     lines!(axRi, Ri_noNNₙ, zF, label="Base closure only")
+    lines!(axRi, Riₙ, zF, label="NDE")
 
-    lines!(axdiffusivity, νₙ, zF, label="ν, NDE")
-    lines!(axdiffusivity, κₙ, zF, label="κ, NDE")
     lines!(axdiffusivity, ν_noNNₙ, zF, label="ν, Base closure only")
     lines!(axdiffusivity, κ_noNNₙ, zF, label="κ, Base closure only")
+    lines!(axdiffusivity, νₙ, zF, label="ν, NDE")
+    lines!(axdiffusivity, κₙ, zF, label="κ, NDE")
 
     axislegend(axu, position=:rb)
     axislegend(axuw, position=:rb)

@@ -23,7 +23,7 @@ function find_max(a...)
     return maximum(maximum.([a...]))
 end
 
-FILE_DIR = "./training_output/SW_FC_2358_UNet_2level_1layer_256_swish_local_diffusivity_piecewise_linear_rho_rho0.8_mae_Adam_noclamp_rho0.8_mae_ADAM1e-4_test_shorttime"
+FILE_DIR = "./training_output/SW_FC_2358_UNet_2level_1layer_512_swish_local_diffusivity_piecewise_linear_rho_rho0.8_mae_Adam_noclamp_rho0.8_mae_ADAM1e-4_test_shorttime"
 mkpath(FILE_DIR)
 @info "$(FILE_DIR)"
 
@@ -84,8 +84,8 @@ level1up = Chain(Conv(Tuple(5), level2_channel => level1_channel, swish, pad=Sam
                  Conv(Tuple(5), level1_channel => output_channel, swish, pad=SamePad()))
 
 decoder = Chain(FlattenLayer(),
-                Dense(32*output_channel, 256, swish),
-                Dense(256, 93))
+                Dense(32*output_channel, 512, swish),
+                Dense(512, 93))
 
 function concat_two_layers(output, input)
     return cat(output, input, dims=2)

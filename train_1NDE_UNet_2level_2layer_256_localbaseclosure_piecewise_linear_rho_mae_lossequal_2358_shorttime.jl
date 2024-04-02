@@ -23,7 +23,7 @@ function find_max(a...)
     return maximum(maximum.([a...]))
 end
 
-FILE_DIR = "./training_output/SW_FC_2358_UNet_2level_1layer_256_swish_local_diffusivity_piecewise_linear_rho_rho0.8_mae_Adam_noclamp_rho0.8_mae_ADAM1e-4_test_shorttime"
+FILE_DIR = "./training_output/SW_FC_2358_UNet_2level_2layer_256_swish_local_diffusivity_piecewise_linear_rho_rho0.8_mae_Adam_noclamp_lossequal_mae_ADAM1e-4_test_shorttime"
 mkpath(FILE_DIR)
 @info "$(FILE_DIR)"
 
@@ -85,6 +85,7 @@ level1up = Chain(Conv(Tuple(5), level2_channel => level1_channel, swish, pad=Sam
 
 decoder = Chain(FlattenLayer(),
                 Dense(32*output_channel, 256, swish),
+                Dense(256, 256, swish),
                 Dense(256, 93))
 
 function concat_two_layers(output, input)
@@ -351,12 +352,12 @@ function train_NDE(train_data, train_data_plot, train_timesteps, NNs, ps_trainin
 
     function compute_loss_prefactor(u_loss, v_loss, ρ_loss, ∂u∂z_loss, ∂v∂z_loss, ∂ρ∂z_loss)
         ρ_prefactor = 1
-        u_prefactor = ρ_loss / u_loss * (0.1/0.8)
-        v_prefactor = ρ_loss / v_loss * (0.1/0.8)
+        u_prefactor = ρ_loss / u_loss
+        v_prefactor = ρ_loss / v_loss
 
         ∂ρ∂z_prefactor = 1
-        ∂u∂z_prefactor = ∂ρ∂z_loss / ∂u∂z_loss * (0.1/0.8)
-        ∂v∂z_prefactor = ∂ρ∂z_loss / ∂v∂z_loss * (0.1/0.8)
+        ∂u∂z_prefactor = ∂ρ∂z_loss / ∂u∂z_loss
+        ∂v∂z_prefactor = ∂ρ∂z_loss / ∂v∂z_loss
 
         profile_loss = u_prefactor * u_loss + v_prefactor * v_loss + ρ_prefactor * ρ_loss
         gradient_loss = ∂u∂z_prefactor * ∂u∂z_loss + ∂v∂z_prefactor * ∂v∂z_loss + ∂ρ∂z_prefactor * ∂ρ∂z_loss

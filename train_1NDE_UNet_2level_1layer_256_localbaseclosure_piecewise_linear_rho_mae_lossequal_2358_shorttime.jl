@@ -25,7 +25,7 @@ function find_max(a...)
 end
 
 # FILE_DIR = "./training_output/SW_FC_2358_UNet_2level_1layer_256_swish_local_diffusivity_piecewise_linear_rho_lossequal_mae_Adam_noclamp_lossequal_mae_ADAM5e-4_test_shorttime"
-FILE_DIR = "./training_output/SW_FC_2358_UNet_2level_1layer_256_swish_local_diffusivity_piecewise_linear_rho_rho0.8_gradient_Adam_noclamp_lossequal_mae_ADAM5e-4_test_shorttime"
+FILE_DIR = "./training_output/SW_FC_2358_UNet_2level_1layer_256_swish_local_diffusivity_piecewise_linear_rho_rho0.8_gradient_Adam_glorot_lossequal_mae_ADAM5e-4_test_shorttime"
 
 mkpath(FILE_DIR)
 @info "$(FILE_DIR)"

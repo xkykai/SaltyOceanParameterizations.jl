@@ -23,7 +23,9 @@ function find_max(a...)
     return maximum(maximum.([a...]))
 end
 
-FILE_DIR = "./training_output/SW_FC_2358_UNet_2level_1layer_256_swish_local_diffusivity_piecewise_linear_rho_lossequal_mae_Adam_noclamp_lossequal_mae_ADAM5e-4_test_shorttime"
+# FILE_DIR = "./training_output/SW_FC_2358_UNet_2level_1layer_256_swish_local_diffusivity_piecewise_linear_rho_lossequal_mae_Adam_noclamp_lossequal_mae_ADAM5e-4_test_shorttime"
+FILE_DIR = "./training_output/SW_FC_2358_UNet_2level_1layer_256_swish_local_diffusivity_piecewise_linear_rho_rho0.8_gradient_Adam_noclamp_lossequal_mae_ADAM5e-4_test_shorttime"
+
 mkpath(FILE_DIR)
 @info "$(FILE_DIR)"
 
@@ -39,7 +41,8 @@ LES_FILE_DIRS = [
     "./LES_training/linearTS_b_dTdz_-0.025_dSdz_-0.0045_QU_-0.0005_QB_0.0_T_-3.6_S_33.9_f_-0.000125_WENO9nu0_Lxz_512.0_256.0_Nxz_256_128/instantaneous_timeseries.jld2",
 ]
 
-BASECLOSURE_FILE_DIR = "./training_output/local_diffusivity_piecewise_linear_rho_noclamp_lossequal_SW_FC_largeinitialdiffusivity_mae/training_results_4.jld2"
+# BASECLOSURE_FILE_DIR = "./training_output/local_diffusivity_piecewise_linear_rho_noclamp_lossequal_SW_FC_largeinitialdiffusivity_mae/training_results_4.jld2"
+BASECLOSURE_FILE_DIR = "./training_output/local_diffusivity_piecewise_linear_rho_noclamp_rho0.8_gradient_Adam_SW_FC_largeinitialdiffusivity/training_results_4.jld2"
 
 field_datasets = [FieldDataset(FILE_DIR, backend=OnDisk()) for FILE_DIR in LES_FILE_DIRS]
 

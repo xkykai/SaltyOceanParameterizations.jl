@@ -727,11 +727,12 @@ optimizers = [OptimizationOptimisers.ADAM(5e-4),
 maxiters = [200, 200, 200, 200]
 
 for (epoch, (optimizer, maxiter)) in enumerate(zip(optimizers, maxiters))
-    res, loss, sols, fluxes, losses, diffusivities, sols_noNN, fluxes_noNN, diffusivities_noNN = train_NDE(train_data, train_data_plot, train_timesteps, NNs, ps_training, ps_baseclosure, st_NN, rng, maxiter=2, solver=VCABM3(), optimizer=optimizer, epoch=epoch)
+    res, loss, sols, fluxes, losses, diffusivities, sols_noNN, fluxes_noNN, diffusivities_noNN = train_NDE(train_data, train_data_plot, train_timesteps, NNs, ps_training, ps_baseclosure, st_NN, rng, maxiter=maxiter, solver=VCABM3(), optimizer=optimizer, epoch=epoch)
     u = res.u
     jldsave("$(FILE_DIR)/training_results_$(epoch).jld2"; res, u, loss, sols, fluxes, losses, NNs, st_NN, diffusivities)
     plot_loss(losses, FILE_DIR, epoch=epoch)
     for i in eachindex(field_datasets)
         animate_data(train_data_plot, train_data.scaling, sols, fluxes, diffusivities, sols_noNN, fluxes_noNN, diffusivities_noNN, i, FILE_DIR, epoch=epoch)
     end
+    ps_training .= u
 end

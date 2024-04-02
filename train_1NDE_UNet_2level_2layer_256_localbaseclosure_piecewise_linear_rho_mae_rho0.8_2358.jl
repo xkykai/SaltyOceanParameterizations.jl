@@ -14,6 +14,7 @@ using Colors
 using Distributions
 import SeawaterPolynomials.TEOS10: s, ΔS, Sₐᵤ
 s(Sᴬ) = Sᴬ + ΔS >= 0 ? √((Sᴬ + ΔS) / Sₐᵤ) : NaN
+using Glob
 
 function find_min(a...)
     return minimum(minimum.([a...]))
@@ -116,7 +117,7 @@ function train_NDE(train_data, train_data_plot, NNs, ps_training, ps_baseclosure
     train_data = train_data |> dev
     x₀s = [vcat(data.profile.u.scaled[:, 1], data.profile.v.scaled[:, 1], data.profile.ρ.scaled[:, 1]) for data in train_data.data] |> dev
     eos = TEOS10EquationOfState()
-    ps_zeros = ComponentArray(ps_training)
+    ps_zeros = deepcopy(ps_training)
     ps_zeros.NDE .= 0
 
     function construct_gaussian_fourier_features(scalars, output_dims, rng)
@@ -305,7 +306,7 @@ function train_NDE(train_data, train_data_plot, NNs, ps_training, ps_baseclosure
 
     function predict_NDE(p)
         probs = [ODEProblem((x, p′, t) -> NDE(x, p′, t, param, st_NN), x₀, (param.scaled_time[1], param.scaled_time[end]), p) for (x₀, param) in zip(x₀s, params)]
-        sols = [Array(solve(prob, solver, saveat=param.scaled_time, reltol=1e-5)) for (param, prob) in zip(params, probs)]
+        sols = [Array(solve(prob, solver, saveat=param.scaled_time, reltol=1e-5, sensealg=InterpolatingAdjoint(autojacvec=ZygoteVJP(), checkpointing=true))) for (param, prob) in zip(params, probs)]
         return sols
     end
 
@@ -406,7 +407,7 @@ function train_NDE(train_data, train_data_plot, NNs, ps_training, ps_baseclosure
                 Dates.now(), prettytime(1e-9 * (time_ns() - wall_clock[1])), iter, maxiter, l, 
                 ind_loss.u, ind_loss.v, ind_loss.ρ, 
                 ind_loss.∂u∂z, ind_loss.∂v∂z, ind_loss.∂ρ∂z)
-        if iter % 10 == 0
+        if iter % 50 == 0
             jldsave("$(FILE_DIR)/intermediate_training_results_epoch$(epoch)_iter$(iter).jld2"; u=p.u)
         end
         losses[iter+1] = l
@@ -733,3 +734,5 @@ for (epoch, (optimizer, maxiter)) in enumerate(zip(optimizers, maxiters))
     end
     ps_training .= u
 end
+
+rm.(glob("$(FILE_DIR)/intermediate_training_results_*.jld2"))

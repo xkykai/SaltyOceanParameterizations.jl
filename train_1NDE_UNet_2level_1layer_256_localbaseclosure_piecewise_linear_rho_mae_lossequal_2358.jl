@@ -14,6 +14,7 @@ using Colors
 using Distributions
 import SeawaterPolynomials.TEOS10: s, ΔS, Sₐᵤ
 s(Sᴬ) = Sᴬ + ΔS >= 0 ? √((Sᴬ + ΔS) / Sₐᵤ) : NaN
+using Glob
 
 function find_min(a...)
     return minimum(minimum.([a...]))
@@ -115,7 +116,7 @@ function train_NDE(train_data, train_data_plot, NNs, ps_training, ps_baseclosure
     train_data = train_data |> dev
     x₀s = [vcat(data.profile.u.scaled[:, 1], data.profile.v.scaled[:, 1], data.profile.ρ.scaled[:, 1]) for data in train_data.data] |> dev
     eos = TEOS10EquationOfState()
-    ps_zeros = ComponentArray(ps_training)
+    ps_zeros = deepcopy(ps_training)
     ps_zeros.NDE .= 0
 
     function construct_gaussian_fourier_features(scalars, output_dims, rng)
@@ -304,7 +305,7 @@ function train_NDE(train_data, train_data_plot, NNs, ps_training, ps_baseclosure
 
     function predict_NDE(p)
         probs = [ODEProblem((x, p′, t) -> NDE(x, p′, t, param, st_NN), x₀, (param.scaled_time[1], param.scaled_time[end]), p) for (x₀, param) in zip(x₀s, params)]
-        sols = [Array(solve(prob, solver, saveat=param.scaled_time, reltol=1e-5)) for (param, prob) in zip(params, probs)]
+        sols = [Array(solve(prob, solver, saveat=param.scaled_time, reltol=1e-5, sensealg=InterpolatingAdjoint(autojacvec=ZygoteVJP(), checkpointing=true))) for (param, prob) in zip(params, probs)]
         return sols
     end
 
@@ -732,3 +733,5 @@ for (epoch, (optimizer, maxiter)) in enumerate(zip(optimizers, maxiters))
     end
     ps_training .= u
 end
+
+rm.(glob("$(FILE_DIR)/intermediate_training_results_*.jld2"))

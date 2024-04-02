@@ -14,6 +14,7 @@ using Colors
 using Distributions
 import SeawaterPolynomials.TEOS10: s, ΔS, Sₐᵤ
 s(Sᴬ) = Sᴬ + ΔS >= 0 ? √((Sᴬ + ΔS) / Sₐᵤ) : NaN
+using Glob
 
 function find_min(a...)
     return minimum(minimum.([a...]))
@@ -772,4 +773,4 @@ for i in eachindex(field_datasets)
     animate_data(train_data_plot, train_data.scaling, sols, fluxes, diffusivities, sols_noNN, fluxes_noNN, diffusivities_noNN, i, FILE_DIR, epoch=epoch)
 end
 
-
+rm.(glob("$(FILE_DIR)/intermediate_training_results_*.jld2"))

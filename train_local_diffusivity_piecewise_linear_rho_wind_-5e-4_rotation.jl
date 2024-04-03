@@ -39,7 +39,8 @@ coarse_size = 32
 train_data_plot = LESDatasetsB(field_datasets, ZeroMeanUnitVarianceScaling, full_timeframes)
 
 # ps = jldopen("./training_output/local_diffusivity_piecewise_linear_noclamp_lossequal_reltol1e-5/training_results_4.jld2", "r")["u"]
-ps = ComponentArray(ν₁=0.1, m=-0.1/0.25, Pr=1)
+# ps = ComponentArray(ν₁=0.1, m=-0.1/0.25, Pr=1)
+ps = ComponentArray(ν₁=6.547e-02, m=-1.632e-01, Pr=1.239)
 
 function optimize_parameters(train_data, train_data_plot, ps; coarse_size=32, dev=cpu_device(), maxiter=10, optimizer=OptimizationOptimisers.ADAM(0.01), solver=DP5(), Ri_clamp_lims=(-Inf, Inf), sensealg=ForwardDiffSensitivity())
     train_data = train_data |> dev
@@ -396,7 +397,7 @@ optimizers = [OptimizationOptimisers.ADAM(5e-3),
               OptimizationOptimisers.ADAM(5e-4),
               OptimizationOptimJL.BFGS()]
 
-maxiters = [1000, 1000, 1000, 1000, 100]
+maxiters = [100, 1000, 1000, 1000, 300]
 # optimizers = [OptimizationOptimisers.ADAM()]
 # maxiters = [10]
 
@@ -404,9 +405,9 @@ for (epoch, (optimizer, maxiter)) in enumerate(zip(optimizers, maxiters))
     res, loss, sols, fluxes, losses, diffusivities = optimize_parameters(train_data, train_data_plot, ps, maxiter=maxiter, optimizer=optimizer, Ri_clamp_lims=(-Inf, Inf), solver=VCABM3())
     u = res.u
     jldsave("$(FILE_DIR)/training_results_$(epoch).jld2"; res, u, loss, sols, fluxes, losses, diffusivities)
-    # for i in eachindex(field_datasets)
-    #     animate_data(train_data_plot, train_data.scaling, sols, fluxes, diffusivities, i, FILE_DIR, epoch=epoch)
-    # end
+    for i in eachindex(field_datasets)
+        animate_data(train_data_plot, train_data.scaling, sols, fluxes, diffusivities, i, FILE_DIR, epoch=epoch)
+    end
     plot_loss(losses, FILE_DIR, epoch=epoch)
     ps .= u
 end

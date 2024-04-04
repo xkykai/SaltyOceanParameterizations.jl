@@ -25,7 +25,7 @@ function find_max(a...)
     return maximum(maximum.([a...]))
 end
 
-FILE_DIR = "./training_output/NN_leakyrelu_local_diffusivity_convectivestep_shearlinear_glorot_freeconvection_mae_ADAM5e-4"
+FILE_DIR = "./training_output/NN_leakyrelu_local_diffusivity_convectivestep_shearlinear_glorot_freeconvection_mae_AdamW_warmup20"
 mkpath(FILE_DIR)
 @info "$(FILE_DIR)"
 

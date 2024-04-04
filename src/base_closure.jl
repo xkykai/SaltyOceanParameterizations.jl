@@ -1,4 +1,5 @@
 using SeawaterPolynomials.TEOS10
+using NNlib: tanh_fast
 
 function calculate_Ri(u, v, T, S, Dᶠ, g, ρ₀; clamp_lims=(-Inf, Inf))
     ϵ = 1e-7
@@ -75,9 +76,16 @@ function local_Ri_ν_convectivestep_shearlinear(Ri, ν_conv, ν_shear, m)
     ν₀ = 1e-5
 
     # ν = ifelse(Ri < 0, ν_shear, clamp(m * Ri + ν_conv + ν₀, ν₀, ν_conv))
-    ν = ifelse(Ri < 0, ν_conv, ifelse(Ri >= (ν₀ - ν_shear) / m, ν₀, m * Ri + ν_shear))
+    # ν = ifelse(Ri < 0, ν_conv, ifelse(Ri >= (ν₀ - ν_shear) / m, ν₀, m * Ri + ν_shear))
+    # ν = Ri < 0 ? ν_conv : Ri >= (ν₀ - ν_shear) / m ? ν₀ : m * Ri + ν_shear
+
+    # ν = (-tanh_fast(1000 * Ri) + 1) * ν_conv / 2 + ν₀
+    # ν = clamp(m * Ri + ν_conv + ν₀, ν₀, ν_conv)
+
+    ν = clamp(ν_conv / 2 * (-tanh_fast(1000 * Ri) + 1) + m * Ri + ν_shear, ν₀, ν_conv)
 
     return ν
+    # return ν₀
 end
 
 function local_Ri_κ_convectivestep_shearlinear(Ri, ν_conv, ν_shear, m, Pr)

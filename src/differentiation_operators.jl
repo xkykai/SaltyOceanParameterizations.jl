@@ -12,7 +12,8 @@ function Dᶜ(N, Δ)
         D[k, k+1] =  1.0
     end
     D .= 1/Δ .* D
-    return sparse(D)
+    # return sparse(D)
+    return D
 end
 
 """
@@ -38,7 +39,8 @@ function Dᶠ(N, Δ)
         D[k, k]   =  1.0
     end
     D .= 1/Δ .* D
-    return sparse(D)
+    # return sparse(D)
+    return D
 end
 
 """

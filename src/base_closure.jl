@@ -69,3 +69,22 @@ function nonlocal_Ri_diffusivity(ν, D⁺, ν₁_en, Δν_enᶜ, ΔΔν_en, Pr)
     κ_en = ν_en ./ Pr
     return ν_en, κ_en
 end
+
+function local_Ri_ν_convectivestep_shearlinear(Ri, ν_conv, ν_shear, m)
+    m > 0 && return NaN
+    ν₀ = 1e-5
+
+    # ν = ifelse(Ri < 0, ν_shear, clamp(m * Ri + ν_conv + ν₀, ν₀, ν_conv))
+    ν = ifelse(Ri < 0, ν_conv, ifelse(Ri >= (ν₀ - ν_shear) / m, ν₀, m * Ri + ν_shear))
+
+    return ν
+end
+
+function local_Ri_κ_convectivestep_shearlinear(Ri, ν_conv, ν_shear, m, Pr)
+    ν = local_Ri_ν_convectivestep_shearlinear(Ri, ν_conv, ν_shear, m)
+    return ν / Pr
+end
+
+function local_Ri_κ_convectivestep_shearlinear(ν, Pr)
+    return ν / Pr
+end

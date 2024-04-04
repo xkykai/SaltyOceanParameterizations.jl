@@ -416,7 +416,7 @@ maxiters = [200, 200, 200, 200, 200]
 # maxiters = [5]
 
 for (epoch, (optimizer, maxiter)) in enumerate(zip(optimizers, maxiters))
-    res, loss, sols, fluxes, losses, diffusivities = optimize_parameters(train_data, train_data_plot, ps, maxiter=maxiter, optimizer=optimizer, Ri_clamp_lims=(-Inf, Inf), solver=VCABM3())
+    res, loss, sols, fluxes, losses, diffusivities = optimize_parameters(train_data, train_data_plot, ps, maxiter=maxiter, optimizer=optimizer, Ri_clamp_lims=(-Inf, Inf), solver=ROCK4())
     u = res.u
     jldsave("$(FILE_DIR)/training_results_$(epoch).jld2"; res, u, loss, sols, fluxes, losses, diffusivities)
     for i in eachindex(field_datasets)

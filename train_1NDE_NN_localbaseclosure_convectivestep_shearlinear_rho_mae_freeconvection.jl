@@ -25,7 +25,7 @@ function find_max(a...)
     return maximum(maximum.([a...]))
 end
 
-FILE_DIR = "./training_output/NN_leakyrelu_local_diffusivity_convectivestep_shearlinear_glorot_freeconvection_mse_Adam5e-4_warmup40"
+FILE_DIR = "./training_output/NN_leakyrelu_local_diffusivity_convectivestep_shearlinear_glorot_freeconvection_mse_Adam1e-3_warmup40"
 mkpath(FILE_DIR)
 @info "$(FILE_DIR)"
 
@@ -507,8 +507,8 @@ function animate_data(train_data, scaling, sols, fluxes, diffusivities, sols_noN
     end
 end
 
-optimizers = [Optimizer(initial=OptimizationOptimisers.Adam(1e-6), initial_learning_rate=1e-6, learning_rate=5e-4, warmup=40, maxiter=1000),
-              Optimizer(initial=OptimizationOptimisers.Adam(1e-6), initial_learning_rate=1e-6, learning_rate=5e-4, warmup=40, maxiter=1000)]
+optimizers = [Optimizer(initial=OptimizationOptimisers.Adam(1e-6), initial_learning_rate=1e-6, learning_rate=1e-3, warmup=40, maxiter=1000),
+              Optimizer(initial=OptimizationOptimisers.Adam(1e-6), initial_learning_rate=1e-6, learning_rate=1e-3, warmup=40, maxiter=1000)]
 
 for (epoch, optimizer) in enumerate(optimizers)
     res, loss, sols, fluxes, losses, diffusivities, sols_noNN, fluxes_noNN, diffusivities_noNN = train_NDE(train_data, train_data_plot, NNs, ps_training, ps_baseclosure, st_NN, rng, solver=ROCK4(), optimizer=optimizer, epoch=epoch)

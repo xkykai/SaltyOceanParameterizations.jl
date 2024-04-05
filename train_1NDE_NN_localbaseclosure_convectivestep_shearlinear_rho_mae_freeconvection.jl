@@ -507,7 +507,8 @@ function animate_data(train_data, scaling, sols, fluxes, diffusivities, sols_noN
     end
 end
 
-optimizers = [Optimizer(initial=OptimizationOptimisers.AdamW(1e-6), initial_learning_rate=1e-6, learning_rate=5e-4, warmup=20, maxiter=2000)]
+optimizers = [Optimizer(initial=OptimizationOptimisers.AdamW(1e-6), initial_learning_rate=1e-6, learning_rate=5e-4, warmup=20, maxiter=1000),
+              Optimizer(initial=OptimizationOptimisers.AdamW(1e-6), initial_learning_rate=1e-6, learning_rate=5e-4, warmup=20, maxiter=1000)]
 
 for (epoch, optimizer) in enumerate(optimizers)
     res, loss, sols, fluxes, losses, diffusivities, sols_noNN, fluxes_noNN, diffusivities_noNN = train_NDE(train_data, train_data_plot, NNs, ps_training, ps_baseclosure, st_NN, rng, solver=ROCK4(), optimizer=optimizer, epoch=epoch)

@@ -96,3 +96,25 @@ end
 function local_Ri_κ_convectivestep_shearlinear(ν, Pr)
     return ν / Pr
 end
+
+function local_Ri_ν_convectivetanh_shearlinear(Ri, ν_conv, ν_shear, m, ΔRi)
+    m > 0 && return NaN
+    ν₀ = 1e-5
+
+    if Ri >= 0
+        ν = clamp(m * Ri + ν_shear + ν₀, ν₀, ν_shear)
+    else
+        ν = (ν_conv - ν_shear) / 2 * -tanh_fast(Ri / ΔRi) + ν_shear
+    end
+
+    return ν
+end
+
+function local_Ri_κ_convectivetanh_shearlinear(Ri, ν_conv, ν_shear, m, ΔRi, Pr)
+    ν = local_Ri_ν_convectivetanh_shearlinear(Ri, ν_conv, ν_shear, m, ΔRi)
+    return ν / Pr
+end
+
+function local_Ri_κ_convectivetanh_shearlinear(ν, Pr)
+    return ν / Pr
+end

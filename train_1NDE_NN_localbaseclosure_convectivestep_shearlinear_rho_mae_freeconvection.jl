@@ -25,7 +25,7 @@ function find_max(a...)
     return maximum(maximum.([a...]))
 end
 
-FILE_DIR = "./training_output/NN_leakyrelu_local_diffusivity_convectivestep_shearlinear_glorot_freeconvection_mae_AdamW1e-3_warmup40"
+FILE_DIR = "./training_output/NN_leakyrelu_local_diffusivity_convectivestep_shearlinear_glorot_freeconvection_mse_Adam5e-4_warmup40"
 mkpath(FILE_DIR)
 @info "$(FILE_DIR)"
 
@@ -36,7 +36,7 @@ LES_FILE_DIRS = [
     "./LES_training/linearTS_b_dTdz_-0.025_dSdz_-0.0045_QU_0.0_QB_8.0e-7_T_-3.6_S_33.9_f_-0.000125_WENO9nu0_Lxz_512.0_256.0_Nxz_256_128/instantaneous_timeseries.jld2",
 ]
 
-BASECLOSURE_FILE_DIR = "./training_output/local_diffusivity_convectivestep_shearlinear_rho_SW_FC/training_results_2.jld2"
+BASECLOSURE_FILE_DIR = "./training_output/local_diffusivity_convectivestep_shearlinear_rho_SW_-5e-4_-2e-4_FC_8e-7/training_results_5.jld2"
 
 field_datasets = [FieldDataset(FILE_DIR, backend=OnDisk()) for FILE_DIR in LES_FILE_DIRS]
 
@@ -221,9 +221,9 @@ function train_NDE(train_data, train_data_plot, NNs, ps_training, ps_baseclosure
     end
 
     function predict_losses(ρ, ∂ρ∂z, loss_scaling=(; ρ=1, ∂ρ∂z=1))
-        ρ_loss = loss_scaling.ρ * mean(mean.([abs.(data.profile.ρ.scaled .- ρ) for (data, ρ) in zip(train_data.data, ρ)]))
+        ρ_loss = loss_scaling.ρ * mean(mean.([(data.profile.ρ.scaled .- ρ).^2 for (data, ρ) in zip(train_data.data, ρ)]))
 
-        ∂ρ∂z_loss = loss_scaling.∂ρ∂z * mean(mean.([abs.(data.profile.∂ρ∂z.scaled .- ∂ρ∂z) for (data, ∂ρ∂z) in zip(train_data.data, ∂ρ∂z)]))
+        ∂ρ∂z_loss = loss_scaling.∂ρ∂z * mean(mean.([(data.profile.∂ρ∂z.scaled .- ∂ρ∂z).^2 for (data, ∂ρ∂z) in zip(train_data.data, ∂ρ∂z)]))
 
         return (ρ=ρ_loss, ∂ρ∂z=∂ρ∂z_loss)
     end
@@ -507,8 +507,8 @@ function animate_data(train_data, scaling, sols, fluxes, diffusivities, sols_noN
     end
 end
 
-optimizers = [Optimizer(initial=OptimizationOptimisers.AdamW(1e-6), initial_learning_rate=1e-6, learning_rate=1e-3, warmup=40, maxiter=1000),
-              Optimizer(initial=OptimizationOptimisers.AdamW(1e-6), initial_learning_rate=1e-6, learning_rate=1e-3, warmup=40, maxiter=1000)]
+optimizers = [Optimizer(initial=OptimizationOptimisers.Adam(1e-6), initial_learning_rate=1e-6, learning_rate=5e-4, warmup=40, maxiter=1000),
+              Optimizer(initial=OptimizationOptimisers.Adam(1e-6), initial_learning_rate=1e-6, learning_rate=5e-4, warmup=40, maxiter=1000)]
 
 for (epoch, optimizer) in enumerate(optimizers)
     res, loss, sols, fluxes, losses, diffusivities, sols_noNN, fluxes_noNN, diffusivities_noNN = train_NDE(train_data, train_data_plot, NNs, ps_training, ps_baseclosure, st_NN, rng, solver=ROCK4(), optimizer=optimizer, epoch=epoch)

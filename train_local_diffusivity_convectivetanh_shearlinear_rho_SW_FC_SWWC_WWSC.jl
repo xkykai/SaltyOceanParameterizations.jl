@@ -20,7 +20,7 @@ function find_max(a...)
     return maximum(maximum.([a...]))
 end
 
-FILE_DIR = "./training_output/local_diffusivity_convectivetanh_shearlinear_rho_SW_FC_WWSC_SWWC_BFGS"
+FILE_DIR = "./training_output/local_diffusivity_convectivetanh_shearlinear_rho_SW_FC_WWSC_SWWC"
 mkpath(FILE_DIR)
 
 LES_FILE_DIRS = [
@@ -390,18 +390,17 @@ function animate_data(truth_data, scaling, sols, fluxes, diffusivities, index, F
     end
 end
 
-# optimizers = [OptimizationOptimisers.ADAM(1e-3),
-#               OptimizationOptimisers.ADAM(5e-4),
-#               OptimizationOptimisers.ADAM(2e-4),
-#               OptimizationOptimisers.ADAM(1e-4),
-#               OptimizationOptimJL.BFGS()]
+optimizers = [OptimizationOptimisers.ADAM(1e-3),
+              OptimizationOptimisers.ADAM(5e-4),
+              OptimizationOptimisers.ADAM(2e-4),
+              OptimizationOptimJL.BFGS()]
 
-# maxiters = [500, 500, 200, 200, 200]
+maxiters = [500, 500, 200, 200]
 
-optimizers = [OptimizationOptimJL.BFGS()]
+# optimizers = [OptimizationOptimJL.BFGS()]
 
-maxiters = [500]
-# optimizers = [OptimizationOptimisers.Adam(5e-4)]
+# maxiters = [500]
+# optimizers = [OptimizationOptimisers.Adam(1e-3)]
 # maxiters = [5]
 
 for (epoch, (optimizer, maxiter)) in enumerate(zip(optimizers, maxiters))

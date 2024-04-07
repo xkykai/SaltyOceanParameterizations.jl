@@ -361,7 +361,6 @@ function plot_loss(losses, FILE_DIR; epoch=1)
     lines!(axtotalloss, losses.total, label="Total Loss", color=colors[1])
 
     lines!(axindividualloss, losses.ρ, label="ρ", color=colors[5])
-    lines!(axindividualloss, losses.∂ρ∂z, label="∂ρ∂z", color=colors[10])
 
     axislegend(axindividualloss, position=:rt)
     save("$(FILE_DIR)/losses_epoch$(epoch).png", fig, px_per_unit=8)

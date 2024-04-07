@@ -20,7 +20,7 @@ function find_max(a...)
     return maximum(maximum.([a...]))
 end
 
-FILE_DIR = "./training_output/local_diffusivity_convectivetanh_shearlinear_rho_SW_FC_WWSC_SWWC"
+FILE_DIR = "./training_output/local_diffusivity_convectivetanh_shearlinear_rho_SW_FC_WWSC_SWWC_fast_BFGS"
 mkpath(FILE_DIR)
 
 LES_FILE_DIRS = [
@@ -41,7 +41,7 @@ train_data_plot = LESDatasetsB(field_datasets, ZeroMeanUnitVarianceScaling, full
 
 ps = ComponentArray(ν_conv=1., ν_shear=6.484e-02, m=-1.736e-01, Pr=1.1, ΔRi=0.1)
 
-function optimize_parameters(train_data, train_data_plot, ps; coarse_size=32, dev=cpu_device(), maxiter=10, optimizer=OptimizationOptimisers.ADAM(0.01), solver=DP5(), Ri_clamp_lims=(-Inf, Inf), sensealg=ForwardDiffSensitivity())
+function optimize_parameters(train_data, train_data_plot, ps; coarse_size=32, dev=cpu_device(), maxiter=10, optimizer=OptimizationOptimisers.ADAM(0.01), solver=DP5(), Ri_clamp_lims=(-Inf, Inf))
     train_data = train_data |> dev
     x₀s = [vcat(data.profile.u.scaled[:, 1], data.profile.v.scaled[:, 1], data.profile.ρ.scaled[:, 1]) for data in train_data.data] |> dev
     eos = TEOS10EquationOfState()
@@ -146,7 +146,7 @@ function optimize_parameters(train_data, train_data_plot, ps; coarse_size=32, de
 
     function predict_DE(p)
         probs = [ODEProblem((x, p′, t) -> DE(x, p′, t, param), x₀, (param.scaled_time[1], param.scaled_time[end]), p) for (x₀, param) in zip(x₀s, params)]
-        sols = [Array(solve(prob, solver, saveat=param.scaled_time, reltol=1e-6, sensealg=sensealg)) for (param, prob) in zip(params, probs)]
+        sols = [Array(solve(prob, solver, saveat=param.scaled_time, reltol=1e-5)) for (param, prob) in zip(params, probs)]
         return sols
     end
 
@@ -390,21 +390,21 @@ function animate_data(truth_data, scaling, sols, fluxes, diffusivities, index, F
     end
 end
 
-optimizers = [OptimizationOptimisers.ADAM(1e-3),
-              OptimizationOptimisers.ADAM(5e-4),
-              OptimizationOptimisers.ADAM(2e-4),
-              OptimizationOptimJL.BFGS()]
+# optimizers = [OptimizationOptimisers.ADAM(1e-3),
+#               OptimizationOptimisers.ADAM(5e-4),
+#               OptimizationOptimisers.ADAM(2e-4),
+#               OptimizationOptimJL.BFGS()]
 
-maxiters = [500, 500, 200, 200]
+# maxiters = [500, 500, 200, 200]
 
-# optimizers = [OptimizationOptimJL.BFGS()]
+optimizers = [OptimizationOptimJL.BFGS()]
 
-# maxiters = [500]
+maxiters = [50]
 # optimizers = [OptimizationOptimisers.Adam(1e-3)]
 # maxiters = [5]
 
 for (epoch, (optimizer, maxiter)) in enumerate(zip(optimizers, maxiters))
-    res, loss, sols, fluxes, losses, diffusivities = optimize_parameters(train_data, train_data_plot, ps, maxiter=maxiter, optimizer=optimizer, Ri_clamp_lims=(-Inf, Inf), solver=ROCK4(), sensealg=ForwardDiffSensitivity())
+    res, loss, sols, fluxes, losses, diffusivities = optimize_parameters(train_data, train_data_plot, ps, maxiter=maxiter, optimizer=optimizer, Ri_clamp_lims=(-Inf, Inf), solver=ROCK4())
 
     u = res.u
     jldsave("$(FILE_DIR)/training_results_$(epoch).jld2"; res, u, loss, sols, fluxes, losses, diffusivities)

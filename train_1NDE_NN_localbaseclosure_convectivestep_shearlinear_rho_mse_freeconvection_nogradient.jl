@@ -63,7 +63,11 @@ ps .= glorot_uniform(rng, Float64, length(ps))
 ps .*= 1e-5
 
 NNs = (; NDE=NN)
-ps_training = ComponentArray(NDE=ps)
+# ps_training = ComponentArray(NDE=ps)
+ps_file = jldopen("$(FILE_DIR)/training_results_1.jld2", "r")
+ps_training = ps_file["u"]
+close(ps_file)
+
 st_NN = (; NDE=st)
 
 struct Optimizer{I, L}
@@ -470,15 +474,15 @@ function animate_data(train_data, scaling, sols, fluxes, diffusivities, sols_noN
     end
 end
 
-optimizers = [Optimizer(initial=OptimizationOptimisers.Adam(1e-3), initial_learning_rate=1e-3, learning_rate=1e-3, warmup=1, maxiter=1000),
-              Optimizer(initial=OptimizationOptimisers.Adam(1e-6), initial_learning_rate=1e-6, learning_rate=3e-4, warmup=40, maxiter=1000)]
+optimizers = [Optimizer(initial=OptimizationOptimisers.Adam(1e-6), initial_learning_rate=1e-6, learning_rate=3e-4, warmup=40, maxiter=1000),
+              Optimizer(initial=OptimizationOptimisers.Adam(1e-6), initial_learning_rate=1e-6, learning_rate=1e-4, warmup=40, maxiter=1000)]
 
 # optimizers = [Optimizer(initial=OptimizationOptimisers.Adam(1e-3), initial_learning_rate=1e-3, learning_rate=1e-3, warmup=1, maxiter=10)]
 
 for (epoch, optimizer) in enumerate(optimizers)
     res, loss, sols, fluxes, losses, diffusivities, sols_noNN, fluxes_noNN, diffusivities_noNN = train_NDE(train_data, train_data_plot, NNs, ps_training, ps_baseclosure, st_NN, rng, solver=ROCK4(), optimizer=optimizer, epoch=epoch)
     u = res.u
-    jldsave("$(FILE_DIR)/training_results_$(epoch).jld2"; res, u, loss, sols, fluxes, losses, NNs, st_NN, diffusivities, sols_noNN, fluxes_noNN, diffusivities_noNN)
+    jldsave("$(FILE_DIR)/training_results_$(epoch)_2.jld2"; res, u, loss, sols, fluxes, losses, NNs, st_NN, diffusivities, sols_noNN, fluxes_noNN, diffusivities_noNN)
     plot_loss(losses, FILE_DIR, epoch=epoch)
     for i in eachindex(field_datasets)
         animate_data(train_data_plot, train_data.scaling, sols, fluxes, diffusivities, sols_noNN, fluxes_noNN, diffusivities_noNN, i, FILE_DIR, epoch=epoch)

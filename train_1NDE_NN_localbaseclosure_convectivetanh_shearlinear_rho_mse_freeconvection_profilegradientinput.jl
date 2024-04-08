@@ -284,7 +284,7 @@ function train_NDE(train_data, train_data_plot, NNs, ps_training, ps_baseclosure
                 ind_loss.∂ρ∂z,
                 maximum(abs, p.u))
         if iter % 200 == 0
-            jldsave("$(FILE_DIR)/intermediate_training_results_epoch$(epoch)_iter$(iter).jld2"; u=p.u)
+            jldsave("$(FILE_DIR)/intermediate_training_results_epoch$(epoch)_iter$(iter)_2.jld2"; u=p.u)
         end
         losses[iter+1] = l
         ρ_losses[iter+1] = ind_loss.ρ
@@ -518,13 +518,13 @@ optimizers = [Optimizer(initial=OptimizationOptimisers.Adam(1e-6), initial_learn
 
 for (epoch, optimizer) in enumerate(optimizers)
     res, loss, sols, fluxes, losses, diffusivities, sols_noNN, fluxes_noNN, diffusivities_noNN = train_NDE(train_data, train_data_plot, NNs, ps_training, ps_baseclosure, st_NN, rng, solver=ROCK4(), optimizer=optimizer, epoch=epoch)
-    # u = res.u
-    # jldsave("$(FILE_DIR)/training_results_$(epoch).jld2"; res, u, loss, sols, fluxes, losses, NNs, st_NN, diffusivities, sols_noNN, fluxes_noNN, diffusivities_noNN)
-    # plot_loss(losses, FILE_DIR, epoch=epoch)
-    # for i in eachindex(field_datasets)
-    #     animate_data(train_data_plot, train_data.scaling, sols, fluxes, diffusivities, sols_noNN, fluxes_noNN, diffusivities_noNN, i, FILE_DIR, epoch=epoch)
-    # end
-    # ps_training .= u
+    u = res.u
+    jldsave("$(FILE_DIR)/training_results_$(epoch)_2.jld2"; res, u, loss, sols, fluxes, losses, NNs, st_NN, diffusivities, sols_noNN, fluxes_noNN, diffusivities_noNN)
+    plot_loss(losses, FILE_DIR, epoch=epoch)
+    for i in eachindex(field_datasets)
+        animate_data(train_data_plot, train_data.scaling, sols, fluxes, diffusivities, sols_noNN, fluxes_noNN, diffusivities_noNN, i, FILE_DIR, epoch=epoch)
+    end
+    ps_training .= u
 end
 
 rm.(glob("$(FILE_DIR)/intermediate_training_results_*.jld2"))

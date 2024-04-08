@@ -63,7 +63,8 @@ ps .= glorot_uniform(rng, Float64, length(ps))
 ps .*= 1e-5
 
 NNs = (; NDE=NN)
-ps_training = ComponentArray(NDE=ps)
+# ps_training = ComponentArray(NDE=ps)
+ps_training = jldopen("$(FILE_DIR)/training_results_2.jld2", "r")["u"]
 st_NN = (; NDE=st)
 
 struct Optimizer{I, L}
@@ -403,7 +404,7 @@ function plot_loss(losses, FILE_DIR; epoch=1)
     lines!(axindividualloss, losses.∂ρ∂z, label="∂ρ∂z", color=colors[10])
 
     axislegend(axindividualloss, position=:rt)
-    save("$(FILE_DIR)/losses_epoch$(epoch).png", fig, px_per_unit=8)
+    save("$(FILE_DIR)/losses_epoch$(epoch)_2.png", fig, px_per_unit=8)
 end
 
 #%%
@@ -505,25 +506,25 @@ function animate_data(train_data, scaling, sols, fluxes, diffusivities, sols_noN
     xlims!(axRi, Rilim)
     xlims!(axdiffusivity, diffusivitylim)
 
-    CairoMakie.record(fig, "$(FILE_DIR)/training_$(index)_epoch$(epoch).mp4", 1:Nt, framerate=15) do nn
+    CairoMakie.record(fig, "$(FILE_DIR)/training_$(index)_epoch$(epoch)_2.mp4", 1:Nt, framerate=15) do nn
         n[] = nn
     end
 end
 
-optimizers = [Optimizer(initial=OptimizationOptimisers.Adam(1e-6), initial_learning_rate=1e-6, learning_rate=1e-3, warmup=40, maxiter=1000),
-              Optimizer(initial=OptimizationOptimisers.Adam(1e-6), initial_learning_rate=1e-6, learning_rate=1e-3, warmup=40, maxiter=1000)]
+optimizers = [Optimizer(initial=OptimizationOptimisers.Adam(1e-6), initial_learning_rate=1e-6, learning_rate=5e-5, warmup=40, maxiter=1000),
+              Optimizer(initial=OptimizationOptimisers.Adam(1e-6), initial_learning_rate=1e-6, learning_rate=3e-5, warmup=40, maxiter=1000)]
 
-# optimizers = [Optimizer(initial=OptimizationOptimisers.Adam(1e-3), initial_learning_rate=1e-3, learning_rate=1e-3, warmup=1, maxiter=2)]
+# optimizers = [Optimizer(initial=OptimizationOptimisers.Adam(1e-6), initial_learning_rate=1e-6, learning_rate=5e-5, warmup=10, maxiter=15)]
 
 for (epoch, optimizer) in enumerate(optimizers)
     res, loss, sols, fluxes, losses, diffusivities, sols_noNN, fluxes_noNN, diffusivities_noNN = train_NDE(train_data, train_data_plot, NNs, ps_training, ps_baseclosure, st_NN, rng, solver=ROCK4(), optimizer=optimizer, epoch=epoch)
-    u = res.u
-    jldsave("$(FILE_DIR)/training_results_$(epoch).jld2"; res, u, loss, sols, fluxes, losses, NNs, st_NN, diffusivities, sols_noNN, fluxes_noNN, diffusivities_noNN)
-    plot_loss(losses, FILE_DIR, epoch=epoch)
-    for i in eachindex(field_datasets)
-        animate_data(train_data_plot, train_data.scaling, sols, fluxes, diffusivities, sols_noNN, fluxes_noNN, diffusivities_noNN, i, FILE_DIR, epoch=epoch)
-    end
-    ps_training .= u
+    # u = res.u
+    # jldsave("$(FILE_DIR)/training_results_$(epoch).jld2"; res, u, loss, sols, fluxes, losses, NNs, st_NN, diffusivities, sols_noNN, fluxes_noNN, diffusivities_noNN)
+    # plot_loss(losses, FILE_DIR, epoch=epoch)
+    # for i in eachindex(field_datasets)
+    #     animate_data(train_data_plot, train_data.scaling, sols, fluxes, diffusivities, sols_noNN, fluxes_noNN, diffusivities_noNN, i, FILE_DIR, epoch=epoch)
+    # end
+    # ps_training .= u
 end
 
 rm.(glob("$(FILE_DIR)/intermediate_training_results_*.jld2"))

@@ -25,7 +25,7 @@ function find_max(a...)
     return maximum(maximum.([a...]))
 end
 
-FILE_DIR = "./training_output/CNN_kernel4_4channels_residual_relu_local_diffusivity_convectivetanh_shearlinear_glorot_freeconvection_mse_Adam1e-3"
+FILE_DIR = "./training_output/CNN_kernel4_4channels_residual_swish_local_diffusivity_convectivetanh_shearlinear_glorot_freeconvection_mse_Adam1e-3"
 mkpath(FILE_DIR)
 @info "$(FILE_DIR)"
 
@@ -51,11 +51,11 @@ train_data_plot = LESDatasetsB(field_datasets, ZeroMeanUnitVarianceScaling, full
 
 rng = Random.default_rng(123)
 
-CNN = Chain(Conv(Tuple(4), 1 => 2, relu),
+CNN = Chain(Conv(Tuple(4), 1 => 2, swish),
             FlattenLayer())
 
-decoder = Chain(Dense(92, 256, relu),
-                Dense(256, 256, relu),
+decoder = Chain(Dense(92, 256, swish),
+                Dense(256, 256, swish),
                 Dense(256, 31))
 
 ps_CNN, st_CNN = Lux.setup(rng, CNN)

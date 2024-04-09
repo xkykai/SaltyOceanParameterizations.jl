@@ -85,6 +85,8 @@ function solve_equation(ps, params, u0)
         ∂u∂x = D_face * u
         α = compute_diffusivity.(∂u∂x)
         D = Tridiagonal(D_center * (α .* D_face))
+        # D = D_center * (α .* D_face)
+
         RHS = rhs(u, ps, params)
 
         sol[:, i] .= (I - Δt .* D) \ (u .+ Δt .* RHS)
@@ -92,6 +94,7 @@ function solve_equation(ps, params, u0)
     end
 
     return sol[:, 1:10:100]
+    # return sol
 end
 
 truth = rand(32, 10)

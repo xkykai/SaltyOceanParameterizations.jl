@@ -630,7 +630,7 @@ function animate_data(train_data, scaling, sols, fluxes, diffusivities, sols_noN
     end
 end
 
-optimizers = [Optimizer(initial=OptimizationOptimisers.Adam(1e-3), initial_learning_rate=1e-3, learning_rate=1e-3, warmup=1, maxiter=1000),
+optimizers = [Optimizer(initial=OptimizationOptimisers.Adam(1e-6), initial_learning_rate=1e-6, learning_rate=1e-3, warmup=40, maxiter=1000),
               Optimizer(initial=OptimizationOptimisers.Adam(1e-6), initial_learning_rate=1e-6, learning_rate=3e-4, warmup=40, maxiter=1000)]
 
 # optimizers = [Optimizer(initial=OptimizationOptimisers.Adam(1e-6), initial_learning_rate=1e-6, learning_rate=5e-5, warmup=10, maxiter=3)]

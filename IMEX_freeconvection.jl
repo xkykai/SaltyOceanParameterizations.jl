@@ -43,6 +43,7 @@ train_data_plot = LESDatasetsB(field_datasets, ZeroMeanUnitVarianceScaling, full
 params = [(                   f = data.coriolis.unscaled,
                     f_scaled = data.coriolis.scaled,
                             τ = data.times[end] - data.times[1],
+                        N_timesteps = length(data.times),
                     scaled_time = (data.times .- data.times[1]) ./ (data.times[end] - data.times[1]),
         scaled_original_time = (plot_data.times .- plot_data.times[1]) ./ (plot_data.times[end] - plot_data.times[1]),
                             zC = data.metadata["zC"],
@@ -101,27 +102,22 @@ predict_diffusivities(Ris, ps_baseclosure)
 function solve_NDE(ps, params, x₀, ps_baseclosure, st, NN)
     eos = TEOS10EquationOfState()
     coarse_size = params.coarse_size
-    # coarse_size = 32
     timestep_multiple = 10
     Δt = (params.scaled_time[2] - params.scaled_time[1]) / timestep_multiple
-    # Δt = 1e-3
-    # ts = collect(params.scaled_time[1]:Δt:params.scaled_time[end])
-    ts = range(0, step=Δt, length=261)
-
-    ρ_hat = deepcopy(x₀)
+    Nt_solve = (params.N_timesteps - 1) * timestep_multiple + 1
     Dᶜ_hat = params.Dᶜ_hat
     Dᶠ_hat = params.Dᶠ_hat
-
-    Dᶜ = params.Dᶜ
     Dᶠ = params.Dᶠ
 
     scaling = params.scaling
     τ, H = params.τ, params.H
 
-    sol = zeros(coarse_size, 261)
+    ρ_hat = deepcopy(x₀)
+    
+    sol = zeros(coarse_size, Nt_solve)
     sol[:, 1] .= x₀
 
-    for i in 2:261
+    for i in 2:Nt_solve
         ρ = inv(scaling.ρ).(ρ_hat)
         Ris = calculate_Ri(zeros(coarse_size), zeros(coarse_size), ρ, Dᶠ, params.g, eos.reference_density, clamp_lims=(-Inf, Inf))
         _, κs = predict_diffusivities(Ris, ps_baseclosure)
@@ -141,7 +137,6 @@ function solve_NDE(ps, params, x₀, ps_baseclosure, st, NN)
     end
 
     return sol[:, 1:timestep_multiple:end]
-    # return sol
 end
 
 sol = solve_NDE(ps, params[1], x₀s[1], ps_baseclosure, st, NN)

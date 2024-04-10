@@ -13,6 +13,7 @@ using JLD2
 using SeawaterPolynomials.TEOS10
 using CairoMakie
 using SparseArrays
+using Optimisers
 
 function find_min(a...)
     return minimum(minimum.([a...]))
@@ -60,7 +61,7 @@ params = [(                   f = data.coriolis.unscaled,
                         ) for (data, plot_data) in zip(train_data.data, train_data_plot.data)]
 
 rng = Random.default_rng(123)
-NN = Chain(Dense(34, 4, leakyrelu), Dense(4, 31))
+NN = Chain(Dense(67, 4, leakyrelu), Dense(4, 31))
 
 ps, st = Lux.setup(rng, NN)
 ps = ps |> ComponentArray .|> Float64
@@ -69,8 +70,8 @@ ps .*= 1e-5
 
 x₀s = [data.profile.ρ.scaled[:, 1] for data in train_data.data]
 
-function predict_residual_flux(ρ_hat, p, params, st, NN)
-    x′ = vcat(ρ_hat, params.wρ.scaled.top, params.f_scaled)
+function predict_residual_flux(ρ_hat, ∂ρ∂z_hat, p, params, st, NN)
+    x′ = vcat(ρ_hat, ∂ρ∂z_hat, params.wρ.scaled.top, params.f_scaled)
     
     NN_pred = NN(x′, p, st)[1]
     wρ = vcat(0., NN_pred, 0.)
@@ -78,7 +79,7 @@ function predict_residual_flux(ρ_hat, p, params, st, NN)
     return wρ
 end
 
-predict_residual_flux(x₀s[1], ps, params[1], st, NN)
+predict_residual_flux(x₀s[1], rand(33), ps, params[1], st, NN)
 
 function predict_boundary_flux(params)
     wρ = vcat(fill(params.wρ.scaled.bottom, params.coarse_size), params.wρ.scaled.top)
@@ -119,12 +120,14 @@ function solve_NDE(ps, params, x₀, ps_baseclosure, st, NN)
 
     for i in 2:Nt_solve
         ρ = inv(scaling.ρ).(ρ_hat)
+        ∂ρ∂z_hat = scaling.∂ρ∂z.(Dᶠ * ρ)
+
         Ris = calculate_Ri(zeros(coarse_size), zeros(coarse_size), ρ, Dᶠ, params.g, eos.reference_density, clamp_lims=(-Inf, Inf))
         _, κs = predict_diffusivities(Ris, ps_baseclosure)
 
         D = Dᶜ_hat * (-κs .* Dᶠ_hat)
 
-        wρ_residual = predict_residual_flux(ρ_hat, ps, params, st, NN)
+        wρ_residual = predict_residual_flux(ρ_hat, ∂ρ∂z_hat, ps, params, st, NN)
         wρ_boundary = predict_boundary_flux(params)
 
         LHS = -τ / H^2 .* D
@@ -158,9 +161,18 @@ autodiff(Enzyme.Reverse,
          Const(params[1]), 
          Duplicated(x₀s[1], deepcopy(x₀s[1])), 
         #  Duplicated(ps_baseclosure, deepcopy(ps_baseclosure)), 
-        Const(ps_baseclosure), 
+         Const(ps_baseclosure), 
          Const(st), 
          Const(NN))
+#%%
+rule = Optimisers.Adam()
+opt_state = Optimisers.setup(rule, ps)
+loss(ps, train_data.data[1].profile.ρ.scaled, params[1], x₀s[1], ps_baseclosure, st, NN)
+
+opt_state = Optimisers.update!(opt_state, ps, dps)
+
+loss(ps, train_data.data[1].profile.ρ.scaled, params[1], x₀s[1], ps_baseclosure, st, NN)
+
 #%%
 fig = Figure()
 ax = CairoMakie.Axis(fig[1, 1], xlabel="ρ", ylabel="z")

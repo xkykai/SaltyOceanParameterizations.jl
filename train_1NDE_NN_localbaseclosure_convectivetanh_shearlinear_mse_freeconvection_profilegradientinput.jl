@@ -636,7 +636,7 @@ optimizers = [Optimizer(initial=OptimizationOptimisers.Adam(1e-6), initial_learn
 # optimizers = [Optimizer(initial=OptimizationOptimisers.Adam(1e-6), initial_learning_rate=1e-6, learning_rate=5e-5, warmup=10, maxiter=3)]
 
 for (epoch, optimizer) in enumerate(optimizers)
-    res, loss, sols, fluxes, losses, diffusivities, sols_noNN, fluxes_noNN, diffusivities_noNN = train_NDE(train_data, train_data_plot, NNs, ps_training, ps_baseclosure, st_NN, rng, solver=ROCK2(), optimizer=optimizer, epoch=epoch)
+    res, loss, sols, fluxes, losses, diffusivities, sols_noNN, fluxes_noNN, diffusivities_noNN = train_NDE(train_data, train_data_plot, NNs, ps_training, ps_baseclosure, st_NN, rng, solver=VCABM3(), optimizer=optimizer, epoch=epoch)
     u = res.u
     jldsave("$(FILE_DIR)/training_results_$(epoch).jld2"; res, u, loss, sols, fluxes, losses, NNs, st_NN, diffusivities, sols_noNN, fluxes_noNN, diffusivities_noNN)
     plot_loss(losses, FILE_DIR, epoch=epoch)

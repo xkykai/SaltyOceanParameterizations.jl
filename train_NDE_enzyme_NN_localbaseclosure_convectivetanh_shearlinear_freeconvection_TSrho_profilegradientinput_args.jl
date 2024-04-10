@@ -652,7 +652,7 @@ function plot_loss(losses, FILE_DIR; epoch=1)
 end
 
 optimizers = [Optimisers.Adam(3e-4), Optimisers.Adam(1e-4), Optimisers.Adam(5e-5), Optimisers.Adam(2e-5), Optimisers.Adam(1e-5)]
-maxiters = [5000, 5000, 5000, 5000, 5000]
+maxiters = [2500, 2500, 2500, 2500, 2500]
 
 for (epoch, (optimizer, maxiter)) in enumerate(zip(optimizers, maxiters))
     global ps = ps

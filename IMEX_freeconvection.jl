@@ -12,6 +12,7 @@ using Oceananigans
 using JLD2
 using SeawaterPolynomials.TEOS10
 using CairoMakie
+using SparseArrays
 
 function find_min(a...)
     return minimum(minimum.([a...]))
@@ -97,30 +98,10 @@ Ris = calculate_Ri(zeros(coarse_size), zeros(coarse_size), train_data.data[1].pr
 
 predict_diffusivities(Ris, ps_baseclosure)
 
-function Dᶜ1(N, Δ)
-    D = zeros(N, N+1)
-    for k in 1:N
-        D[k, k]   = -1.0
-        D[k, k+1] =  1.0
-    end
-    D .= 1/Δ .* D
-    return D
-end
-
-function Dᶠ1(N, Δ)
-    D = zeros(N+1, N)
-    for k in 2:N
-        D[k, k-1] = -1.0
-        D[k, k]   =  1.0
-    end
-    D .= 1/Δ .* D
-    return D
-end
-
 function solve_NDE(ps, params, x₀, ps_baseclosure, st, NN)
     eos = TEOS10EquationOfState()
-    # coarse_size = params.coarse_size
-    coarse_size = 32
+    coarse_size = params.coarse_size
+    # coarse_size = 32
     timestep_multiple = 10
     Δt = (params.scaled_time[2] - params.scaled_time[1]) / timestep_multiple
     # Δt = 1e-3
@@ -128,14 +109,12 @@ function solve_NDE(ps, params, x₀, ps_baseclosure, st, NN)
     ts = range(0, step=Δt, length=261)
 
     ρ_hat = deepcopy(x₀)
-    # Dᶜ_hat = params.Dᶜ_hat
-    # Dᶠ_hat = params.Dᶠ_hat
-    Dᶜ_hat = Dᶜ1(32, 1)
-    Dᶠ_hat = Dᶠ1(32, 1)
+    Dᶜ_hat = params.Dᶜ_hat
+    Dᶠ_hat = params.Dᶠ_hat
 
-    # Dᶜ = params.Dᶜ
-    # Dᶠ = params.Dᶠ
-    Dᶠ = Dᶠ1(32, 8)
+    Dᶜ = params.Dᶜ
+    Dᶠ = params.Dᶠ
+
     scaling = params.scaling
     τ, H = params.τ, params.H
 
@@ -147,24 +126,16 @@ function solve_NDE(ps, params, x₀, ps_baseclosure, st, NN)
         Ris = calculate_Ri(zeros(coarse_size), zeros(coarse_size), ρ, Dᶠ, params.g, eos.reference_density, clamp_lims=(-Inf, Inf))
         _, κs = predict_diffusivities(Ris, ps_baseclosure)
 
-        # D = Tridiagonal(Dᶜ_hat * (-κs .* Dᶠ_hat))
-        # κs = fill(1e-5, coarse_size+1)
         D = Dᶜ_hat * (-κs .* Dᶠ_hat)
 
         wρ_residual = predict_residual_flux(ρ_hat, ps, params, st, NN)
         wρ_boundary = predict_boundary_flux(params)
 
         LHS = -τ / H^2 .* D
-        # LHS = D
 
         RHS = - τ / H * scaling.wρ.σ / scaling.ρ.σ .* (Dᶜ_hat * (wρ_boundary .+ wρ_residual))
-        # RHS = -τ / H * scaling.wρ.σ / scaling.ρ.σ .* (Dᶜ_hat * wρ_boundary)
-        # RHS = -τ / H * scaling.wρ.σ / scaling.ρ.σ .* (Dᶜ_hat * wρ_residual)
-        # RHS = -Dᶜ_hat * wρ_residual
-        # RHS = first(NN(ρ_hat, ps, st))
 
         sol[:, i] .= (I - Δt .* LHS) \ (ρ_hat .+ Δt .* RHS)
-        # sol[:, i] .= (A - Δt .* LHS) \ (ρ_hat .+ Δt .* RHS)
 
         ρ_hat .= sol[:, i]
     end
@@ -193,12 +164,12 @@ autodiff(Enzyme.Reverse,
          Duplicated(ps_baseclosure, deepcopy(ps_baseclosure)), 
          Const(st), 
          Const(NN))
-# #%%
-# fig = Figure()
-# ax = CairoMakie.Axis(fig[1, 1], xlabel="ρ", ylabel="z")
-# lines!(ax, sol[:, 1], params[1].zC, label="initial")
-# lines!(ax, sol[:, end], params[1].zC, label="final")
-# lines!(ax, train_data.data[1].profile.ρ.scaled[:, end], train_data.data[1].metadata["zC"], label="truth")
-# axislegend(ax)
-# display(fig)
-# #%%
+#%%
+fig = Figure()
+ax = CairoMakie.Axis(fig[1, 1], xlabel="ρ", ylabel="z")
+lines!(ax, sol[:, 1], params[1].zC, label="initial")
+lines!(ax, sol[:, end], params[1].zC, label="final")
+lines!(ax, train_data.data[1].profile.ρ.scaled[:, end], train_data.data[1].metadata["zC"], label="truth")
+axislegend(ax)
+display(fig)
+#%%

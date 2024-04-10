@@ -157,10 +157,8 @@ autodiff(Enzyme.Reverse,
          Active, 
          Duplicated(ps, dps), 
          Const(train_data.data[1].profile.ρ.scaled), 
-        #  Duplicated(params[1], deepcopy(params[1])), 
          Const(params[1]), 
          Duplicated(x₀s[1], deepcopy(x₀s[1])), 
-        #  Duplicated(ps_baseclosure, deepcopy(ps_baseclosure)), 
          Const(ps_baseclosure), 
          Const(st), 
          Const(NN))
@@ -169,9 +167,34 @@ rule = Optimisers.Adam()
 opt_state = Optimisers.setup(rule, ps)
 loss(ps, train_data.data[1].profile.ρ.scaled, params[1], x₀s[1], ps_baseclosure, st, NN)
 
-opt_state = Optimisers.update!(opt_state, ps, dps)
+opt_state, ps = Optimisers.update!(opt_state, ps, dps)
 
 loss(ps, train_data.data[1].profile.ρ.scaled, params[1], x₀s[1], ps_baseclosure, st, NN)
+
+function train_NDE(ps, params, ps_baseclosure, st, NN, train_data; n_epochs=2, n_batches=2, rule=Optimisers.Adam())
+    opt_state = Optimisers.setup(rule, ps)
+    dps = deepcopy(ps) .= 0
+    for epoch in 1:n_epochs
+        for batch in 1:n_batches
+            autodiff(Enzyme.Reverse, 
+                     loss, 
+                     Active, 
+                     Duplicated(ps, dps), 
+                     Const(train_data.data[batch].profile.ρ.scaled), 
+                     Const(params[batch]), 
+                     Duplicated(x₀s[batch], deepcopy(x₀s[batch])), 
+                     Const(ps_baseclosure), 
+                     Const(st), 
+                     Const(NN))
+            opt_state, ps = Optimisers.update!(opt_state, ps, dps)
+            @info loss(ps, train_data.data[batch].profile.ρ.scaled, params[batch], x₀s[batch], ps_baseclosure, st, NN)
+            dps .= 0
+        end
+    end
+    return ps
+end
+
+train_NDE(ps, params, ps_baseclosure, st, NN, train_data; n_epochs=200, n_batches=1, rule=Optimisers.Adam())
 
 #%%
 fig = Figure()

@@ -14,6 +14,8 @@ using SeawaterPolynomials.TEOS10
 using CairoMakie
 using SparseArrays
 using Optimisers
+using Printf
+import Dates
 
 function find_min(a...)
     return minimum(minimum.([a...]))
@@ -61,7 +63,7 @@ params = [(                   f = data.coriolis.unscaled,
                         ) for (data, plot_data) in zip(train_data.data, train_data_plot.data)]
 
 rng = Random.default_rng(123)
-NN = Chain(Dense(67, 4, leakyrelu), Dense(4, 31))
+NN = Chain(Dense(67, 256, leakyrelu), Dense(256, 31))
 
 ps, st = Lux.setup(rng, NN)
 ps = ps |> ComponentArray .|> Float64
@@ -103,7 +105,7 @@ predict_diffusivities(Ris, ps_baseclosure)
 function solve_NDE(ps, params, x₀, ps_baseclosure, st, NN)
     eos = TEOS10EquationOfState()
     coarse_size = params.coarse_size
-    timestep_multiple = 10
+    timestep_multiple = 20
     Δt = (params.scaled_time[2] - params.scaled_time[1]) / timestep_multiple
     Nt_solve = (params.N_timesteps - 1) * timestep_multiple + 1
     Dᶜ_hat = params.Dᶜ_hat
@@ -174,6 +176,9 @@ loss(ps, train_data.data[1].profile.ρ.scaled, params[1], x₀s[1], ps_baseclosu
 function train_NDE(ps, params, ps_baseclosure, st, NN, train_data; n_epochs=2, n_batches=2, rule=Optimisers.Adam())
     opt_state = Optimisers.setup(rule, ps)
     dps = deepcopy(ps) .= 0
+    wall_clock = [time_ns()]
+    maxiter = n_epochs * n_batches
+    iter = 1
     for epoch in 1:n_epochs
         for batch in 1:n_batches
             autodiff(Enzyme.Reverse, 
@@ -187,14 +192,20 @@ function train_NDE(ps, params, ps_baseclosure, st, NN, train_data; n_epochs=2, n
                      Const(st), 
                      Const(NN))
             opt_state, ps = Optimisers.update!(opt_state, ps, dps)
-            @info loss(ps, train_data.data[batch].profile.ρ.scaled, params[batch], x₀s[batch], ps_baseclosure, st, NN)
+            @printf("%s, Δt %s, iter %d/%d, loss total %6.10e, max NN weight %6.5e\n",
+                     Dates.now(), prettytime(1e-9 * (time_ns() - wall_clock[1])), iter, maxiter,
+                     loss(ps, train_data.data[batch].profile.ρ.scaled, params[batch], x₀s[batch], ps_baseclosure, st, NN), 
+                     maximum(abs, ps))
+            wall_clock = [time_ns()]
+            iter += 1
+            # @info loss(ps, train_data.data[batch].profile.ρ.scaled, params[batch], x₀s[batch], ps_baseclosure, st, NN)
             dps .= 0
         end
     end
     return ps
 end
 
-train_NDE(ps, params, ps_baseclosure, st, NN, train_data; n_epochs=200, n_batches=1, rule=Optimisers.Adam())
+train_NDE(ps, params, ps_baseclosure, st, NN, train_data; n_epochs=20, n_batches=1, rule=Optimisers.Adam(1e-4))
 
 #%%
 fig = Figure()

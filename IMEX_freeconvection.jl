@@ -41,7 +41,7 @@ coarse_size = 32
 train_data_plot = LESDatasetsB(field_datasets, ZeroMeanUnitVarianceScaling, full_timeframes)
 
 params = [(                   f = data.coriolis.unscaled,
-                    f_scaled = data.coriolis.scaled,
+                     f_scaled = data.coriolis.scaled,
                             τ = data.times[end] - data.times[1],
                         N_timesteps = length(data.times),
                     scaled_time = (data.times .- data.times[1]) ./ (data.times[end] - data.times[1]),
@@ -154,9 +154,11 @@ autodiff(Enzyme.Reverse,
          Active, 
          Duplicated(ps, dps), 
          Const(train_data.data[1].profile.ρ.scaled), 
-         Duplicated(params[1], deepcopy(params[1])), 
+        #  Duplicated(params[1], deepcopy(params[1])), 
+         Const(params[1]), 
          Duplicated(x₀s[1], deepcopy(x₀s[1])), 
-         Duplicated(ps_baseclosure, deepcopy(ps_baseclosure)), 
+        #  Duplicated(ps_baseclosure, deepcopy(ps_baseclosure)), 
+        Const(ps_baseclosure), 
          Const(st), 
          Const(NN))
 #%%

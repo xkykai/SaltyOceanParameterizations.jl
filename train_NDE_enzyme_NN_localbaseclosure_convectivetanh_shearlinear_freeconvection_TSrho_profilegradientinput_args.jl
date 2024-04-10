@@ -655,6 +655,7 @@ optimizers = [Optimisers.Adam(3e-4), Optimisers.Adam(1e-4), Optimisers.Adam(5e-5
 maxiters = [5000, 5000, 5000, 5000, 5000]
 
 for (epoch, (optimizer, maxiter)) in enumerate(zip(optimizers, maxiters))
+    global ps = ps
     ps, losses = train_NDE_multipleics(ps, params, ps_baseclosure, sts, NNs, truths, x₀s; maxiter=maxiter, rule=optimizer, loss_prefactor=loss_prefactor)
     
     sols = [diagnose_fields(ps, param, x₀, ps_baseclosure, sts, NNs, data) for (data, x₀, param) in zip(train_data_plot.data, x₀s, params)]

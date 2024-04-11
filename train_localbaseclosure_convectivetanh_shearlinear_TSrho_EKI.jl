@@ -25,8 +25,6 @@ const EKP = EnsembleKalmanProcesses
 import SeawaterPolynomials.TEOS10: s, ΔS, Sₐᵤ
 s(Sᴬ) = Sᴬ + ΔS >= 0 ? √((Sᴬ + ΔS) / Sₐᵤ) : NaN
 
-args = parse_commandline()
-
 function find_min(a...)
     return minimum(minimum.([a...]))
 end

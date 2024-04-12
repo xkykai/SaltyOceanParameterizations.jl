@@ -76,7 +76,7 @@ end
 
 const S_scaling = args["S_scaling"]
 
-FILE_DIR = "./training_output/NDE_enzyme_$(args["hidden_layer"])layer_$(args["hidden_layer_size"])_$(args["activation"])_$(S_scaling)Sscaling_localbaseclosure_CTSL_TS_TSdrhodz_args"
+FILE_DIR = "./training_output/NDE_enzyme_$(args["hidden_layer"])layer_$(args["hidden_layer_size"])_$(args["activation"])_$(S_scaling)Sscaling_wholebatch_localbaseclosure_CTSL_TS_TSdrhodz_args"
 mkpath(FILE_DIR)
 
 LES_FILE_DIRS = [
@@ -463,10 +463,25 @@ ind_losses = [individual_loss(ps, truth, param, x₀, ps_baseclosure, sts, NNs) 
 
 loss_prefactors = compute_loss_prefactor_density_contribution.(ind_losses, compute_density_contribution.(train_data.data), S_scaling)
 
-function loss_multipleics(ps, truths, params, x₀s, ps_baseclosure, sts, NNs, losses_prefactor=(; T=1, S=1, ρ=1, ∂T∂z=1, ∂S∂z=1, ∂ρ∂z=1))
-    losses = [loss(ps, truth, param, x₀, ps_baseclosure, sts, NNs, losses_prefactor) for (truth, x₀, param) in zip(truths, x₀s, params)]
+function loss_multipleics(ps, truths, params, x₀s, ps_baseclosure, sts, NNs, losses_prefactor)
+    losses = [loss(ps, truth, param, x₀, ps_baseclosure, sts, NNs, loss_prefactor) for (truth, x₀, param, loss_prefactor) in zip(truths, x₀s, params, losses_prefactor)]
     return mean(losses)
 end
+
+loss_multipleics(ps, truths[1:2], params[1:2], x₀s, ps_baseclosure, sts, NNs, loss_prefactors[1:2])
+
+dps = deepcopy(ps) .= 0
+autodiff(Enzyme.ReverseWithPrimal, 
+         loss_multipleics, 
+         Active, 
+         DuplicatedNoNeed(ps, dps), 
+         DuplicatedNoNeed(truths, deepcopy(truths)), 
+         DuplicatedNoNeed(params, deepcopy(params)), 
+         DuplicatedNoNeed(x₀s, deepcopy(x₀s)), 
+         DuplicatedNoNeed(ps_baseclosure, deepcopy(ps_baseclosure)), 
+         Const(sts), 
+         Const(NNs), 
+         DuplicatedNoNeed(loss_prefactors, deepcopy(loss_prefactors)))
 
 function predict_residual_flux_dimensional(T_hat, S_hat, ∂ρ∂z_hat, p, params, sts, NNs)
     wT_hat, wS_hat = predict_residual_flux(T_hat, S_hat, ∂ρ∂z_hat, p, params, sts, NNs)
@@ -860,8 +875,77 @@ function train_NDE_stochastic(ps, params, ps_baseclosure, sts, NNs, truths, x₀
     return ps_min, (; total=losses), opt_statemin
 end
 
+# optimizers = [Optimisers.Adam(3e-4), Optimisers.Adam(1e-4), Optimisers.Adam(3e-5)]
+# maxiters = [1000, 1000, 1000]
+# end_epochs = cumsum(maxiters)
+# # optimizers = [Optimisers.Adam(3e-4)]
+# # maxiters = [3]
+# # end_epochs = cumsum(maxiters)
+
+# for (i, (epoch, optimizer, maxiter)) in enumerate(zip(end_epochs, optimizers, maxiters))
+#     global ps = ps
+#     ps, losses, opt_state = train_NDE_stochastic(ps, params, ps_baseclosure, sts, NNs, truths, x₀s, loss_prefactors, rng, train_data_plot; epoch=i, maxiter=maxiter, rule=optimizer)
+    
+#     jldsave("$(FILE_DIR)/training_results_epoch$(epoch).jld2"; u=ps, losses=losses, state=opt_state)
+#     sols = [diagnose_fields(ps, param, x₀, ps_baseclosure, sts, NNs, data) for (data, x₀, param) in zip(train_data_plot.data, x₀s, params)]
+#     for (index, sol) in enumerate(sols)
+#         animate_data(train_data_plot.data[index], sol.sols_dimensional, sol.fluxes, sol.diffusivities, sol.sols_dimensional_noNN, sol.fluxes_noNN, sol.diffusivities_noNN, index, FILE_DIR; epoch=epoch)
+#     end
+#     plot_loss(losses, FILE_DIR; epoch=epoch)
+# end
+
+function train_NDE_multipleics(ps, params, ps_baseclosure, sts, NNs, truths, x₀s, losses_prefactors, train_data_plot; epoch=1, maxiter=2, rule=Optimisers.Adam())
+    opt_state = Optimisers.setup(rule, ps)
+    opt_statemin = deepcopy(opt_state)
+    l_min = Inf
+    ps_min = deepcopy(ps)
+    dps = deepcopy(ps) .= 0
+    wall_clock = [time_ns()]
+    losses = zeros(maxiter)
+    mean_loss = mean(losses)
+    for iter in 1:maxiter
+        _, l = autodiff(Enzyme.ReverseWithPrimal, 
+                        loss_multipleics, 
+                        Active, 
+                        DuplicatedNoNeed(ps, dps), 
+                        DuplicatedNoNeed(truths, deepcopy(truths)), 
+                        DuplicatedNoNeed(params, deepcopy(params)), 
+                        DuplicatedNoNeed(x₀s, deepcopy(x₀s)), 
+                        DuplicatedNoNeed(ps_baseclosure, deepcopy(ps_baseclosure)), 
+                        Const(sts), 
+                        Const(NNs), 
+                        DuplicatedNoNeed(losses_prefactors, deepcopy(losses_prefactors)))
+
+        opt_state, ps = Optimisers.update!(opt_state, ps, dps)
+
+        losses[iter] = l
+        dps .= 0
+
+        @printf("%s, Δt %s, iter %d/%d, loss average %6.10e, max NN weight %6.5e\n",
+                Dates.now(), prettytime(1e-9 * (time_ns() - wall_clock[1])), iter, maxiter, l, 
+                maximum(abs, ps))
+
+        if mean_loss < l_min
+            l_min = mean_loss
+            opt_statemin = deepcopy(opt_state)
+            ps_min .= ps
+        end
+
+        if iter % 1000 == 0
+            @info "Saving intermediate results"
+            jldsave("$(FILE_DIR)/intermediate_training_results_round$(epoch)_epoch$(iter).jld2"; u=ps_min, state=opt_statemin, loss=l_min)
+            sols = [diagnose_fields(ps_min, param, x₀, ps_baseclosure, sts, NNs, data) for (data, x₀, param) in zip(train_data_plot.data, x₀s, params)]
+            for (index, sol) in enumerate(sols)
+                animate_data(train_data_plot.data[index], sol.sols_dimensional, sol.fluxes, sol.diffusivities, sol.sols_dimensional_noNN, sol.fluxes_noNN, sol.diffusivities_noNN, index, FILE_DIR; epoch="intermediateround$(epoch)_$(iter)")
+            end
+        end
+        wall_clock = [time_ns()]
+    end
+    return ps_min, (; total=losses), opt_statemin
+end
+
 optimizers = [Optimisers.Adam(3e-4), Optimisers.Adam(1e-4), Optimisers.Adam(3e-5)]
-maxiters = [1000, 1000, 1000]
+maxiters = [2000, 2000, 2000]
 end_epochs = cumsum(maxiters)
 # optimizers = [Optimisers.Adam(3e-4)]
 # maxiters = [3]
@@ -869,7 +953,7 @@ end_epochs = cumsum(maxiters)
 
 for (i, (epoch, optimizer, maxiter)) in enumerate(zip(end_epochs, optimizers, maxiters))
     global ps = ps
-    ps, losses, opt_state = train_NDE_stochastic(ps, params, ps_baseclosure, sts, NNs, truths, x₀s, loss_prefactors, rng, train_data_plot; epoch=i, maxiter=maxiter, rule=optimizer)
+    ps, losses, opt_state = train_NDE_multipleics(ps, params, ps_baseclosure, sts, NNs, truths, x₀s, loss_prefactors, train_data_plot; epoch=i, maxiter=maxiter, rule=optimizer)
     
     jldsave("$(FILE_DIR)/training_results_epoch$(epoch).jld2"; u=ps, losses=losses, state=opt_state)
     sols = [diagnose_fields(ps, param, x₀, ps_baseclosure, sts, NNs, data) for (data, x₀, param) in zip(train_data_plot.data, x₀s, params)]

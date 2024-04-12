@@ -700,7 +700,7 @@ function plot_loss(losses, FILE_DIR; epoch=1)
     save("$(FILE_DIR)/losses_epoch$(epoch).png", fig, px_per_unit=8)
 end
 
-ps_prior = ComponentArray(ν_conv=0.2, ν_shear=6.484e-02, m=-1.736e-01, Pr=1.1, ΔRi=0.1)
+ps_prior = ComponentArray(ν_conv=1.52879, ν_shear=7.40022e-2, m=-1.70174e-1, Pr=1.18263, ΔRi=6.62497e-3)
 
 ind_losses = [individual_loss(ps_prior, truth, param, x₀) for (truth, x₀, param) in zip(truths, x₀s, params)]
 ind_loss = (; u=sum([loss.u for loss in ind_losses]),
@@ -727,7 +727,7 @@ priors = combine_distributions([prior_ν_conv, prior_ν_shear, prior_m, prior_Pr
 target = [0.]
 
 N_ensemble = 100
-N_iterations = 5000
+N_iterations = 100
 Γ = prior_loss / 1e6 * I
 
 ps_eki = EKP.construct_initial_ensemble(rng, priors, N_ensemble)
@@ -759,6 +759,8 @@ losses = (; total=losses)
 final_ensemble = get_ϕ_final(priors, ensemble_kalman_process)
 ensemble_mean = vec(mean(final_ensemble, dims=2))
 ps_final = ComponentArray(; ν_conv=ensemble_mean[1], ν_shear=ensemble_mean[2], m=ensemble_mean[3], Pr=ensemble_mean[4], ΔRi=ensemble_mean[5])
+
+jldsave("$(FILE_DIR)/training_results.jld2", u=ps_final)
 
 plot_loss(losses, FILE_DIR; epoch=1)
 for i in eachindex(params)

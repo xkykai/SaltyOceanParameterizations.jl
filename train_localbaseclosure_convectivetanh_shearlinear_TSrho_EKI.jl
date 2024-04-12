@@ -840,7 +840,7 @@ for i in 1:N_iterations
     global ps_eki .= get_ϕ_final(priors, ensemble_kalman_process)
     Threads.@threads for j in 1:N_ensemble
         ps_ensemble = ComponentArray(ν_conv=ps_eki[1, j], ν_shear=ps_eki[2, j], m=ps_eki[3, j], Pr=ps_eki[4, j], ΔRi=ps_eki[5, j])
-        G_ens[j] = loss_multipleics(ps_ensemble, truths, params, x₀s, loss_prefactor)
+        G_ens[j] = loss_multipleics(ps_ensemble, truths, params, x₀s, loss_prefactors)
     end
     EKP.update_ensemble!(ensemble_kalman_process, G_ens)
     @printf("%s, Δt %s, iter %d/%d, loss average %6.10e, ν_conv %6.5e, ν_shear %6.5e, m %6.5e, Pr %6.5e, ΔRi %6.5e\n",

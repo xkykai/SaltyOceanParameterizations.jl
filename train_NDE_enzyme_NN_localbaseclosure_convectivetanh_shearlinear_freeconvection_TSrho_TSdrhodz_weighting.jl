@@ -76,7 +76,7 @@ end
 
 const S_scaling = args["S_scaling"]
 
-FILE_DIR = "./training_output/NDE_enzyme_$(args["hidden_layer"])layer_$(args["hidden_layer_size"])_$(args["activation"])_$(S_scaling)Sscaling_localbaseclosure_convectivetanh_shearlinear_TS_TSdrhodz_args"
+FILE_DIR = "./training_output/NDE_enzyme_$(args["hidden_layer"])layer_$(args["hidden_layer_size"])_$(args["activation"])_$(S_scaling)Sscaling_localbaseclosure_CTSL_TS_TSdrhodz_args"
 mkpath(FILE_DIR)
 
 LES_FILE_DIRS = [

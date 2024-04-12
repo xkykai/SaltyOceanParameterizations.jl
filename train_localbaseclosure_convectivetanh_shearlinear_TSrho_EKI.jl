@@ -25,6 +25,20 @@ const EKP = EnsembleKalmanProcesses
 import SeawaterPolynomials.TEOS10: s, ΔS, Sₐᵤ
 s(Sᴬ) = Sᴬ + ΔS >= 0 ? √((Sᴬ + ΔS) / Sₐᵤ) : NaN
 
+function parse_commandline()
+    s = ArgParseSettings()
+  
+    @add_arg_table! s begin
+      "--S_scaling"
+        help = "Scaling factor for S"
+        arg_type = Float64
+        default = 1.0
+    end
+    return parse_args(s)
+end
+
+args = parse_commandline()
+
 function find_min(a...)
     return minimum(minimum.([a...]))
 end
@@ -33,7 +47,8 @@ function find_max(a...)
     return maximum(maximum.([a...]))
 end
 
-FILE_DIR = "./training_output/localbaseclosure_convectivetanh_shearlinear_TSrho_EKI"
+const S_scaling = args["S_scaling"]
+FILE_DIR = "./training_output/localbaseclosure_$(S_scaling)Sscaling_convectivetanh_shearlinear_TSrho_EKI"
 mkpath(FILE_DIR)
 
 LES_FILE_DIRS = [
@@ -115,7 +130,7 @@ caches = [(boundary=(uw=zeros(coarse_size+1), vw=zeros(coarse_size+1), wT=zeros(
 
 rng = Random.default_rng(123)
 
-ps = ComponentArray(ν_conv=1., ν_shear=6.484e-02, m=-1.736e-01, Pr=1.1, ΔRi=0.1)
+ps = ComponentArray(ν_conv=2., ν_shear=6.484e-02, m=-1.736e-01, Pr=1.1, ΔRi=0.1)
 
 function predict_boundary_flux(params)
     uw = vcat(fill(params.uw.scaled.bottom, params.coarse_size), params.uw.scaled.top)
@@ -325,20 +340,67 @@ function loss(ps, truth, params, x₀, losses_prefactor=(; u=1, v=1, T=1, S=1, �
     return sum(values(losses) .* values(losses_prefactor))
 end
 
-function compute_loss_prefactor(individual_loss)
+function compute_density_contribution(data)
+    eos = TEOS10EquationOfState()
+    ρ = data.profile.ρ.unscaled[:, 1]
+    T = data.profile.T.unscaled[:, 1]
+    S = data.profile.S.unscaled[:, 1]
+
+    Δρ = maximum(ρ) - minimum(ρ)
+    ΔT = maximum(T) - minimum(T)
+    ΔS = maximum(S) - minimum(S)
+
+    α = mean(SeawaterPolynomials.thermal_expansion.(T, S, 0, Ref(eos)))
+    β = mean(SeawaterPolynomials.haline_contraction.(T, S, 0, Ref(eos)))
+    ρ₀ = eos.reference_density
+
+    T_contribution = α * ΔT * ρ₀
+    S_contribution = β * ΔS * ρ₀
+
+    return (; T=T_contribution, S=S_contribution, ρ=Δρ)
+end
+
+function compute_loss_prefactor_density_contribution(individual_loss, contribution, S_scaling=1.0)
     u_loss, v_loss, T_loss, S_loss, ρ_loss, ∂u∂z_loss, ∂v∂z_loss, ∂T∂z_loss, ∂S∂z_loss, ∂ρ∂z_loss = values(individual_loss)
+    
+    total_contribution = contribution.T + contribution.S
+    T_prefactor = total_contribution / contribution.T
+    S_prefactor = total_contribution / contribution.S
 
-    T_prefactor = 1
-    S_prefactor = T_loss / S_loss
-    ρ_prefactor = T_loss / ρ_loss
-    u_prefactor = T_loss / u_loss
-    v_prefactor = T_loss / v_loss
+    TS_loss = T_prefactor * T_loss + S_prefactor * S_loss
 
-    ∂T∂z_prefactor = 1
-    ∂S∂z_prefactor = ∂T∂z_loss / ∂S∂z_loss
-    ∂ρ∂z_prefactor = ∂T∂z_loss / ∂ρ∂z_loss
-    ∂u∂z_prefactor = ∂T∂z_loss / ∂u∂z_loss
-    ∂v∂z_prefactor = ∂T∂z_loss / ∂v∂z_loss
+    ρ_prefactor = TS_loss / ρ_loss * 0.1 / 0.4
+
+    if u_loss > eps(eltype(u_loss))
+        u_prefactor = TS_loss / u_loss * 0.2 / 0.4
+    else
+        u_prefactor = TS_loss * 0.2 / 0.4
+    end
+
+    if v_loss > eps(eltype(v_loss))
+        v_prefactor = TS_loss / v_loss * 0.2 / 0.4
+    else
+        v_prefactor = TS_loss * 0.2 / 0.4
+    end
+
+    ∂T∂z_prefactor = T_prefactor
+    ∂S∂z_prefactor = S_prefactor
+
+    ∂TS∂z_loss = ∂T∂z_loss + ∂S∂z_loss
+
+    ∂ρ∂z_prefactor = ∂TS∂z_loss / ∂ρ∂z_loss * 0.1 / 0.4
+
+    if ∂u∂z_loss > eps(eltype(∂u∂z_loss))
+        ∂u∂z_prefactor = ∂TS∂z_loss / ∂u∂z_loss * 0.2 / 0.4
+    else
+        ∂u∂z_prefactor = ∂TS∂z_loss * 0.2 / 0.4
+    end
+
+    if ∂v∂z_loss > eps(eltype(∂v∂z_loss))
+        ∂v∂z_prefactor = ∂TS∂z_loss / ∂v∂z_loss * 0.2 / 0.4
+    else
+        ∂v∂z_prefactor = ∂TS∂z_loss * 0.2 / 0.4
+    end
 
     profile_loss = u_prefactor * u_loss + v_prefactor * v_loss + T_prefactor * T_loss + S_prefactor * S_loss + ρ_prefactor * ρ_loss
     gradient_loss = ∂u∂z_prefactor * ∂u∂z_loss + ∂v∂z_prefactor * ∂v∂z_loss + ∂T∂z_prefactor * ∂T∂z_loss + ∂S∂z_prefactor * ∂S∂z_loss + ∂ρ∂z_prefactor * ∂ρ∂z_loss
@@ -351,11 +413,43 @@ function compute_loss_prefactor(individual_loss)
     ∂u∂z_prefactor *= gradient_prefactor
     ∂v∂z_prefactor *= gradient_prefactor
 
+    S_prefactor *= S_scaling
+    ∂S∂z_prefactor *= S_scaling
+
     return (u=u_prefactor, v=v_prefactor, T=T_prefactor, S=S_prefactor, ρ=ρ_prefactor, ∂u∂z=∂u∂z_prefactor, ∂v∂z=∂v∂z_prefactor, ∂T∂z=∂T∂z_prefactor, ∂S∂z=∂S∂z_prefactor, ∂ρ∂z=∂ρ∂z_prefactor)
 end
 
-function loss_multipleics(ps, truths, params, x₀s, losses_prefactor=(; u=1, v=1, T=1, S=1, ρ=1, ∂u∂z=1, ∂v∂z=1, ∂T∂z=1, ∂S∂z=1, ∂ρ∂z=1))
-    losses = [loss(ps, truth, param, x₀, losses_prefactor) for (truth, x₀, param) in zip(truths, x₀s, params)]
+# function compute_loss_prefactor(individual_loss)
+#     u_loss, v_loss, T_loss, S_loss, ρ_loss, ∂u∂z_loss, ∂v∂z_loss, ∂T∂z_loss, ∂S∂z_loss, ∂ρ∂z_loss = values(individual_loss)
+
+#     T_prefactor = 1
+#     S_prefactor = T_loss / S_loss
+#     ρ_prefactor = T_loss / ρ_loss
+#     u_prefactor = T_loss / u_loss
+#     v_prefactor = T_loss / v_loss
+
+#     ∂T∂z_prefactor = 1
+#     ∂S∂z_prefactor = ∂T∂z_loss / ∂S∂z_loss
+#     ∂ρ∂z_prefactor = ∂T∂z_loss / ∂ρ∂z_loss
+#     ∂u∂z_prefactor = ∂T∂z_loss / ∂u∂z_loss
+#     ∂v∂z_prefactor = ∂T∂z_loss / ∂v∂z_loss
+
+#     profile_loss = u_prefactor * u_loss + v_prefactor * v_loss + T_prefactor * T_loss + S_prefactor * S_loss + ρ_prefactor * ρ_loss
+#     gradient_loss = ∂u∂z_prefactor * ∂u∂z_loss + ∂v∂z_prefactor * ∂v∂z_loss + ∂T∂z_prefactor * ∂T∂z_loss + ∂S∂z_prefactor * ∂S∂z_loss + ∂ρ∂z_prefactor * ∂ρ∂z_loss
+
+#     gradient_prefactor = profile_loss / gradient_loss
+
+#     ∂ρ∂z_prefactor *= gradient_prefactor
+#     ∂T∂z_prefactor *= gradient_prefactor
+#     ∂S∂z_prefactor *= gradient_prefactor
+#     ∂u∂z_prefactor *= gradient_prefactor
+#     ∂v∂z_prefactor *= gradient_prefactor
+
+#     return (u=u_prefactor, v=v_prefactor, T=T_prefactor, S=S_prefactor, ρ=ρ_prefactor, ∂u∂z=∂u∂z_prefactor, ∂v∂z=∂v∂z_prefactor, ∂T∂z=∂T∂z_prefactor, ∂S∂z=∂S∂z_prefactor, ∂ρ∂z=∂ρ∂z_prefactor)
+# end
+
+function loss_multipleics(ps, truths, params, x₀s, losses_prefactors)
+    losses = [loss(ps, truth, param, x₀, loss_prefactor) for (truth, x₀, param, loss_prefactor) in zip(truths, x₀s, params, losses_prefactors)]
     return mean(losses)
 end
 
@@ -700,22 +794,23 @@ function plot_loss(losses, FILE_DIR; epoch=1)
     save("$(FILE_DIR)/losses_epoch$(epoch).png", fig, px_per_unit=8)
 end
 
-ps_prior = ComponentArray(ν_conv=1.52879, ν_shear=7.40022e-2, m=-1.70174e-1, Pr=1.18263, ΔRi=6.62497e-3)
+ps_prior = ComponentArray(ν_conv=1., ν_shear=7.40022e-2, m=-1.70174e-1, Pr=1.18263, ΔRi=6.62497e-3)
 
 ind_losses = [individual_loss(ps_prior, truth, param, x₀) for (truth, x₀, param) in zip(truths, x₀s, params)]
-ind_loss = (; u=sum([loss.u for loss in ind_losses]),
-              v=sum([loss.v for loss in ind_losses]),
-              T=sum([loss.T for loss in ind_losses]), 
-              S=sum([loss.S for loss in ind_losses]), 
-              ρ=sum([loss.ρ for loss in ind_losses]), 
-              ∂u∂z=sum([loss.∂u∂z for loss in ind_losses]),
-              ∂v∂z=sum([loss.∂v∂z for loss in ind_losses]),
-              ∂T∂z=sum([loss.∂T∂z for loss in ind_losses]), 
-              ∂S∂z=sum([loss.∂S∂z for loss in ind_losses]), 
-              ∂ρ∂z=sum([loss.∂ρ∂z for loss in ind_losses]))
+loss_prefactors = compute_loss_prefactor_density_contribution.(ind_losses, compute_density_contribution.(train_data.data), S_scaling)
+# ind_loss = (; u=sum([loss.u for loss in ind_losses]),
+#               v=sum([loss.v for loss in ind_losses]),
+#               T=sum([loss.T for loss in ind_losses]), 
+#               S=sum([loss.S for loss in ind_losses]), 
+#               ρ=sum([loss.ρ for loss in ind_losses]), 
+#               ∂u∂z=sum([loss.∂u∂z for loss in ind_losses]),
+#               ∂v∂z=sum([loss.∂v∂z for loss in ind_losses]),
+#               ∂T∂z=sum([loss.∂T∂z for loss in ind_losses]), 
+#               ∂S∂z=sum([loss.∂S∂z for loss in ind_losses]), 
+#               ∂ρ∂z=sum([loss.∂ρ∂z for loss in ind_losses]))
 
-loss_prefactor = compute_loss_prefactor(ind_loss)
-prior_loss = loss_multipleics(ps_prior, truths, params, x₀s, loss_prefactor)
+# loss_prefactor = compute_loss_prefactor(ind_loss)
+prior_loss = loss_multipleics(ps_prior, truths, params, x₀s, loss_prefactors)
 
 prior_ν_conv = constrained_gaussian("ν_conv", ps_prior.ν_conv, 0.05, -Inf, Inf)
 prior_ν_shear = constrained_gaussian("ν_shear", ps_prior.ν_shear, 1e-2, -Inf, Inf)
@@ -727,7 +822,7 @@ priors = combine_distributions([prior_ν_conv, prior_ν_shear, prior_m, prior_Pr
 target = [0.]
 
 N_ensemble = 100
-N_iterations = 100
+N_iterations = 1000
 Γ = prior_loss / 1e6 * I
 
 ps_eki = EKP.construct_initial_ensemble(rng, priors, N_ensemble)

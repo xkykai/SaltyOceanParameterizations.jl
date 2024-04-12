@@ -509,7 +509,7 @@ function diagnose_fields(ps, params, x₀, train_data_plot, timestep_multiple=2)
     Ris_truth = hcat([calculate_Ri(u, v, ρ, Dᶠ, params.g, eos.reference_density, clamp_lims=(-Inf, Inf)) for (u, v, ρ) in zip(eachcol(train_data_plot.profile.u.unscaled), eachcol(train_data_plot.profile.v.unscaled), eachcol(train_data_plot.profile.ρ.unscaled))]...)
     Ris = hcat([calculate_Ri(u, v, ρ, Dᶠ, params.g, eos.reference_density, clamp_lims=(-Inf, Inf)) for (u, v, ρ) in zip(eachcol(us), eachcol(vs), eachcol(ρs))]...)
     
-    νs, κs = predict_diffusivities(Ris, ps_baseclosure)
+    νs, κs = predict_diffusivities(Ris, ps)
 
     uw_diffusive_boundarys = zeros(coarse_size+1, size(Ts, 2))
     vw_diffusive_boundarys = zeros(coarse_size+1, size(Ts, 2))
@@ -721,7 +721,7 @@ prior_ν_conv = constrained_gaussian("ν_conv", ps_prior.ν_conv, 0.05, -Inf, In
 prior_ν_shear = constrained_gaussian("ν_shear", ps_prior.ν_shear, 1e-2, -Inf, Inf)
 prior_m = constrained_gaussian("m", ps_prior.m, 2e-2, -Inf, Inf)
 prior_Pr = constrained_gaussian("Pr", ps_prior.Pr, 0.2, -Inf, Inf)
-prior_ΔRi = constrained_gaussian("ΔRi", ps_prior.ΔRi, 0.02, -Inf, Inf)
+prior_ΔRi = constrained_gaussian("ΔRi", ps_prior.ΔRi, 1e-3, -Inf, Inf)
 
 priors = combine_distributions([prior_ν_conv, prior_ν_shear, prior_m, prior_Pr, prior_ΔRi])
 target = [0.]

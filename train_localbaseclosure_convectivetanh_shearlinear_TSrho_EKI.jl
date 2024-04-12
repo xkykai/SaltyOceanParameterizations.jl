@@ -22,6 +22,7 @@ using ArgParse
 using EnsembleKalmanProcesses
 using EnsembleKalmanProcesses.ParameterDistributions
 const EKP = EnsembleKalmanProcesses
+using SeawaterPolynomials
 import SeawaterPolynomials.TEOS10: s, ΔS, Sₐᵤ
 s(Sᴬ) = Sᴬ + ΔS >= 0 ? √((Sᴬ + ΔS) / Sₐᵤ) : NaN
 

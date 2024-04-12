@@ -76,7 +76,7 @@ end
 
 const S_scaling = args["S_scaling"]
 
-FILE_DIR = "./training_output/NDE_enzyme_$(args["hidden_layer"])layer_$(args["hidden_layer_size"])_$(args["activation"])_$(S_scaling)Sscaling_wholebatch_Adam1e-4_1e-5_localbaseclosure_CTSL_TS_TSdrhodz_args"
+FILE_DIR = "./training_output/NDE_enzyme_$(args["hidden_layer"])layer_$(args["hidden_layer_size"])_$(args["activation"])_$(S_scaling)Sscaling_wholebatch_Adam1e-4_localbaseclosure_CTSL_TS_TSdrhodz_args"
 mkpath(FILE_DIR)
 
 LES_FILE_DIRS = [
@@ -164,8 +164,8 @@ ps_wS = ps_wS |> ComponentArray .|> Float64
 ps_wT .= glorot_uniform(rng, Float64, length(ps_wT))
 ps_wS .= glorot_uniform(rng, Float64, length(ps_wS))
 
-ps_wT .*= 1e-5
-ps_wS .*= 1e-5
+# ps_wT .*= 1e-5
+# ps_wS .*= 1e-5
 
 x₀s = [(; T=data.profile.T.scaled[:, 1], S=data.profile.S.scaled[:, 1]) for data in train_data.data]
 

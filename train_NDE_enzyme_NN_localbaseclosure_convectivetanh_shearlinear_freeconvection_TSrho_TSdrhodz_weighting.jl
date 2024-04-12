@@ -34,7 +34,7 @@ function parse_commandline()
       "--hidden_layer_size"
         help = "Size of hidden layer"
         arg_type = Int64
-        default = 4
+        default = 256
       "--hidden_layer"
         help = "Number of hidden layers"
         arg_type = Int64
@@ -76,7 +76,7 @@ end
 
 const S_scaling = args["S_scaling"]
 
-FILE_DIR = "./training_output/NDE_enzyme_$(args["hidden_layer"])layer_$(args["hidden_layer_size"])_$(args["activation"])_$(S_scaling)Sscaling_wholebatch_localbaseclosure_CTSL_TS_TSdrhodz_args"
+FILE_DIR = "./training_output/NDE_enzyme_$(args["hidden_layer"])layer_$(args["hidden_layer_size"])_$(args["activation"])_$(S_scaling)Sscaling_wholebatch_Adam1e-4_1e-5_localbaseclosure_CTSL_TS_TSdrhodz_args"
 mkpath(FILE_DIR)
 
 LES_FILE_DIRS = [
@@ -241,10 +241,6 @@ function solve_NDE(ps, params, x‚ÇÄ, ps_baseclosure, sts, NNs, timestep_multiple
     
     T_RHS = zeros(coarse_size)
     S_RHS = zeros(coarse_size)
-
-    sol_T = zeros(coarse_size, Nt_solve)
-    sol_S = zeros(coarse_size, Nt_solve)
-    sol_œÅ = zeros(coarse_size, Nt_solve)
 
     wT_residual = zeros(coarse_size+1)
     wS_residual = zeros(coarse_size+1)
@@ -917,6 +913,7 @@ function train_NDE_multipleics(ps, params, ps_baseclosure, sts, NNs, truths, x‚Ç
                         DuplicatedNoNeed(losses_prefactors, deepcopy(losses_prefactors)))
 
         opt_state, ps = Optimisers.update!(opt_state, ps, dps)
+        # @info dps
 
         losses[iter] = l
         dps .= 0
@@ -944,7 +941,7 @@ function train_NDE_multipleics(ps, params, ps_baseclosure, sts, NNs, truths, x‚Ç
     return ps_min, (; total=losses), opt_statemin
 end
 
-optimizers = [Optimisers.Adam(3e-4), Optimisers.Adam(1e-4), Optimisers.Adam(3e-5)]
+optimizers = [Optimisers.Adam(1e-4), Optimisers.Adam(3e-5), Optimisers.Adam(1e-5)]
 maxiters = [2000, 2000, 2000]
 end_epochs = cumsum(maxiters)
 # optimizers = [Optimisers.Adam(3e-4)]

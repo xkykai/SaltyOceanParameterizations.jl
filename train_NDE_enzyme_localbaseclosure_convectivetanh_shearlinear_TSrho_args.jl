@@ -70,7 +70,7 @@ else
     error("Activation function not recognized")
 end
 
-FILE_DIR = "./training_output/NDE_enzyme_localbaseclosure_convectivetanh_shearlinear_uvTSdrhodz_20sim"
+FILE_DIR = "./training_output/NDE_enzyme_$(args["hidden_layer"])l_$(args["hidden_layer_size"])s_$(args["activation"])_localbaseclosure_convectivetanh_shearlinear_uvTSdrhodz_20sim"
 mkpath(FILE_DIR)
 
 LES_FILE_DIRS = [
@@ -528,7 +528,7 @@ total_loss = sum([loss(ps, truth, param, x₀, ps_baseclosure, sts, NNs, loss_pr
 #          Const(NNs),
 #          Const(loss_prefactor))
 
-function train_NDE_stochastic(ps, params, ps_baseclosure, sts, NNs, truths, x₀s, losses_prefactors, rng; epoch=1, maxiter=2, rule=Optimisers.Adam())
+function train_NDE_stochastic(ps, params, ps_baseclosure, sts, NNs, truths, x₀s, losses_prefactors, rng, train_data_plot; epoch=1, maxiter=2, rule=Optimisers.Adam())
     opt_state = Optimisers.setup(rule, ps)
     opt_statemin = deepcopy(opt_state)
     l_min = Inf
@@ -576,13 +576,17 @@ function train_NDE_stochastic(ps, params, ps_baseclosure, sts, NNs, truths, x₀
             ps_min .= ps
         end
 
-        if iter % 4000 == 0
+        if iter % 100 == 0
             jldsave("$(FILE_DIR)/intermediate_training_results_epoch$(epoch)_iter$(iter).jld2"; u=ps_min, state=opt_statemin, loss=l_min)
+            sols = [diagnose_fields(ps_min, param, x₀, ps_baseclosure, sts, NNs, data) for (data, x₀, param) in zip(train_data_plot.data, x₀s, params)]
+            for (index, sol) in enumerate(sols)
+                animate_data(train_data_plot.data[index], sol.sols_dimensional, sol.fluxes, sol.diffusivities, sol.sols_dimensional_noNN, sol.fluxes_noNN, sol.diffusivities_noNN, index, FILE_DIR; epoch="intermediate$(iter)")
+            end
         end
 
         wall_clock = [time_ns()]
     end
-    return ps_min, (; total=losses)
+    return ps_min, (; total=losses), opt_statemin
 end
 
 function solve_NDE_postprocessing(ps, params, x₀, ps_baseclosure, sts, NNs, timestep_multiple=2)
@@ -1030,19 +1034,19 @@ function plot_loss(losses, FILE_DIR; epoch=1)
 end
 
 optimizers = [Optimisers.Adam(3e-4), Optimisers.Adam(3e-4), Optimisers.Adam(3e-4), Optimisers.Adam(3e-4), Optimisers.Adam(3e-4)]
-maxiters = [200, 200, 200, 200, 200]
-
+maxiters = [500, 500, 500, 500, 500]
+end_epochs = cumsum(maxiters)
 # optimizers = [Optimisers.Adam(3e-4)]
 # maxiters = [3]
 
-for (epoch, (optimizer, maxiter)) in enumerate(zip(optimizers, maxiters))
+for (epoch, optimizer, maxiter) in zip(end_epochs, optimizers, maxiters)
     global ps = ps
-    ps, losses = train_NDE_stochastic(ps, params, ps_baseclosure, sts, NNs, truths, x₀s, loss_prefactors, rng; maxiter=maxiter, rule=optimizer)
+    ps, losses, opt_state = train_NDE_stochastic(ps, params, ps_baseclosure, sts, NNs, truths, x₀s, loss_prefactors, rng, train_data_plot; maxiter=maxiter, rule=optimizer)
     
-    # jldsave("$(FILE_DIR)/training_results_epoch$(epoch).jld2"; u=ps, losses=losses)
-    # sols = [diagnose_fields(ps, param, x₀, ps_baseclosure, sts, NNs, data) for (data, x₀, param) in zip(train_data_plot.data, x₀s, params)]
-    # for (index, sol) in enumerate(sols)
-    #     animate_data(train_data_plot.data[index], sol.sols_dimensional, sol.fluxes, sol.diffusivities, sol.sols_dimensional_noNN, sol.fluxes_noNN, sol.diffusivities_noNN, index, FILE_DIR; epoch=1)
-    # end
-    # plot_loss(losses, FILE_DIR; epoch=epoch)
+    jldsave("$(FILE_DIR)/training_results_epoch$(epoch).jld2"; u=ps, losses=losses, state=opt_state)
+    sols = [diagnose_fields(ps, param, x₀, ps_baseclosure, sts, NNs, data) for (data, x₀, param) in zip(train_data_plot.data, x₀s, params)]
+    for (index, sol) in enumerate(sols)
+        animate_data(train_data_plot.data[index], sol.sols_dimensional, sol.fluxes, sol.diffusivities, sol.sols_dimensional_noNN, sol.fluxes_noNN, sol.diffusivities_noNN, index, FILE_DIR; epoch=epoch)
+    end
+    plot_loss(losses, FILE_DIR; epoch=epoch)
 end

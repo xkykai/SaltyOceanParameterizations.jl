@@ -958,7 +958,7 @@ end
 # maxiters = [10000, 10000, 10000]
 # end_epochs = cumsum(maxiters)
 optimizers = vcat([Optimisers.Adam(1e-4) for _ in 1:10], Optimisers.Adam(3e-5), Optimisers.Adam(1e-5))
-maxiters = [2 for _ in 1:12]
+maxiters = [5000 for _ in 1:12]
 end_epochs = cumsum(maxiters)
 
 sim_indices = [1, 2, 3, 4, 5, 6, 7, 8]

@@ -70,7 +70,7 @@ else
     error("Activation function not recognized")
 end
 
-FILE_DIR = "./training_output/NDE_enzyme_$(args["hidden_layer"])l_$(args["hidden_layer_size"])s_$(args["activation"])_localbaseclosure_convectivetanh_shearlinear_uvTSdrhodz_20simwarmup_test"
+FILE_DIR = "./training_output/NDE_enzyme_$(args["hidden_layer"])l_$(args["hidden_layer_size"])s_$(args["activation"])_localbaseclosure_convectivetanh_shearlinear_uvTSdrhodz_20simwarmup"
 mkpath(FILE_DIR)
 
 LES_FILE_DIRS = [
@@ -1187,10 +1187,10 @@ end
 # maxiters = [10000, 10000, 10000]
 # end_epochs = cumsum(maxiters)
 optimizers = vcat([Optimisers.Adam(1e-4) for _ in 1:10], Optimisers.Adam(3e-5), Optimisers.Adam(1e-5))
-maxiters = [5 for _ in 1:12]
+maxiters = [5000 for _ in 1:12]
 end_epochs = cumsum(maxiters)
 
-sim_indices = [1, 2, 3, 4, 5, 6, 7, 8]
+sim_indices = collect(1:20)
 training_timeframes = [timeframes[1][1:2],
                       timeframes[1][1:3],
                       timeframes[1][1:5],

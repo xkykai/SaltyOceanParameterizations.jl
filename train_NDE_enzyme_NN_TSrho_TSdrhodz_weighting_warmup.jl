@@ -4,7 +4,7 @@ using MPI
 MPI.Init()
 
 rank = MPI.Comm_rank(MPI.COMM_WORLD)
-sleep(rank)
+# sleep(rank)
 logfile = "/home/xinkai/SaltyOceanParameterizations.jl/logs/$(Dates.format(Dates.now(), "dd-mm-yy_HH.MM.SS"))log$(rank).txt"
 logger = FileLogger(logfile)
 global_logger(logger)

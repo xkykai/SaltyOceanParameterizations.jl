@@ -27,6 +27,7 @@ using MPI
 MPI.Init()
 
 rank = MPI.Comm_rank(MPI.COMM_WORLD)
+@info "rank = $rank"
 
 function parse_commandline()
     s = ArgParseSettings()
@@ -85,7 +86,7 @@ const negative_∂ρ∂z_penalty = 1.0
 # DATA_DIR = "."
 DATA_DIR = "/nobackup/users/xinkai/SaltyOceanParameterizations.jl"
 
-io = open("$(DATA_DIR)/logs/log$(rank).txt", "w+")
+io = open("~/SaltyOceanParameterizations.jl/logs/log$(rank).txt", "w+")
 logger = ConsoleLogger(io, Logging.Debug)
 global_logger(logger)
 

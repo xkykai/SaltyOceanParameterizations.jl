@@ -69,7 +69,7 @@ end
 const S_scaling = args["S_scaling"]
 const negative_∂ρ∂z_penalty = args["negative_∂ρ∂z_penalty"]
 
-logfile = "/home/xinkai/SaltyOceanParameterizations.jl/logs/NDE_nobaseclosure_$(Dates.format(Dates.now(), "dd-mm-yy_HH.MM.SS"))_$(N_hidden_layer)l$(hidden_layer_size)_S$(S_scaling)_rho$(negative_∂ρ∂z_penalty)_log.txt"
+logfile = "/home/xinkai/SaltyOceanParameterizations.jl/logs/NDE_nobaseclosure_$(Dates.format(Dates.now(), "dd-mm-yy_HH.MM.SS"))_$(N_hidden_layer)l$(hidden_layer_size)_S$(S_scaling)_rho$(negative_∂ρ∂z_penalty)_$(activation)_log.txt"
 logger = FileLogger(logfile)
 logger = MinLevelLogger(logger, Logging.Info)
 global_logger(logger)

@@ -66,7 +66,7 @@ end
 
 const S_scaling = args["S_scaling"]
 
-logfile = "/home/xinkai/SaltyOceanParameterizations.jl/logs/NDE_$(Dates.format(Dates.now(), "dd-mm-yy_HH.MM.SS"))_$(N_hidden_layer)l$(hidden_layer_size)_S$(S_scaling)_log.txt"
+logfile = "/home/xinkai/SaltyOceanParameterizations.jl/logs/NDE_$(Dates.format(Dates.now(), "dd-mm-yy_HH.MM.SS"))_$(N_hidden_layer)l$(hidden_layer_size)_S$(S_scaling)_$(activation)_log.txt"
 logger = FileLogger(logfile)
 logger = MinLevelLogger(logger, Logging.Info)
 global_logger(logger)

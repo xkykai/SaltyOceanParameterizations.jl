@@ -77,8 +77,8 @@ end
 const S_scaling = args["S_scaling"]
 const negative_∂ρ∂z_penalty = 1.0
 
-DATA_DIR = "."
-# DATA_DIR = "/nobackup/users/xinkai/SaltyOceanParameterizations.jl"
+# DATA_DIR = "."
+DATA_DIR = "/nobackup/users/xinkai/SaltyOceanParameterizations.jl"
 
 FILE_DIR = "$(DATA_DIR)/training_output/13runs/NDE_enzyme_$(args["hidden_layer"])layer_$(args["hidden_layer_size"])_$(args["activation"])_$(S_scaling)Sscaling_nobaseclosure_$(negative_∂ρ∂z_penalty)penalty_warmup"
 mkpath(FILE_DIR)

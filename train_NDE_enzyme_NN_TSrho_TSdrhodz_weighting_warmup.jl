@@ -34,7 +34,7 @@ function parse_commandline()
       "--hidden_layer_size"
         help = "Size of hidden layer"
         arg_type = Int64
-        default = 256
+        default = 512
       "--hidden_layer"
         help = "Number of hidden layers"
         arg_type = Int64
@@ -75,11 +75,12 @@ else
 end
 
 const S_scaling = args["S_scaling"]
+const negative_∂ρ∂z_penalty = 1.0
 
 DATA_DIR = "."
 # DATA_DIR = "/nobackup/users/xinkai/SaltyOceanParameterizations.jl"
 
-FILE_DIR = "$(DATA_DIR)/training_output/13runs/NDE_enzyme_$(args["hidden_layer"])layer_$(args["hidden_layer_size"])_$(args["activation"])_$(S_scaling)Sscaling_nobaseclosure_warmup_nopenalty"
+FILE_DIR = "$(DATA_DIR)/training_output/13runs/NDE_enzyme_$(args["hidden_layer"])layer_$(args["hidden_layer_size"])_$(args["activation"])_$(S_scaling)Sscaling_nobaseclosure_$(negative_∂ρ∂z_penalty)penalty_warmup"
 mkpath(FILE_DIR)
 @info FILE_DIR
 
@@ -394,8 +395,8 @@ function compute_loss_prefactor_density_contribution(individual_loss, contributi
 
     ∂TS∂z_loss = ∂T∂z_loss + ∂S∂z_loss
     ∂ρ∂z_prefactor = ∂TS∂z_loss / ∂ρ∂z_loss * 0.1 / 0.4
-    negative_∂ρ∂z_prefactor = 0
-    # negative_∂ρ∂z_prefactor = ∂ρ∂z_loss / negative_∂ρ∂z_loss
+    # negative_∂ρ∂z_prefactor = 0
+    negative_∂ρ∂z_prefactor = ∂ρ∂z_loss / negative_∂ρ∂z_loss
 
     profile_loss = T_prefactor * T_loss + S_prefactor * S_loss + ρ_prefactor * ρ_loss
     gradient_loss = ∂T∂z_prefactor * ∂T∂z_loss + ∂S∂z_prefactor * ∂S∂z_loss + ∂ρ∂z_prefactor * ∂ρ∂z_loss + negative_∂ρ∂z_prefactor * negative_∂ρ∂z_loss
@@ -409,6 +410,7 @@ function compute_loss_prefactor_density_contribution(individual_loss, contributi
 
     S_prefactor *= S_scaling
     ∂S∂z_prefactor *= S_scaling
+    negative_∂ρ∂z_prefactor *= negative_∂ρ∂z_penalty
 
     return (T=T_prefactor, S=S_prefactor, ρ=ρ_prefactor, ∂T∂z=∂T∂z_prefactor, ∂S∂z=∂S∂z_prefactor, ∂ρ∂z=∂ρ∂z_prefactor, negative_∂ρ∂z=negative_∂ρ∂z_prefactor)
 end
@@ -850,7 +852,7 @@ function train_NDE_multipleics(ps, params, sts, NNs, truths, x₀s, train_data_p
     return ps_min, (; total=losses), opt_statemin
 end
 
-optimizers = vcat([Optimisers.AdamW(eta=1e-4, lambda=3e-4) for _ in 1:6], [Optimisers.AdamW(eta=1e-5, lambda=3e-4) for _ in 1:5], Optimisers.AdamW(eta=3e-6, lambda=3e-4), Optimisers.AdamW(eta=1e-6, lambda=3e-4))
+optimizers = vcat([Optimisers.AdamW(eta=1e-4, lambda=3e-4) for _ in 1:3], [Optimisers.AdamW(eta=3e-5, lambda=3e-4) for _ in 1:3], [Optimisers.AdamW(eta=1e-5, lambda=3e-4) for _ in 1:5], Optimisers.AdamW(eta=3e-6, lambda=3e-4), Optimisers.AdamW(eta=1e-6, lambda=3e-4))
             
 # maxiters = [5000, 5000, 5000, 5000, 5000, 5000]
 # end_epochs = cumsum(maxiters)
@@ -866,7 +868,7 @@ optimizers = vcat([Optimisers.AdamW(eta=1e-4, lambda=3e-4) for _ in 1:6], [Optim
 #               Optimisers.AdamW(eta=1e-4, lambda=3e-4),
 #               Optimisers.AdamW(eta=1e-4, lambda=3e-4)]
             
-maxiters = [5000 for _ in 1:13]
+maxiters = vcat([5000 for _ in 1:3], [7000 for _ in 1:10])
 end_epochs = cumsum(maxiters)
 
 sim_indices = [1, 2, 3, 4, 5, 6, 7, 8]

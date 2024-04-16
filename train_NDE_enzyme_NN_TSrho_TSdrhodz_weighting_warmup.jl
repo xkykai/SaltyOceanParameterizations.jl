@@ -79,7 +79,7 @@ const S_scaling = args["S_scaling"]
 DATA_DIR = "."
 # DATA_DIR = "/nobackup/users/xinkai/SaltyOceanParameterizations.jl"
 
-FILE_DIR = "$(DATA_DIR)/training_output/13runs/NDE_enzyme_$(args["hidden_layer"])layer_$(args["hidden_layer_size"])_$(args["activation"])_$(S_scaling)Sscaling_nobaseclosure_warmup"
+FILE_DIR = "$(DATA_DIR)/training_output/13runs/NDE_enzyme_$(args["hidden_layer"])layer_$(args["hidden_layer_size"])_$(args["activation"])_$(S_scaling)Sscaling_nobaseclosure_warmup_nopenalty"
 mkpath(FILE_DIR)
 @info FILE_DIR
 
@@ -394,7 +394,8 @@ function compute_loss_prefactor_density_contribution(individual_loss, contributi
 
     ∂TS∂z_loss = ∂T∂z_loss + ∂S∂z_loss
     ∂ρ∂z_prefactor = ∂TS∂z_loss / ∂ρ∂z_loss * 0.1 / 0.4
-    negative_∂ρ∂z_prefactor = ∂ρ∂z_loss / negative_∂ρ∂z_loss
+    negative_∂ρ∂z_prefactor = 0
+    # negative_∂ρ∂z_prefactor = ∂ρ∂z_loss / negative_∂ρ∂z_loss
 
     profile_loss = T_prefactor * T_loss + S_prefactor * S_loss + ρ_prefactor * ρ_loss
     gradient_loss = ∂T∂z_prefactor * ∂T∂z_loss + ∂S∂z_prefactor * ∂S∂z_loss + ∂ρ∂z_prefactor * ∂ρ∂z_loss + negative_∂ρ∂z_prefactor * negative_∂ρ∂z_loss

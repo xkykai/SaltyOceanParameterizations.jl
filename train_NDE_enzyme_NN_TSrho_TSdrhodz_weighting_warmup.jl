@@ -1,15 +1,4 @@
 import Dates
-using Logging, LoggingExtras
-using MPI
-MPI.Init()
-
-rank = MPI.Comm_rank(MPI.COMM_WORLD)
-# sleep(rank)
-logfile = "/home/xinkai/SaltyOceanParameterizations.jl/logs/$(Dates.format(Dates.now(), "dd-mm-yy_HH.MM.SS"))log$(rank).txt"
-logger = FileLogger(logfile)
-MinLevelLogger(logger, Logging.Info)
-global_logger(logger)
-
 using LinearAlgebra
 using DiffEqBase
 import SciMLBase
@@ -45,7 +34,7 @@ function parse_commandline()
       "--hidden_layer_size"
         help = "Size of hidden layer"
         arg_type = Int64
-        default = 512
+        default = 768
       "--hidden_layer"
         help = "Number of hidden layers"
         arg_type = Int64
@@ -469,7 +458,7 @@ function loss_multipleics(ps, truths, params, x₀s, sts, NNs, losses_prefactor,
     return mean(losses)
 end
 
-loss_multipleics(ps, [truths[1]], [params[1]], [x₀s[1]], sts, NNs, [loss_prefactors[1]], params[1].scaled_time[2] - params[1].scaled_time[1], length(25:10:45))
+# loss_multipleics(ps, [truths[1]], [params[1]], [x₀s[1]], sts, NNs, [loss_prefactors[1]], params[1].scaled_time[2] - params[1].scaled_time[1], length(25:10:45))
 
 # dps = deepcopy(ps) .= 0
 # autodiff(Enzyme.ReverseWithPrimal, 

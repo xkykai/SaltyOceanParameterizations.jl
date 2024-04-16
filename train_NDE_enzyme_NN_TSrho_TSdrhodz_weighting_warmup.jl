@@ -7,6 +7,7 @@ rank = MPI.Comm_rank(MPI.COMM_WORLD)
 # sleep(rank)
 logfile = "/home/xinkai/SaltyOceanParameterizations.jl/logs/$(Dates.format(Dates.now(), "dd-mm-yy_HH.MM.SS"))log$(rank).txt"
 logger = FileLogger(logfile)
+MinLevelLogger(logger, Logging.Info)
 global_logger(logger)
 
 using LinearAlgebra

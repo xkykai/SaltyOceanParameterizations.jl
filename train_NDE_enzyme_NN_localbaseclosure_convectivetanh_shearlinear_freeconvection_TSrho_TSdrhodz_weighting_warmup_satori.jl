@@ -38,8 +38,7 @@ for hidden_layer_size in hidden_layer_sizes, hidden_layer in hidden_layers, S_sc
     push!(argss, Dict("hidden_layer_size" => hidden_layer_size,
                 "hidden_layer" => hidden_layer,
                 "activation" => activation,
-                "S_scaling" => S_scaling,
-                "negative_∂ρ∂z_penalty" => negative_∂ρ∂z_penalty))
+                "S_scaling" => S_scaling))
 end
 
 args = argss[ranknum+1]

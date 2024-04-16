@@ -1,3 +1,10 @@
+import Dates
+using Logging, LoggingExtras
+
+logfile = "/home/xinkai/SaltyOceanParameterizations.jl/logs/$(Dates.format(Dates.now(), "dd-mm-yy_HH.MM.SS"))log$(rank).txt"
+logger = FileLogger(logfile)
+global_logger(logger)
+
 using MPI
 MPI.Init()
 
@@ -21,14 +28,12 @@ using CairoMakie
 using SparseArrays
 using Optimisers
 using Printf
-import Dates
 using Statistics
 using Colors
 using ArgParse
 using SeawaterPolynomials
 import SeawaterPolynomials.TEOS10: s, ΔS, Sₐᵤ
 s(Sᴬ) = Sᴬ + ΔS >= 0 ? √((Sᴬ + ΔS) / Sₐᵤ) : NaN
-using Logging, LoggingExtras
 
 function parse_commandline()
     s = ArgParseSettings()
@@ -86,10 +91,6 @@ const negative_∂ρ∂z_penalty = 1.0
 
 # DATA_DIR = "."
 DATA_DIR = "/nobackup/users/xinkai/SaltyOceanParameterizations.jl"
-
-logfile = "/home/xinkai/SaltyOceanParameterizations.jl/logs/$(Dates.format(Dates.now(), "dd-mm-yy_HH.MM.SS"))log$(rank).txt"
-logger = FileLogger(logfile)
-global_logger(logger)
 
 FILE_DIR = "$(DATA_DIR)/training_output/13runs/NDE_enzyme_$(args["hidden_layer"])layer_$(args["hidden_layer_size"])_$(args["activation"])_$(S_scaling)Sscaling_nobaseclosure_$(negative_∂ρ∂z_penalty)penalty_warmup"
 mkpath(FILE_DIR)
@@ -838,9 +839,10 @@ function train_NDE_multipleics(ps, params, sts, NNs, truths, x₀s, train_data_p
             l_min = l
         end
         
-        @printf("%s, Δt %s, round %d, iter %d/%d, loss average %6.10e, minimum loss %6.5e, max NN weight %6.5e, gradient norm %6.5e\n",
-                Dates.now(), prettytime(1e-9 * (time_ns() - wall_clock[1])), epoch, iter, maxiter, l, l_min,
-                maximum(abs, ps), maximum(abs, dps))
+        msg = @sprintf("%s, Δt %s, round %d, iter %d/%d, loss average %6.10e, minimum loss %6.5e, max NN weight %6.5e, gradient norm %6.5e\n",
+                        Dates.now(), prettytime(1e-9 * (time_ns() - wall_clock[1])), epoch, iter, maxiter, l, l_min,
+                        maximum(abs, ps), maximum(abs, dps))
+        @info msg
         
         dps .= 0
         mean_loss = l

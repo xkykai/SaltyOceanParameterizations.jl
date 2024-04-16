@@ -76,41 +76,44 @@ end
 
 const S_scaling = args["S_scaling"]
 
-FILE_DIR = "./training_output/NDE_enzyme_$(args["hidden_layer"])layer_$(args["hidden_layer_size"])_$(args["activation"])_$(S_scaling)Sscaling__nobaseclosure_warmup"
+DATA_DIR = "."
+# DATA_DIR = "/nobackup/users/xinkai/SaltyOceanParameterizations.jl"
+
+FILE_DIR = "$(DATA_DIR)/training_output/13runs/NDE_enzyme_$(args["hidden_layer"])layer_$(args["hidden_layer_size"])_$(args["activation"])_$(S_scaling)Sscaling_nobaseclosure_warmup"
 mkpath(FILE_DIR)
 @info FILE_DIR
 
 LES_FILE_DIRS = [
-    # "./LES_training/linearTS_dTdz_0.014_dSdz_0.0021_QU_-0.0005_QT_0.0_QS_0.0_T_18.0_S_36.6_f_8.0e-5_WENO9nu0_Lxz_512.0_256.0_Nxz_256_128/instantaneous_timeseries.jld2",
-    # "./LES_training/linearTS_dTdz_0.014_dSdz_0.0021_QU_-0.0002_QT_0.0_QS_0.0_T_18.0_S_36.6_f_8.0e-5_WENO9nu0_Lxz_512.0_256.0_Nxz_256_128/instantaneous_timeseries.jld2",
+    # "$(DATA_DIR)/LES_training/linearTS_dTdz_0.014_dSdz_0.0021_QU_-0.0005_QT_0.0_QS_0.0_T_18.0_S_36.6_f_8.0e-5_WENO9nu0_Lxz_512.0_256.0_Nxz_256_128/instantaneous_timeseries.jld2",
+    # "$(DATA_DIR)/LES_training/linearTS_dTdz_0.014_dSdz_0.0021_QU_-0.0002_QT_0.0_QS_0.0_T_18.0_S_36.6_f_8.0e-5_WENO9nu0_Lxz_512.0_256.0_Nxz_256_128/instantaneous_timeseries.jld2",
 
-    "./LES_training/linearTS_dTdz_0.014_dSdz_0.0021_QU_0.0_QT_0.0005_QS_0.0_T_18.0_S_36.6_f_8.0e-5_WENO9nu0_Lxz_512.0_256.0_Nxz_256_128/instantaneous_timeseries.jld2",
-    "./LES_training/linearTS_dTdz_0.014_dSdz_0.0021_QU_0.0_QT_0.0001_QS_0.0_T_18.0_S_36.6_f_8.0e-5_WENO9nu0_Lxz_512.0_256.0_Nxz_256_128/instantaneous_timeseries.jld2",
+    "$(DATA_DIR)/LES_training/linearTS_dTdz_0.014_dSdz_0.0021_QU_0.0_QT_0.0005_QS_0.0_T_18.0_S_36.6_f_8.0e-5_WENO9nu0_Lxz_512.0_256.0_Nxz_256_128/instantaneous_timeseries.jld2",
+    "$(DATA_DIR)/LES_training/linearTS_dTdz_0.014_dSdz_0.0021_QU_0.0_QT_0.0001_QS_0.0_T_18.0_S_36.6_f_8.0e-5_WENO9nu0_Lxz_512.0_256.0_Nxz_256_128/instantaneous_timeseries.jld2",
 
-    "./LES_training/linearTS_dTdz_0.014_dSdz_0.0021_QU_0.0_QT_0.0_QS_-5.0e-5_T_18.0_S_36.6_f_8.0e-5_WENO9nu0_Lxz_512.0_256.0_Nxz_256_128/instantaneous_timeseries.jld2",
-    "./LES_training/linearTS_dTdz_0.014_dSdz_0.0021_QU_0.0_QT_0.0_QS_-2.0e-5_T_18.0_S_36.6_f_8.0e-5_WENO9nu0_Lxz_512.0_256.0_Nxz_256_128/instantaneous_timeseries.jld2",
+    "$(DATA_DIR)/LES_training/linearTS_dTdz_0.014_dSdz_0.0021_QU_0.0_QT_0.0_QS_-5.0e-5_T_18.0_S_36.6_f_8.0e-5_WENO9nu0_Lxz_512.0_256.0_Nxz_256_128/instantaneous_timeseries.jld2",
+    "$(DATA_DIR)/LES_training/linearTS_dTdz_0.014_dSdz_0.0021_QU_0.0_QT_0.0_QS_-2.0e-5_T_18.0_S_36.6_f_8.0e-5_WENO9nu0_Lxz_512.0_256.0_Nxz_256_128/instantaneous_timeseries.jld2",
 
-    # "./LES_training/linearTS_dTdz_0.014_dSdz_0.0021_QU_-0.00015_QT_0.00045_QS_0.0_T_18.0_S_36.6_f_8.0e-5_WENO9nu0_Lxz_512.0_256.0_Nxz_256_128/instantaneous_timeseries.jld2",
-    # "./LES_training/linearTS_dTdz_0.014_dSdz_0.0021_QU_-0.0004_QT_0.00015_QS_0.0_T_18.0_S_36.6_f_8.0e-5_WENO9nu0_Lxz_512.0_256.0_Nxz_256_128/instantaneous_timeseries.jld2",
+    # "$(DATA_DIR)/LES_training/linearTS_dTdz_0.014_dSdz_0.0021_QU_-0.00015_QT_0.00045_QS_0.0_T_18.0_S_36.6_f_8.0e-5_WENO9nu0_Lxz_512.0_256.0_Nxz_256_128/instantaneous_timeseries.jld2",
+    # "$(DATA_DIR)/LES_training/linearTS_dTdz_0.014_dSdz_0.0021_QU_-0.0004_QT_0.00015_QS_0.0_T_18.0_S_36.6_f_8.0e-5_WENO9nu0_Lxz_512.0_256.0_Nxz_256_128/instantaneous_timeseries.jld2",
 
-    # "./LES_training/linearTS_dTdz_0.014_dSdz_0.0021_QU_-0.00015_QT_0.0_QS_-4.5e-5_T_18.0_S_36.6_f_8.0e-5_WENO9nu0_Lxz_512.0_256.0_Nxz_256_128/instantaneous_timeseries.jld2",
-    # "./LES_training/linearTS_dTdz_0.014_dSdz_0.0021_QU_-0.0004_QT_0.0_QS_-2.5e-5_T_18.0_S_36.6_f_8.0e-5_WENO9nu0_Lxz_512.0_256.0_Nxz_256_128/instantaneous_timeseries.jld2",
+    # "$(DATA_DIR)/LES_training/linearTS_dTdz_0.014_dSdz_0.0021_QU_-0.00015_QT_0.0_QS_-4.5e-5_T_18.0_S_36.6_f_8.0e-5_WENO9nu0_Lxz_512.0_256.0_Nxz_256_128/instantaneous_timeseries.jld2",
+    # "$(DATA_DIR)/LES_training/linearTS_dTdz_0.014_dSdz_0.0021_QU_-0.0004_QT_0.0_QS_-2.5e-5_T_18.0_S_36.6_f_8.0e-5_WENO9nu0_Lxz_512.0_256.0_Nxz_256_128/instantaneous_timeseries.jld2",
 
 
-    # "./LES_training/linearTS_dTdz_0.013_dSdz_0.00075_QU_-0.0005_QT_0.0_QS_0.0_T_14.5_S_35.0_f_0.0_WENO9nu0_Lxz_512.0_256.0_Nxz_256_128/instantaneous_timeseries.jld2",
-    # "./LES_training/linearTS_dTdz_0.013_dSdz_0.00075_QU_-0.0002_QT_0.0_QS_0.0_T_14.5_S_35.0_f_0.0_WENO9nu0_Lxz_512.0_256.0_Nxz_256_128/instantaneous_timeseries.jld2",
+    # "$(DATA_DIR)/LES_training/linearTS_dTdz_0.013_dSdz_0.00075_QU_-0.0005_QT_0.0_QS_0.0_T_14.5_S_35.0_f_0.0_WENO9nu0_Lxz_512.0_256.0_Nxz_256_128/instantaneous_timeseries.jld2",
+    # "$(DATA_DIR)/LES_training/linearTS_dTdz_0.013_dSdz_0.00075_QU_-0.0002_QT_0.0_QS_0.0_T_14.5_S_35.0_f_0.0_WENO9nu0_Lxz_512.0_256.0_Nxz_256_128/instantaneous_timeseries.jld2",
 
-    "./LES_training/linearTS_dTdz_0.013_dSdz_0.00075_QU_0.0_QT_0.0005_QS_0.0_T_14.5_S_35.0_f_0.0_WENO9nu0_Lxz_512.0_256.0_Nxz_256_128/instantaneous_timeseries.jld2",
-    "./LES_training/linearTS_dTdz_0.013_dSdz_0.00075_QU_0.0_QT_0.0001_QS_0.0_T_14.5_S_35.0_f_0.0_WENO9nu0_Lxz_512.0_256.0_Nxz_256_128/instantaneous_timeseries.jld2",
+    "$(DATA_DIR)/LES_training/linearTS_dTdz_0.013_dSdz_0.00075_QU_0.0_QT_0.0005_QS_0.0_T_14.5_S_35.0_f_0.0_WENO9nu0_Lxz_512.0_256.0_Nxz_256_128/instantaneous_timeseries.jld2",
+    "$(DATA_DIR)/LES_training/linearTS_dTdz_0.013_dSdz_0.00075_QU_0.0_QT_0.0001_QS_0.0_T_14.5_S_35.0_f_0.0_WENO9nu0_Lxz_512.0_256.0_Nxz_256_128/instantaneous_timeseries.jld2",
 
-    "./LES_training/linearTS_dTdz_0.013_dSdz_0.00075_QU_0.0_QT_0.0_QS_-5.0e-5_T_14.5_S_35.0_f_0.0_WENO9nu0_Lxz_512.0_256.0_Nxz_256_128/instantaneous_timeseries.jld2",
-    "./LES_training/linearTS_dTdz_0.013_dSdz_0.00075_QU_0.0_QT_0.0_QS_-2.0e-5_T_14.5_S_35.0_f_0.0_WENO9nu0_Lxz_512.0_256.0_Nxz_256_128/instantaneous_timeseries.jld2",
+    "$(DATA_DIR)/LES_training/linearTS_dTdz_0.013_dSdz_0.00075_QU_0.0_QT_0.0_QS_-5.0e-5_T_14.5_S_35.0_f_0.0_WENO9nu0_Lxz_512.0_256.0_Nxz_256_128/instantaneous_timeseries.jld2",
+    "$(DATA_DIR)/LES_training/linearTS_dTdz_0.013_dSdz_0.00075_QU_0.0_QT_0.0_QS_-2.0e-5_T_14.5_S_35.0_f_0.0_WENO9nu0_Lxz_512.0_256.0_Nxz_256_128/instantaneous_timeseries.jld2",
 
-    # "./LES_training/linearTS_dTdz_0.013_dSdz_0.00075_QU_-0.00015_QT_0.00045_QS_0.0_T_14.5_S_35.0_f_0.0_WENO9nu0_Lxz_512.0_256.0_Nxz_256_128/instantaneous_timeseries.jld2",
-    # "./LES_training/linearTS_dTdz_0.013_dSdz_0.00075_QU_-0.0004_QT_0.00015_QS_0.0_T_14.5_S_35.0_f_0.0_WENO9nu0_Lxz_512.0_256.0_Nxz_256_128/instantaneous_timeseries.jld2",
+    # "$(DATA_DIR)/LES_training/linearTS_dTdz_0.013_dSdz_0.00075_QU_-0.00015_QT_0.00045_QS_0.0_T_14.5_S_35.0_f_0.0_WENO9nu0_Lxz_512.0_256.0_Nxz_256_128/instantaneous_timeseries.jld2",
+    # "$(DATA_DIR)/LES_training/linearTS_dTdz_0.013_dSdz_0.00075_QU_-0.0004_QT_0.00015_QS_0.0_T_14.5_S_35.0_f_0.0_WENO9nu0_Lxz_512.0_256.0_Nxz_256_128/instantaneous_timeseries.jld2",
 
-    # "./LES_training/linearTS_dTdz_0.013_dSdz_0.00075_QU_-0.00015_QT_0.0_QS_-4.5e-5_T_14.5_S_35.0_f_0.0_WENO9nu0_Lxz_512.0_256.0_Nxz_256_128/instantaneous_timeseries.jld2",
-    # "./LES_training/linearTS_dTdz_0.013_dSdz_0.00075_QU_-0.0004_QT_0.0_QS_-2.5e-5_T_14.5_S_35.0_f_0.0_WENO9nu0_Lxz_512.0_256.0_Nxz_256_128/instantaneous_timeseries.jld2",
+    # "$(DATA_DIR)/LES_training/linearTS_dTdz_0.013_dSdz_0.00075_QU_-0.00015_QT_0.0_QS_-4.5e-5_T_14.5_S_35.0_f_0.0_WENO9nu0_Lxz_512.0_256.0_Nxz_256_128/instantaneous_timeseries.jld2",
+    # "$(DATA_DIR)/LES_training/linearTS_dTdz_0.013_dSdz_0.00075_QU_-0.0004_QT_0.0_QS_-2.5e-5_T_14.5_S_35.0_f_0.0_WENO9nu0_Lxz_512.0_256.0_Nxz_256_128/instantaneous_timeseries.jld2",
 ]
 
 field_datasets = [FieldDataset(FILE_DIR, backend=OnDisk()) for FILE_DIR in LES_FILE_DIRS]
@@ -168,8 +171,12 @@ ps_wS .*= 1e-5
 x₀s = [(; T=data.profile.T.scaled[:, 1], S=data.profile.S.scaled[:, 1]) for data in train_data.data]
 
 ps = ComponentArray(; wT=ps_wT, wS=ps_wS)
+# ps = jldopen("./training_output/NDE_enzyme_2layer_256_swish_1.0Sscaling__nobaseclosure_warmup/training_results_epoch30000_end.jld2", "r")["u"]
 NNs = (wT=wT_NN, wS=wS_NN)
 sts = (wT=st_wT, wS=st_wS)
+
+ps_wT = ps.wT
+ps_wS = ps.wS
 
 function predict_residual_flux(T_hat, S_hat, ∂ρ∂z_hat, p, params, sts, NNs)
     x′ = vcat(T_hat, S_hat, ∂ρ∂z_hat, params.wT.scaled.top, params.wS.scaled.top, params.f_scaled)
@@ -327,10 +334,12 @@ function individual_loss(ps, truth, params, x₀, sts, NNs, timestep, Nt, tstart
     ∂S∂z_loss = mean((∂S∂z[1:end-1,:] .- truth.∂S∂z[1:end-1, tstart:tstart+Nt-1]).^2)
     ∂ρ∂z_loss = mean((∂ρ∂z[1:end-1,:] .- truth.∂ρ∂z[1:end-1, tstart:tstart+Nt-1]).^2)
 
-    return (; T=T_loss, S=S_loss, ρ=ρ_loss, ∂T∂z=∂T∂z_loss, ∂S∂z=∂S∂z_loss, ∂ρ∂z=∂ρ∂z_loss)
+    negative_∂ρ∂z = mean(clamp.(∂ρ∂z[1:end-1,:], 0, Inf).^2)
+
+    return (; T=T_loss, S=S_loss, ρ=ρ_loss, ∂T∂z=∂T∂z_loss, ∂S∂z=∂S∂z_loss, ∂ρ∂z=∂ρ∂z_loss, negative_∂ρ∂z=negative_∂ρ∂z)
 end
 
-function loss(ps, truth, params, x₀, sts, NNs, timestep, Nt, tstart=1, timestep_multiple=10, losses_prefactor=(; T=1, S=1, ρ=1, ∂T∂z=1, ∂S∂z=1, ∂ρ∂z=1))
+function loss(ps, truth, params, x₀, sts, NNs, timestep, Nt, tstart=1, timestep_multiple=10, losses_prefactor=(; T=1, S=1, ρ=1, ∂T∂z=1, ∂S∂z=1, ∂ρ∂z=1, negative_∂ρ∂z=1))
     losses = individual_loss(ps, truth, params, x₀, sts, NNs, timestep, Nt, tstart, timestep_multiple)
     return sum(values(losses) .* values(losses_prefactor))
 end
@@ -371,7 +380,7 @@ function compute_density_contribution(data)
 end
 
 function compute_loss_prefactor_density_contribution(individual_loss, contribution, S_scaling=1.0)
-    T_loss, S_loss, ρ_loss, ∂T∂z_loss, ∂S∂z_loss, ∂ρ∂z_loss = values(individual_loss)
+    T_loss, S_loss, ρ_loss, ∂T∂z_loss, ∂S∂z_loss, ∂ρ∂z_loss, negative_∂ρ∂z_loss = values(individual_loss)
     
     total_contribution = contribution.T + contribution.S
     T_prefactor = total_contribution / contribution.T
@@ -385,20 +394,22 @@ function compute_loss_prefactor_density_contribution(individual_loss, contributi
 
     ∂TS∂z_loss = ∂T∂z_loss + ∂S∂z_loss
     ∂ρ∂z_prefactor = ∂TS∂z_loss / ∂ρ∂z_loss * 0.1 / 0.4
+    negative_∂ρ∂z_prefactor = ∂ρ∂z_loss / negative_∂ρ∂z_loss
 
     profile_loss = T_prefactor * T_loss + S_prefactor * S_loss + ρ_prefactor * ρ_loss
-    gradient_loss = ∂T∂z_prefactor * ∂T∂z_loss + ∂S∂z_prefactor * ∂S∂z_loss + ∂ρ∂z_prefactor * ∂ρ∂z_loss
+    gradient_loss = ∂T∂z_prefactor * ∂T∂z_loss + ∂S∂z_prefactor * ∂S∂z_loss + ∂ρ∂z_prefactor * ∂ρ∂z_loss + negative_∂ρ∂z_prefactor * negative_∂ρ∂z_loss
 
     gradient_prefactor = profile_loss / gradient_loss
 
     ∂ρ∂z_prefactor *= gradient_prefactor
     ∂T∂z_prefactor *= gradient_prefactor
     ∂S∂z_prefactor *= gradient_prefactor
+    negative_∂ρ∂z_prefactor *= gradient_prefactor
 
     S_prefactor *= S_scaling
     ∂S∂z_prefactor *= S_scaling
 
-    return (T=T_prefactor, S=S_prefactor, ρ=ρ_prefactor, ∂T∂z=∂T∂z_prefactor, ∂S∂z=∂S∂z_prefactor, ∂ρ∂z=∂ρ∂z_prefactor)
+    return (T=T_prefactor, S=S_prefactor, ρ=ρ_prefactor, ∂T∂z=∂T∂z_prefactor, ∂S∂z=∂S∂z_prefactor, ∂ρ∂z=∂ρ∂z_prefactor, negative_∂ρ∂z=negative_∂ρ∂z_prefactor)
 end
 
 # function compute_loss_prefactor(individual_loss)
@@ -636,9 +647,12 @@ function animate_data(train_data, sols, fluxes, diffusivities, sols_noNN, fluxes
     wT_noNN = fluxes_noNN.wT.total
     wS_noNN = fluxes_noNN.wS.total
 
-    Tlim = (find_min(T_NDE, train_data.profile.T.unscaled, T_noNN), find_max(T_NDE, train_data.profile.T.unscaled, T_noNN))
-    Slim = (find_min(S_NDE, train_data.profile.S.unscaled, S_noNN), find_max(S_NDE, train_data.profile.S.unscaled, S_noNN))
-    ρlim = (find_min(ρ_NDE, train_data.profile.ρ.unscaled, ρ_noNN), find_max(ρ_NDE, train_data.profile.ρ.unscaled, ρ_noNN))
+    # Tlim = (find_min(T_NDE, train_data.profile.T.unscaled, T_noNN), find_max(T_NDE, train_data.profile.T.unscaled, T_noNN))
+    # Slim = (find_min(S_NDE, train_data.profile.S.unscaled, S_noNN), find_max(S_NDE, train_data.profile.S.unscaled, S_noNN))
+    # ρlim = (find_min(ρ_NDE, train_data.profile.ρ.unscaled, ρ_noNN), find_max(ρ_NDE, train_data.profile.ρ.unscaled, ρ_noNN))
+    Tlim = (find_min(T_NDE, train_data.profile.T.unscaled), find_max(T_NDE, train_data.profile.T.unscaled))
+    Slim = (find_min(S_NDE, train_data.profile.S.unscaled), find_max(S_NDE, train_data.profile.S.unscaled))
+    ρlim = (find_min(ρ_NDE, train_data.profile.ρ.unscaled), find_max(ρ_NDE, train_data.profile.ρ.unscaled))
 
     wTlim = (find_min(wT_residual, train_data.flux.wT.column.unscaled),
              find_max(wT_residual, train_data.flux.wT.column.unscaled))
@@ -650,7 +664,8 @@ function animate_data(train_data, sols, fluxes, diffusivities, sols_noNN, fluxes
     wSlim = (find_min(wS_residual, train_data.flux.wS.column.unscaled),
              find_max(wS_residual, train_data.flux.wS.column.unscaled))
 
-    Rilim = (find_min(diffusivities.Ri, diffusivities.Ri_truth, diffusivities_noNN.Ri,), Ri_max)
+    # Rilim = (find_min(diffusivities.Ri, diffusivities.Ri_truth, diffusivities_noNN.Ri,), Ri_max)
+    Rilim = (find_min(diffusivities.Ri, diffusivities.Ri_truth), Ri_max)
 
     diffusivitylim = (find_min(diffusivities.ν, diffusivities.κ, diffusivities_noNN.ν, diffusivities_noNN.κ), 
                       find_max(diffusivities.ν, diffusivities.κ, diffusivities_noNN.ν, diffusivities_noNN.κ),)
@@ -773,7 +788,7 @@ function plot_loss(losses, FILE_DIR; suffix=1)
     save("$(FILE_DIR)/losses_$(suffix).png", fig, px_per_unit=8)
 end
 
-function train_NDE_multipleics(ps, params, sts, NNs, truths, x₀s, loss_prefactors, train_data_plot, timeframes; sim_index=[1], epoch=1, maxiter=2, rule=Optimisers.Adam())
+function train_NDE_multipleics(ps, params, sts, NNs, truths, x₀s, train_data_plot, timeframes, S_scaling; sim_index=[1], epoch=1, maxiter=2, rule=Optimisers.Adam())
     opt_state = Optimisers.setup(rule, ps)
     opt_statemin = deepcopy(opt_state)
     l_min = Inf
@@ -782,6 +797,10 @@ function train_NDE_multipleics(ps, params, sts, NNs, truths, x₀s, loss_prefact
     wall_clock = [time_ns()]
     losses = zeros(maxiter)
     mean_loss = mean(losses)
+
+    ind_losses = [individual_loss(ps, truth, param, x₀, sts, NNs, param.scaled_time[2] - param.scaled_time[1], length(timeframes)) for (truth, x₀, param) in zip(truths[sim_index], x₀s[sim_index], params[sim_index])]
+
+    loss_prefactors = compute_loss_prefactor_density_contribution.(ind_losses, compute_density_contribution.(train_data.data), S_scaling)
     for iter in 1:maxiter
         _, l = autodiff(Enzyme.ReverseWithPrimal, 
                         loss_multipleics, 
@@ -792,11 +811,10 @@ function train_NDE_multipleics(ps, params, sts, NNs, truths, x₀s, loss_prefact
                         DuplicatedNoNeed(x₀s[sim_index], deepcopy(x₀s[sim_index])), 
                         Const(sts), 
                         Const(NNs), 
-                        DuplicatedNoNeed(loss_prefactors[sim_index], deepcopy(loss_prefactors[sim_index])),
+                        DuplicatedNoNeed(loss_prefactors, deepcopy(loss_prefactors)),
                         Const(params[sim_index][1].scaled_time[2] - params[sim_index][1].scaled_time[1]),
                         Const(length(timeframes)))
         if iter <= 40
-            @info "adjusting learning rate to $(rule.opts[1].eta * iter / 40)"
             Optimisers.adjust!(opt_state, eta=rule.opts[1].eta * iter / 40)
         end
         opt_state, ps = Optimisers.update!(opt_state, ps, dps)
@@ -831,48 +849,61 @@ function train_NDE_multipleics(ps, params, sts, NNs, truths, x₀s, loss_prefact
     return ps_min, (; total=losses), opt_statemin
 end
 
-optimizers = [Optimisers.AdamW(eta=3e-4, lambda=3e-4), 
-              Optimisers.AdamW(eta=3e-4, lambda=3e-4), 
-              Optimisers.AdamW(eta=3e-4, lambda=3e-4), 
-              Optimisers.AdamW(eta=3e-4, lambda=3e-4), 
-              Optimisers.AdamW(eta=3e-4, lambda=3e-4),
-              Optimisers.AdamW(eta=3e-4, lambda=3e-4)]
+optimizers = vcat([Optimisers.AdamW(eta=1e-4, lambda=3e-4) for _ in 1:6], [Optimisers.AdamW(eta=1e-5, lambda=3e-4) for _ in 1:5], Optimisers.AdamW(eta=3e-6, lambda=3e-4), Optimisers.AdamW(eta=1e-6, lambda=3e-4))
             
-maxiters = [5000, 5000, 5000, 5000, 5000, 5000]
-end_epochs = cumsum(maxiters)
+# maxiters = [5000, 5000, 5000, 5000, 5000, 5000]
+# end_epochs = cumsum(maxiters)
+
 # optimizers = vcat([Optimisers.Adam(1e-4) for _ in 1:10], Optimisers.Adam(3e-5), Optimisers.Adam(1e-5))
 # maxiters = [5000 for _ in 1:12]
 # end_epochs = cumsum(maxiters)
 
+# optimizers = [Optimisers.AdamW(eta=1e-4, lambda=3e-4), 
+#               Optimisers.AdamW(eta=1e-4, lambda=3e-4), 
+#               Optimisers.AdamW(eta=1e-4, lambda=3e-4), 
+#               Optimisers.AdamW(eta=1e-4, lambda=3e-4), 
+#               Optimisers.AdamW(eta=1e-4, lambda=3e-4),
+#               Optimisers.AdamW(eta=1e-4, lambda=3e-4)]
+            
+maxiters = [5000 for _ in 1:13]
+end_epochs = cumsum(maxiters)
+
 sim_indices = [1, 2, 3, 4, 5, 6, 7, 8]
-training_timeframes = [timeframes[1][1:2],
-                       timeframes[1][1:3],
-                      timeframes[1][1:5],
-                      timeframes[1][1:7],
-                      timeframes[1][1:10],
-                      timeframes[1][1:12],]
 # training_timeframes = [timeframes[1][1:2],
-#                       timeframes[1][1:3],
+#                        timeframes[1][1:3],
 #                       timeframes[1][1:5],
 #                       timeframes[1][1:7],
 #                       timeframes[1][1:10],
-#                       timeframes[1][1:12],
-#                       timeframes[1][1:15],
-#                       timeframes[1][1:20],
-#                       timeframes[1][1:25],
-#                       timeframes[1][1:27],
-#                       timeframes[1][1:27],
-#                       timeframes[1][1:27]]
+#                       timeframes[1][1:12],]
+# training_timeframes = [timeframes[1][1:12],
+#                        timeframes[1][1:15],
+#                       timeframes[1][1:18],
+#                       timeframes[1][1:21],
+#                       timeframes[1][1:24],
+#                       timeframes[1][1:27],]
 
+training_timeframes = [timeframes[1][1:2],
+                      timeframes[1][1:3],
+                      timeframes[1][1:5],
+                      timeframes[1][1:7],
+                      timeframes[1][1:10],
+                      timeframes[1][1:12],
+                      timeframes[1][1:15],
+                      timeframes[1][1:18],
+                      timeframes[1][1:21],
+                      timeframes[1][1:24],
+                      timeframes[1][1:27],
+                      timeframes[1][1:27],
+                      timeframes[1][1:27]]
 
 plot_timeframes = [training_timeframe[1]:training_timeframe[end] for training_timeframe in training_timeframes]
 sols = nothing
 for (i, (epoch, optimizer, maxiter, training_timeframe, plot_timeframe)) in enumerate(zip(end_epochs, optimizers, maxiters, training_timeframes, plot_timeframes))
     global ps = ps
     global sols = sols
-    ps, losses, opt_state = train_NDE_multipleics(ps, params, sts, NNs, truths, x₀s, loss_prefactors, train_data_plot, training_timeframe; sim_index=sim_indices, epoch=i, maxiter=maxiter, rule=optimizer)
+    ps, losses, opt_state = train_NDE_multipleics(ps, params, sts, NNs, truths, x₀s, train_data_plot, training_timeframe, S_scaling; sim_index=sim_indices, epoch=i, maxiter=maxiter, rule=optimizer)
     
-    # jldsave("$(FILE_DIR)/training_results_epoch$(epoch)_end$(training_timeframe[end]).jld2"; u=ps, losses=losses, state=opt_state)
+    jldsave("$(FILE_DIR)/training_results_epoch$(epoch)_end$(training_timeframe[end]).jld2"; u=ps, losses=losses, state=opt_state)
 
     sols = [diagnose_fields(ps, param, x₀, sts, NNs, data, param.scaled_original_time[2] - param.scaled_original_time[1], length(plot_timeframe)) for (data, x₀, param) in zip(train_data_plot.data[sim_indices], x₀s[sim_indices], params[sim_indices])]
 

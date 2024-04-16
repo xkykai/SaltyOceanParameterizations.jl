@@ -22,6 +22,11 @@ using ArgParse
 using SeawaterPolynomials
 import SeawaterPolynomials.TEOS10: s, ΔS, Sₐᵤ
 s(Sᴬ) = Sᴬ + ΔS >= 0 ? √((Sᴬ + ΔS) / Sₐᵤ) : NaN
+using MPI
+
+MPI.Init()
+
+rank = MPI.Comm_rank(MPI.COMM_WORLD)
 
 function parse_commandline()
     s = ArgParseSettings()
@@ -79,6 +84,10 @@ const negative_∂ρ∂z_penalty = 1.0
 
 # DATA_DIR = "."
 DATA_DIR = "/nobackup/users/xinkai/SaltyOceanParameterizations.jl"
+
+io = open("$(DATA_DIR)/logs/log$(rank).txt", "w+")
+logger = ConsoleLogger(io, Logging.Debug)
+global_logger(logger)
 
 FILE_DIR = "$(DATA_DIR)/training_output/13runs/NDE_enzyme_$(args["hidden_layer"])layer_$(args["hidden_layer_size"])_$(args["activation"])_$(S_scaling)Sscaling_nobaseclosure_$(negative_∂ρ∂z_penalty)penalty_warmup"
 mkpath(FILE_DIR)

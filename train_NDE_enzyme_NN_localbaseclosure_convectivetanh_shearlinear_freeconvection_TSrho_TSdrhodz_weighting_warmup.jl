@@ -34,7 +34,7 @@ function parse_commandline()
       "--hidden_layer_size"
         help = "Size of hidden layer"
         arg_type = Int64
-        default = 512
+        default = 768
       "--hidden_layer"
         help = "Number of hidden layers"
         arg_type = Int64
@@ -963,8 +963,8 @@ end
 # optimizers = [Optimisers.Adam(1e-4), Optimisers.Adam(3e-5), Optimisers.Adam(1e-5)]
 # maxiters = [10000, 10000, 10000]
 # end_epochs = cumsum(maxiters)
-optimizers = vcat([Optimisers.Adam(1e-4) for _ in 1:6], [Optimisers.Adam(1e-5) for _ in 1:5], Optimisers.Adam(3e-6), Optimisers.Adam(1e-6))
-maxiters = [5000 for _ in 1:13]
+optimizers = vcat([Optimisers.Adam(3e-5) for _ in 1:3], [Optimisers.Adam(1e-5) for _ in 1:3], [Optimisers.Adam(3e-6) for _ in 1:5], Optimisers.Adam(1e-6), Optimisers.Adam(3e-7))
+maxiters = vcat([5000 for _ in 1:3], [7000 for _ in 1:10])
 end_epochs = cumsum(maxiters)
 
 sim_indices = [1, 2, 3, 4, 5, 6, 7, 8]

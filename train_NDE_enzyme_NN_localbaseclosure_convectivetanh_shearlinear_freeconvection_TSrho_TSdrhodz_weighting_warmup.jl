@@ -76,7 +76,7 @@ end
 
 const S_scaling = args["S_scaling"]
 
-FILE_DIR = "./training_output/13runs/NDE_enzyme_$(args["hidden_layer"])layer_$(args["hidden_layer_size"])_$(args["activation"])_$(S_scaling)Sscaling_warmup"
+FILE_DIR = "./training_output/13runs/NDE_enzyme_$(args["hidden_layer"])layer_$(args["hidden_layer_size"])_$(args["activation"])_$(S_scaling)Sscaling_warmup_end-2"
 mkpath(FILE_DIR)
 @info FILE_DIR
 
@@ -348,9 +348,9 @@ function individual_loss(ps, truth, params, x₀, ps_baseclosure, sts, NNs, time
     ∂S∂z = scaling.∂S∂z.(Dᶠ * S)
     ∂ρ∂z = scaling.∂ρ∂z.(Dᶠ * ρ)
 
-    ∂T∂z_loss = mean((∂T∂z[1:end-3,:] .- truth.∂T∂z[1:end-3, tstart:tstart+Nt-1]).^2)
-    ∂S∂z_loss = mean((∂S∂z[1:end-3,:] .- truth.∂S∂z[1:end-3, tstart:tstart+Nt-1]).^2)
-    ∂ρ∂z_loss = mean((∂ρ∂z[1:end-3,:] .- truth.∂ρ∂z[1:end-3, tstart:tstart+Nt-1]).^2)
+    ∂T∂z_loss = mean((∂T∂z[1:end-2,:] .- truth.∂T∂z[1:end-2, tstart:tstart+Nt-1]).^2)
+    ∂S∂z_loss = mean((∂S∂z[1:end-2,:] .- truth.∂S∂z[1:end-2, tstart:tstart+Nt-1]).^2)
+    ∂ρ∂z_loss = mean((∂ρ∂z[1:end-2,:] .- truth.∂ρ∂z[1:end-2, tstart:tstart+Nt-1]).^2)
 
     return (; T=T_loss, S=S_loss, ρ=ρ_loss, ∂T∂z=∂T∂z_loss, ∂S∂z=∂S∂z_loss, ∂ρ∂z=∂ρ∂z_loss)
 end

@@ -76,7 +76,7 @@ end
 
 const S_scaling = args["S_scaling"]
 
-FILE_DIR = "./training_output/13runs/NDE_enzyme_$(args["hidden_layer"])layer_$(args["hidden_layer_size"])_$(args["activation"])_$(S_scaling)Sscaling_warmup_trainall"
+FILE_DIR = "./training_output/13runs/NDE_enzyme_$(args["hidden_layer"])layer_$(args["hidden_layer_size"])_$(args["activation"])_$(S_scaling)Sscaling_warmup_trainall_Adam3e-6"
 mkpath(FILE_DIR)
 @info FILE_DIR
 
@@ -959,7 +959,7 @@ function train_NDE_multipleics(ps, params, sts, NNs, truths, x₀s, train_data_p
     return ps_min, (; total=losses), opt_statemin
 end
 
-optimizers = vcat([Optimisers.Adam(1e-5) for _ in 1:11], Optimisers.Adam(3e-6), Optimisers.Adam(1e-6))
+optimizers = vcat([Optimisers.Adam(3e-6) for _ in 1:12], Optimisers.Adam(1e-6))
 maxiters = [5000 for _ in 1:13]
 end_epochs = cumsum(maxiters)
 

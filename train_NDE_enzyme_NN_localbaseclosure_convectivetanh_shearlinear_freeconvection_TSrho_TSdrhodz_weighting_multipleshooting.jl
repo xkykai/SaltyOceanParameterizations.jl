@@ -514,7 +514,7 @@ end
 
 # loss_multipleics(ps, [truths[1]], [params[1]], [x₀s[1]], ps_baseclosure, sts, NNs, [loss_prefactors[1]], params[1].scaled_time[2] - params[1].scaled_time[1], length(25:10:45))
 
-loss_multipleics(ps, [truths_split[20]], [params[simulation_indices_split[20]]], [x₀s_split[20]], ps_baseclosure, sts, NNs, [loss_prefactors[20]], params[simulation_indices_split[20]].scaled_time[1], length(split_timeframes[20]))
+# loss_multipleics(ps, [truths_split[20]], [params[simulation_indices_split[20]]], [x₀s_split[20]], ps_baseclosure, sts, NNs, [loss_prefactors[20]], params[simulation_indices_split[20]].scaled_time[1], length(split_timeframes[20]))
 
 # dps = deepcopy(ps) .= 0
 # autodiff(Enzyme.ReverseWithPrimal, 

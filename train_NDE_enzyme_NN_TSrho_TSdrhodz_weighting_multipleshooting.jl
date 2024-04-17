@@ -1044,7 +1044,8 @@ end
 # end
 
 sim_indices = 1:length(split_timeframes)
-optimizers = [Optimisers.Adam(3e-4)]
+# optimizers = [Optimisers.Adam(3e-4)]
+optimizers = [Optimisers.AdamW(eta=3e-4, lambda=3e-4)]
 maxiters = [5000]
 end_epochs = cumsum(maxiters)
 plot_timeframes = full_timeframes
@@ -1068,7 +1069,8 @@ for (i, (epoch, optimizer, maxiter)) in enumerate(zip(end_epochs, optimizers, ma
 
 end
 
-optimizers = [Optimisers.Adam(1e-4)]
+# optimizers = [Optimisers.Adam(1e-4)]
+optimizers = [Optimisers.AdamW(eta=1e-4, lambda=3e-4)]
 maxiters = [5000]
 end_epochs = end_epochs[end] .+ cumsum(maxiters)
 

@@ -965,7 +965,7 @@ function train_NDE_multipleics(ps, params, sts, NNs, truths, x₀s, train_data_p
                         Const(params[sim_index][1].scaled_Δt),
                         Const(length(timeframes[1])))
         if iter <= 40
-            Optimisers.adjust!(opt_state, eta=rule.eta * iter / 40)
+            Optimisers.adjust!(opt_state, eta=rule.opts[1].eta * iter / 40)
         end
         
         opt_state, ps = Optimisers.update!(opt_state, ps, dps)

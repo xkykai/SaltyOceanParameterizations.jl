@@ -501,9 +501,9 @@ end
 # loss_prefactor = compute_loss_prefactor(ind_loss)
 
 # density_contributions = [compute_density_contribution(data) for data in train_data.data]
-density_contributions = [compute_density_contribution(train_data.data[sim]) for sim in simulation_indices_split]
+# density_contributions = [compute_density_contribution(train_data.data[sim]) for sim in simulation_indices_split]
 
-loss_prefactors = compute_loss_prefactor_density_contribution.(ind_losses, density_contributions, S_scaling)
+# loss_prefactors = compute_loss_prefactor_density_contribution.(ind_losses, density_contributions, S_scaling)
 
 # loss_prefactors = [compute_loss_prefactor_density_contribution(ind_loss, density_contributions[sim], S_scaling) for (sim, ind_loss) in zip(simulation_indices_split, ind_losses)]
 

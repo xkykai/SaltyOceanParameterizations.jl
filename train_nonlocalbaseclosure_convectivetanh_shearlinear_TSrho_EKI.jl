@@ -854,7 +854,7 @@ function plot_loss(losses, FILE_DIR; epoch=1)
     save("$(FILE_DIR)/losses_epoch$(epoch).png", fig, px_per_unit=8)
 end
 
-ps_prior = ComponentArray(ν_conv=1., ν_shear=6.484e-02, m=-1.736e-01, Pr=1.1, ΔRi=0.1, C_en=0.3, x₀=5e-2, Δx=1e-2)
+ps_prior = ComponentArray(ν_conv=1.369, ν_shear=7.712e-02, m=-1.79e-01, Pr=1.15, ΔRi=3.43e-3, C_en=0.16, x₀=2.69e-2, Δx=8e-3)
 
 ind_losses = [individual_loss(ps_prior, truth, param, x₀) for (truth, x₀, param) in zip(truths, x₀s, params)]
 loss_prefactors = compute_loss_prefactor_density_contribution.(ind_losses, compute_density_contribution.(train_data.data), S_scaling)
@@ -876,16 +876,16 @@ prior_ν_conv = constrained_gaussian("ν_conv", ps_prior.ν_conv, 0.1, -Inf, Inf
 prior_ν_shear = constrained_gaussian("ν_shear", ps_prior.ν_shear, 1e-2, -Inf, Inf)
 prior_m = constrained_gaussian("m", ps_prior.m, 3e-2, -Inf, Inf)
 prior_Pr = constrained_gaussian("Pr", ps_prior.Pr, 0.2, -Inf, Inf)
-prior_ΔRi = constrained_gaussian("ΔRi", ps_prior.ΔRi, 2e-2, -Inf, Inf)
-prior_C_en = constrained_gaussian("C_en", ps_prior.C_en, 6e-2, -Inf, Inf)
-prior_x₀ = constrained_gaussian("x₀", ps_prior.x₀, 1e-2, -Inf, Inf)
-prior_Δx = constrained_gaussian("Δx", ps_prior.Δx, 2e-3, -Inf, Inf)
+prior_ΔRi = constrained_gaussian("ΔRi", ps_prior.ΔRi, 5e-4, -Inf, Inf)
+prior_C_en = constrained_gaussian("C_en", ps_prior.C_en, 3e-2, -Inf, Inf)
+prior_x₀ = constrained_gaussian("x₀", ps_prior.x₀, 5e-3, -Inf, Inf)
+prior_Δx = constrained_gaussian("Δx", ps_prior.Δx, 1e-3, -Inf, Inf)
 
 priors = combine_distributions([prior_ν_conv, prior_ν_shear, prior_m, prior_Pr, prior_ΔRi, prior_C_en, prior_x₀, prior_Δx])
 target = [0.]
 
 N_ensemble = 500
-N_iterations = 1500
+N_iterations = 100
 Γ = prior_loss / 1e6 * I
 
 ps_eki = EKP.construct_initial_ensemble(rng, priors, N_ensemble)
@@ -928,7 +928,8 @@ ensemble_mean_loss = loss_multipleics(ComponentArray(ν_conv=ensemble_mean[1], �
 
 ps_final_mean = ComponentArray(; ν_conv=ensemble_mean[1], ν_shear=ensemble_mean[2], m=ensemble_mean[3], Pr=ensemble_mean[4], ΔRi=ensemble_mean[5], C_en=ensemble_mean[6], x₀=ensemble_mean[7], Δx=ensemble_mean[8])
 
-jldsave("$(FILE_DIR)/training_results.jld2", u=ps_final)
+jldsave("$(FILE_DIR)/training_results_mean.jld2", u=ps_final_mean)
+jldsave("$(FILE_DIR)/training_results_min.jld2", u=ps_final_min)
 
 plot_loss(losses, FILE_DIR; epoch=1)
 for i in eachindex(params)

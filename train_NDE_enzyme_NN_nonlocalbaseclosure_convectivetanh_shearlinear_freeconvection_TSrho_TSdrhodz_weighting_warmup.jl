@@ -76,7 +76,7 @@ end
 
 const S_scaling = args["S_scaling"]
 
-FILE_DIR = "./training_output/nonlocal6runs/NDE_enzyme_$(args["hidden_layer"])layer_$(args["hidden_layer_size"])_$(args["activation"])_$(S_scaling)Sscaling_test"
+FILE_DIR = "./training_output/nonlocal6runs/NDE_enzyme_$(args["hidden_layer"])layer_$(args["hidden_layer_size"])_$(args["activation"])_$(S_scaling)Sscaling"
 mkpath(FILE_DIR)
 @info FILE_DIR
 

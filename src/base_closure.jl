@@ -134,3 +134,20 @@ end
 function nonlocal_Ri_κ_convectivetanh_shearlinear(ν, Pr)
     return ν / Pr
 end
+
+function nonlocal_Ri_ν_convectivetanh_shearlinear_const(Ri, Ri_above, Qρ, ν_conv, ν_shear, m, ΔRi, C_en)
+    ν_local = local_Ri_ν_convectivetanh_shearlinear(Ri, ν_conv, ν_shear, m, ΔRi)
+    entrainment = Ri > 0 && Ri_above < 0 && Qρ < 0
+    ν_nonlocal = entrainment * C_en * ν_conv
+
+    return ν_local + ν_nonlocal
+end
+
+function nonlocal_Ri_κ_convectivetanh_shearlinear_const(Ri, Ri_above, Qρ, ν_conv, ν_shear, m, ΔRi, C_en, Pr)
+    ν = nonlocal_Ri_ν_convectivetanh_shearlinear(Ri, Ri_above, ∂ρ∂z, Qρ, ν_conv, ν_shear, m, ΔRi, C_en, x₀, Δx, ϵ)
+    return ν / Pr
+end
+
+function nonlocal_Ri_κ_convectivetanh_shearlinear_const(ν, Pr)
+    return ν / Pr
+end

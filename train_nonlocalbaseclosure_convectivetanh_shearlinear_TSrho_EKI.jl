@@ -49,7 +49,7 @@ function find_max(a...)
 end
 
 const S_scaling = args["S_scaling"]
-FILE_DIR = "./training_output/nonlocalbaseclosure_$(S_scaling)Sscaling_convectivetanh_shearlinear_TSrho_EKI"
+FILE_DIR = "./training_output/nonlocalbaseclosure_$(S_scaling)Sscaling_convectivetanh_shearlinear_TSrho_EKI_smallrho"
 mkpath(FILE_DIR)
 @info "Saving to $FILE_DIR"
 
@@ -139,7 +139,7 @@ params = [(                   f = data.coriolis.unscaled,
 
 rng = Random.default_rng(123)
 
-ps = ComponentArray(ν_conv=1., ν_shear=6.484e-02, m=-1.736e-01, Pr=1.1, ΔRi=0.1, C_en=0.01, x₀=1e-4, Δx=1e-4)
+ps = ComponentArray(ν_conv=1., ν_shear=6.484e-02, m=-1.736e-01, Pr=1.1, ΔRi=0.1, C_en=0.3, x₀=5e-2, Δx=1e-2)
 
 function predict_boundary_flux(params)
     uw = vcat(fill(params.uw.scaled.bottom, params.coarse_size), params.uw.scaled.top)
@@ -283,38 +283,38 @@ end
 # sol_u, sol_v, sol_T, sol_S, sol_ρ = solve_NDE(ps, params[1], x₀s[1], 10)
 
 #%%
-sim_number = 20
-sol_u, sol_v, sol_T, sol_S, sol_ρ = solve_NDE(ps, params[sim_number], x₀s[sim_number])
-truth = truths[sim_number]
-fig = Figure(size=(900, 600))
-axu = CairoMakie.Axis(fig[1, 1], xlabel="T", ylabel="z")
-axv = CairoMakie.Axis(fig[1, 2], xlabel="T", ylabel="z")
-axT = CairoMakie.Axis(fig[2, 1], xlabel="T", ylabel="z")
-axS = CairoMakie.Axis(fig[2, 2], xlabel="S", ylabel="z")
-axρ = CairoMakie.Axis(fig[2, 3], xlabel="ρ", ylabel="z")
+# sim_number = 12
+# sol_u, sol_v, sol_T, sol_S, sol_ρ = solve_NDE(ps, params[sim_number], x₀s[sim_number])
+# truth = truths[sim_number]
+# fig = Figure(size=(900, 600))
+# axu = CairoMakie.Axis(fig[1, 1], xlabel="T", ylabel="z")
+# axv = CairoMakie.Axis(fig[1, 2], xlabel="T", ylabel="z")
+# axT = CairoMakie.Axis(fig[2, 1], xlabel="T", ylabel="z")
+# axS = CairoMakie.Axis(fig[2, 2], xlabel="S", ylabel="z")
+# axρ = CairoMakie.Axis(fig[2, 3], xlabel="ρ", ylabel="z")
 
-lines!(axu, sol_u[:, 1], params[1].zC, label="initial")
-lines!(axu, sol_u[:, end], params[1].zC, label="final")
-lines!(axu, truth.u[:, end], train_data.data[1].metadata["zC"], label="truth")
+# lines!(axu, sol_u[:, 1], params[1].zC, label="initial")
+# lines!(axu, sol_u[:, end], params[1].zC, label="final")
+# lines!(axu, truth.u[:, end], train_data.data[1].metadata["zC"], label="truth")
 
-lines!(axv, sol_v[:, 1], params[1].zC, label="initial")
-lines!(axv, sol_v[:, end], params[1].zC, label="final")
-lines!(axv, truth.v[:, end], train_data.data[1].metadata["zC"], label="truth")
+# lines!(axv, sol_v[:, 1], params[1].zC, label="initial")
+# lines!(axv, sol_v[:, end], params[1].zC, label="final")
+# lines!(axv, truth.v[:, end], train_data.data[1].metadata["zC"], label="truth")
 
-lines!(axT, sol_T[:, 1], params[1].zC, label="initial")
-lines!(axT, sol_T[:, end], params[1].zC, label="final")
-lines!(axT, truth.T[:, end], train_data.data[1].metadata["zC"], label="truth")
+# lines!(axT, sol_T[:, 1], params[1].zC, label="initial")
+# lines!(axT, sol_T[:, end], params[1].zC, label="final")
+# lines!(axT, truth.T[:, end], train_data.data[1].metadata["zC"], label="truth")
 
-lines!(axS, sol_S[:, 1], params[1].zC, label="initial")
-lines!(axS, sol_S[:, end], params[1].zC, label="final")
-lines!(axS, truth.S[:, end], train_data.data[1].metadata["zC"], label="truth")
+# lines!(axS, sol_S[:, 1], params[1].zC, label="initial")
+# lines!(axS, sol_S[:, end], params[1].zC, label="final")
+# lines!(axS, truth.S[:, end], train_data.data[1].metadata["zC"], label="truth")
 
-lines!(axρ, sol_ρ[:, 1], params[1].zC, label="initial")
-lines!(axρ, sol_ρ[:, end], params[1].zC, label="final")
-lines!(axρ, truth.ρ[:, end], train_data.data[1].metadata["zC"], label="truth")
+# lines!(axρ, sol_ρ[:, 1], params[1].zC, label="initial")
+# lines!(axρ, sol_ρ[:, end], params[1].zC, label="final")
+# lines!(axρ, truth.ρ[:, end], train_data.data[1].metadata["zC"], label="truth")
 
-Legend(fig[1, 3], axT, orientation=:vertical, tellwidth=false)
-display(fig)
+# Legend(fig[1, 3], axT, orientation=:vertical, tellwidth=false)
+# display(fig)
 #%%
 function individual_loss(ps, truth, params, x₀)
     Dᶠ = params.Dᶠ
@@ -391,12 +391,14 @@ function compute_loss_prefactor_density_contribution(individual_loss, contributi
 
     TS_loss = T_prefactor * T_loss + S_prefactor * S_loss
 
-    ρ_prefactor = TS_loss / ρ_loss * 0.1 / 0.4
+    ρ_prefactor = TS_loss / ρ_loss * 0.1 / 0.9
 
     if u_loss > eps(eltype(u_loss))
         u_prefactor = TS_loss / u_loss * 0.2 / 0.4
     else
         u_prefactor = TS_loss * 0.2 / 0.4
+        T_prefactor *= 2
+        S_prefactor *= 2
     end
 
     if v_loss > eps(eltype(v_loss))
@@ -410,7 +412,7 @@ function compute_loss_prefactor_density_contribution(individual_loss, contributi
 
     ∂TS∂z_loss = ∂T∂z_loss + ∂S∂z_loss
 
-    ∂ρ∂z_prefactor = ∂TS∂z_loss / ∂ρ∂z_loss * 0.1 / 0.4
+    ∂ρ∂z_prefactor = ∂TS∂z_loss / ∂ρ∂z_loss * 0.1 / 0.9
 
     if ∂u∂z_loss > eps(eltype(∂u∂z_loss))
         ∂u∂z_prefactor = ∂TS∂z_loss / ∂u∂z_loss * 0.2 / 0.4
@@ -852,7 +854,7 @@ function plot_loss(losses, FILE_DIR; epoch=1)
     save("$(FILE_DIR)/losses_epoch$(epoch).png", fig, px_per_unit=8)
 end
 
-ps_prior = ComponentArray(ν_conv=1., ν_shear=6.484e-02, m=-1.736e-01, Pr=1.1, ΔRi=0.1, C_en=0.01, x₀=1e-4, Δx=1e-4)
+ps_prior = ComponentArray(ν_conv=1., ν_shear=6.484e-02, m=-1.736e-01, Pr=1.1, ΔRi=0.1, C_en=0.3, x₀=5e-2, Δx=1e-2)
 
 ind_losses = [individual_loss(ps_prior, truth, param, x₀) for (truth, x₀, param) in zip(truths, x₀s, params)]
 loss_prefactors = compute_loss_prefactor_density_contribution.(ind_losses, compute_density_contribution.(train_data.data), S_scaling)
@@ -870,20 +872,20 @@ loss_prefactors = compute_loss_prefactor_density_contribution.(ind_losses, compu
 # loss_prefactor = compute_loss_prefactor(ind_loss)
 prior_loss = loss_multipleics(ps_prior, truths, params, x₀s, loss_prefactors)
 
-prior_ν_conv = constrained_gaussian("ν_conv", ps_prior.ν_conv, 0.05, -Inf, Inf)
+prior_ν_conv = constrained_gaussian("ν_conv", ps_prior.ν_conv, 0.1, -Inf, Inf)
 prior_ν_shear = constrained_gaussian("ν_shear", ps_prior.ν_shear, 1e-2, -Inf, Inf)
-prior_m = constrained_gaussian("m", ps_prior.m, 2e-2, -Inf, Inf)
+prior_m = constrained_gaussian("m", ps_prior.m, 3e-2, -Inf, Inf)
 prior_Pr = constrained_gaussian("Pr", ps_prior.Pr, 0.2, -Inf, Inf)
-prior_ΔRi = constrained_gaussian("ΔRi", ps_prior.ΔRi, 1e-3, -Inf, Inf)
-prior_C_en = constrained_gaussian("C_en", ps_prior.C_en, 2e-3, -Inf, Inf)
-prior_x₀ = constrained_gaussian("x₀", ps_prior.x₀, 2e-5, -Inf, Inf)
-prior_Δx = constrained_gaussian("Δx", ps_prior.Δx, 2e-5, -Inf, Inf)
+prior_ΔRi = constrained_gaussian("ΔRi", ps_prior.ΔRi, 2e-2, -Inf, Inf)
+prior_C_en = constrained_gaussian("C_en", ps_prior.C_en, 6e-2, -Inf, Inf)
+prior_x₀ = constrained_gaussian("x₀", ps_prior.x₀, 1e-2, -Inf, Inf)
+prior_Δx = constrained_gaussian("Δx", ps_prior.Δx, 2e-3, -Inf, Inf)
 
 priors = combine_distributions([prior_ν_conv, prior_ν_shear, prior_m, prior_Pr, prior_ΔRi, prior_C_en, prior_x₀, prior_Δx])
 target = [0.]
 
-N_ensemble = 200
-N_iterations = 2000
+N_ensemble = 500
+N_iterations = 1500
 Γ = prior_loss / 1e6 * I
 
 ps_eki = EKP.construct_initial_ensemble(rng, priors, N_ensemble)
@@ -914,12 +916,27 @@ losses = Array{Float64}(losses)
 losses = (; total=losses)
 final_ensemble = get_ϕ_final(priors, ensemble_kalman_process)
 ensemble_mean = vec(mean(final_ensemble, dims=2))
-ps_final = ComponentArray(; ν_conv=ensemble_mean[1], ν_shear=ensemble_mean[2], m=ensemble_mean[3], Pr=ensemble_mean[4], ΔRi=ensemble_mean[5], C_en=ensemble_mean[6], x₀=ensemble_mean[7], Δx=ensemble_mean[8])
+ensemble_losses = [loss_multipleics(ComponentArray(ν_conv=p[1], ν_shear=p[2], m=p[3], Pr=p[4], ΔRi=p[5], C_en=p[6], x₀=p[7], Δx=p[8]), 
+                                    truths, params, x₀s, loss_prefactors) for p in eachcol(final_ensemble)]
+
+ensemble_min = final_ensemble[:, argmin(ensemble_losses)]
+
+ps_final_min = ComponentArray(; ν_conv=ensemble_min[1], ν_shear=ensemble_min[2], m=ensemble_min[3], Pr=ensemble_min[4], ΔRi=ensemble_min[5], C_en=ensemble_min[6], x₀=ensemble_min[7], Δx=ensemble_min[8])
+
+ensemble_mean_loss = loss_multipleics(ComponentArray(ν_conv=ensemble_mean[1], ν_shear=ensemble_mean[2], m=ensemble_mean[3], Pr=ensemble_mean[4], ΔRi=ensemble_mean[5], C_en=ensemble_mean[6], x₀=ensemble_mean[7], Δx=ensemble_mean[8]), 
+                                      truths, params, x₀s, loss_prefactors)
+
+ps_final_mean = ComponentArray(; ν_conv=ensemble_mean[1], ν_shear=ensemble_mean[2], m=ensemble_mean[3], Pr=ensemble_mean[4], ΔRi=ensemble_mean[5], C_en=ensemble_mean[6], x₀=ensemble_mean[7], Δx=ensemble_mean[8])
 
 jldsave("$(FILE_DIR)/training_results.jld2", u=ps_final)
 
 plot_loss(losses, FILE_DIR; epoch=1)
 for i in eachindex(params)
-    sols, fluxes, diffusivities = diagnose_fields(ps_final, params[i], x₀s[i], train_data_plot.data[i], 10)
-    animate_data(train_data_plot.data[i], diffusivities, sols, fluxes, diffusivities, i, FILE_DIR; epoch=1)
+    sols, fluxes, diffusivities = diagnose_fields(ps_final_mean, params[i], x₀s[i], train_data_plot.data[i], 10)
+    animate_data(train_data_plot.data[i], diffusivities, sols, fluxes, diffusivities, i, FILE_DIR; epoch="1_mean")
+end
+
+for i in eachindex(params)
+    sols, fluxes, diffusivities = diagnose_fields(ps_final_min, params[i], x₀s[i], train_data_plot.data[i], 10)
+    animate_data(train_data_plot.data[i], diffusivities, sols, fluxes, diffusivities, i, FILE_DIR; epoch="1_min")
 end

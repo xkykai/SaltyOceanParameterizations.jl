@@ -229,10 +229,8 @@ function solve_NDE(ps, params, x₀, timestep_multiple=10)
     sol_T[:, 1] .= T_hat
     sol_S[:, 1] .= S_hat
 
-    # ν_LHS = Tridiagonal(zeros(32, 32))
-    # κ_LHS = Tridiagonal(zeros(32, 32))
-    ν_LHS = zeros(32, 32)
-    κ_LHS = zeros(32, 32)
+    ν_LHS = Tridiagonal(zeros(32, 32))
+    κ_LHS = Tridiagonal(zeros(32, 32))
 
     for i in 2:Nt_solve
         u .= inv(scaling.u).(u_hat)
@@ -256,10 +254,8 @@ function solve_NDE(ps, params, x₀, timestep_multiple=10)
 
         predict_boundary_flux!(uw_boundary, vw_boundary, wT_boundary, wS_boundary, params)
 
-        # ν_LHS .= Tridiagonal(-τ / H^2 .* Dν)
-        # κ_LHS .= Tridiagonal(-τ / H^2 .* Dκ)
-        ν_LHS .= -τ / H^2 .* Dν
-        κ_LHS .= -τ / H^2 .* Dκ
+        ν_LHS .= Tridiagonal(-τ / H^2 .* Dν)
+        κ_LHS .= Tridiagonal(-τ / H^2 .* Dκ)
 
         u_RHS .= - τ / H * scaling.uw.σ / scaling.u.σ .* (Dᶜ_hat * (uw_boundary)) .+ f * τ ./ scaling.u.σ .* v
         v_RHS .= - τ / H * scaling.vw.σ / scaling.v.σ .* (Dᶜ_hat * (vw_boundary)) .- f * τ ./ scaling.v.σ .* u

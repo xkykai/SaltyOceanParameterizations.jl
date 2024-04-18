@@ -49,7 +49,7 @@ function find_max(a...)
 end
 
 const S_scaling = args["S_scaling"]
-FILE_DIR = "./training_output/nonlocalbaseclosure_$(S_scaling)Sscaling_convectivetanh_shearlinear_TSrho_EKI_smallrho"
+FILE_DIR = "./training_output/nonlocalbaseclosure_$(S_scaling)Sscaling_convectivetanh_shearlinear_TSrho_EKI_smallrho_2"
 mkpath(FILE_DIR)
 @info "Saving to $FILE_DIR"
 

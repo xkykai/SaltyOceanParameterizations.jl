@@ -1005,7 +1005,7 @@ end
 #                       timeframes[1][1:27],
 #                       timeframes[1][1:27]]
 
-optimizers = [Optimisers.Adam(3e-5), Optimisers.Adam(1e-5), Optimisers.Adam(1e-5), Optimisers.Adam(1e-5), Optimisers.Adam(3e-6), Optimisers.Adam(3e-6)]
+optimizers = [Optimisers.Adam(3e-5), Optimisers.Adam(1e-5), Optimisers.Adam(1e-5), Optimisers.Adam(1e-5), Optimisers.Adam(1e-5), Optimisers.Adam(3e-6)]
 maxiters = [5000, 5000, 5000, 5000, 5000, 5000]
 end_epochs = cumsum(maxiters)
 

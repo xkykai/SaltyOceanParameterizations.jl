@@ -76,7 +76,7 @@ end
 
 const S_scaling = args["S_scaling"]
 
-FILE_DIR = "./training_output/nonlocalconst6runs/NDE_enzyme_$(args["hidden_layer"])layer_$(args["hidden_layer_size"])_$(args["activation"])_$(S_scaling)Sscaling"
+FILE_DIR = "./training_output/nonlocalfullrun/NDE_enzyme_$(args["hidden_layer"])layer_$(args["hidden_layer_size"])_$(args["activation"])_$(S_scaling)Sscaling_Adam1e-5"
 mkpath(FILE_DIR)
 @info FILE_DIR
 
@@ -1005,18 +1005,18 @@ end
 #                       timeframes[1][1:27],
 #                       timeframes[1][1:27]]
 
-optimizers = [Optimisers.Adam(3e-5), Optimisers.Adam(1e-5), Optimisers.Adam(1e-5), Optimisers.Adam(1e-5), Optimisers.Adam(1e-5), Optimisers.Adam(3e-6)]
-maxiters = [5000, 5000, 5000, 5000, 5000, 5000]
-end_epochs = cumsum(maxiters)
+# optimizers = [Optimisers.Adam(3e-5), Optimisers.Adam(1e-5), Optimisers.Adam(1e-5), Optimisers.Adam(1e-5), Optimisers.Adam(1e-5), Optimisers.Adam(3e-6)]
+# maxiters = [5000, 5000, 5000, 5000, 5000, 5000]
+# end_epochs = cumsum(maxiters)
 
-sim_indices = [1, 2, 3, 4, 5, 6, 7, 8]
+# sim_indices = [1, 2, 3, 4, 5, 6, 7, 8]
 
-training_timeframes = [timeframes[1][1:5],
-                       timeframes[1][1:10],
-                       timeframes[1][1:15],
-                       timeframes[1][1:20],
-                       timeframes[1][1:25],
-                       timeframes[1][1:27]]
+# training_timeframes = [timeframes[1][1:5],
+#                        timeframes[1][1:10],
+#                        timeframes[1][1:15],
+#                        timeframes[1][1:20],
+#                        timeframes[1][1:25],
+#                        timeframes[1][1:27]]
 
 
 # optimizers = [Optimisers.Adam(3e-5)]
@@ -1026,6 +1026,14 @@ training_timeframes = [timeframes[1][1:5],
 # sim_indices = [1, 2, 3, 4, 5, 6, 7, 8]
 
 # training_timeframes = [timeframes[1][1:5]]
+
+optimizers = [Optimisers.Adam(1e-5), Optimisers.Adam(3e-6), Optimisers.Adam(1e-6)]
+maxiters = [10000, 10000, 10000]
+end_epochs = cumsum(maxiters)
+
+sim_indices = [1, 2, 3, 4, 5, 6, 7, 8]
+
+training_timeframes = [timeframes[1][1:27], timeframes[1][1:27], timeframes[1][1:27]]
 
 plot_timeframes = [training_timeframe[1]:training_timeframe[end] for training_timeframe in training_timeframes]
 sols = nothing

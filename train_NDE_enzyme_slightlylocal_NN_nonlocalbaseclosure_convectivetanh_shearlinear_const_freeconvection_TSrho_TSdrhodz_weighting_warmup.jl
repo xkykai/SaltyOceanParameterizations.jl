@@ -343,26 +343,26 @@ end
 sol_T, sol_S, sol_ρ = solve_NDE(ps, params[1], x₀s[1], ps_baseclosure, sts, NNs, params[1].scaled_time[2] - params[1].scaled_time[1], length(timeframes[1]))
 
 #%%
-truth = truths[1]
-fig = Figure(size=(900, 600))
-axT = CairoMakie.Axis(fig[1, 1], xlabel="T", ylabel="z")
-axS = CairoMakie.Axis(fig[1, 2], xlabel="S", ylabel="z")
-axρ = CairoMakie.Axis(fig[1, 3], xlabel="ρ", ylabel="z")
+# truth = truths[1]
+# fig = Figure(size=(900, 600))
+# axT = CairoMakie.Axis(fig[1, 1], xlabel="T", ylabel="z")
+# axS = CairoMakie.Axis(fig[1, 2], xlabel="S", ylabel="z")
+# axρ = CairoMakie.Axis(fig[1, 3], xlabel="ρ", ylabel="z")
 
-lines!(axT, sol_T[:, 1], params[1].zC, label="initial")
-lines!(axT, sol_T[:, end], params[1].zC, label="final")
-lines!(axT, truth.T[:, length(timeframes[1])], train_data.data[1].metadata["zC"], label="truth")
+# lines!(axT, sol_T[:, 1], params[1].zC, label="initial")
+# lines!(axT, sol_T[:, end], params[1].zC, label="final")
+# lines!(axT, truth.T[:, length(timeframes[1])], train_data.data[1].metadata["zC"], label="truth")
 
-lines!(axS, sol_S[:, 1], params[1].zC, label="initial")
-lines!(axS, sol_S[:, end], params[1].zC, label="final")
-lines!(axS, truth.S[:, length(timeframes[1])], train_data.data[1].metadata["zC"], label="truth")
+# lines!(axS, sol_S[:, 1], params[1].zC, label="initial")
+# lines!(axS, sol_S[:, end], params[1].zC, label="final")
+# lines!(axS, truth.S[:, length(timeframes[1])], train_data.data[1].metadata["zC"], label="truth")
 
-lines!(axρ, sol_ρ[:, 1], params[1].zC, label="initial")
-lines!(axρ, sol_ρ[:, end], params[1].zC, label="final")
-lines!(axρ, truth.ρ[:, length(timeframes[1])], train_data.data[1].metadata["zC"], label="truth")
+# lines!(axρ, sol_ρ[:, 1], params[1].zC, label="initial")
+# lines!(axρ, sol_ρ[:, end], params[1].zC, label="final")
+# lines!(axρ, truth.ρ[:, length(timeframes[1])], train_data.data[1].metadata["zC"], label="truth")
 
-axislegend(axT, orientation=:vertical, position=:rb)
-display(fig)
+# axislegend(axT, orientation=:vertical, position=:rb)
+# display(fig)
 #%%
 # function individual_loss(ps, truth, params, x₀, ps_baseclosure, sts, NNs, timestep, Nt, tstart=1, timestep_multiple=10)
 #     Dᶠ = params.Dᶠ
@@ -509,14 +509,6 @@ function compute_loss_prefactor_density_contribution(individual_loss, contributi
 end
 
 ind_losses = [individual_loss(ps, truth, param, x₀, ps_baseclosure, sts, NNs, param.scaled_time[2] - param.scaled_time[1], length(timeframe)) for (truth, x₀, param, timeframe) in zip(truths, x₀s, params, timeframes)]
-# ind_loss = (; T=sum([loss.T for loss in ind_losses]), 
-#               S=sum([loss.S for loss in ind_losses]), 
-#               ρ=sum([loss.ρ for loss in ind_losses]), 
-#               ∂T∂z=sum([loss.∂T∂z for loss in ind_losses]), 
-#               ∂S∂z=sum([loss.∂S∂z for loss in ind_losses]), 
-#               ∂ρ∂z=sum([loss.∂ρ∂z for loss in ind_losses]))
-
-# loss_prefactor = compute_loss_prefactor(ind_loss)
 
 loss_prefactors = compute_loss_prefactor_density_contribution.(ind_losses, compute_density_contribution.(train_data.data), S_scaling)
 
@@ -527,20 +519,20 @@ end
 
 loss_multipleics(ps, [truths[1]], [params[1]], [x₀s[1]], ps_baseclosure, sts, NNs, [loss_prefactors[1]], params[1].scaled_time[2] - params[1].scaled_time[1], length(25:10:45))
 
-dps = deepcopy(ps) .= 0
-autodiff(Enzyme.ReverseWithPrimal, 
-         loss_multipleics, 
-         Active, 
-         DuplicatedNoNeed(ps, dps), 
-         DuplicatedNoNeed([truths[1]], deepcopy([truths[1]])), 
-         DuplicatedNoNeed([params[1]], deepcopy([params[1]])), 
-         DuplicatedNoNeed([x₀s[1]], deepcopy([x₀s[1]])), 
-         DuplicatedNoNeed(ps_baseclosure, deepcopy(ps_baseclosure)), 
-         Const(sts), 
-         Const(NNs), 
-         DuplicatedNoNeed([loss_prefactors[1]], deepcopy([loss_prefactors[1]])),
-         Const(params[1].scaled_time[2] - params[1].scaled_time[1]),
-         Const(length(25:10:45)))
+# dps = deepcopy(ps) .= 0
+# autodiff(Enzyme.ReverseWithPrimal, 
+#          loss_multipleics, 
+#          Active, 
+#          DuplicatedNoNeed(ps, dps), 
+#          DuplicatedNoNeed([truths[1]], deepcopy([truths[1]])), 
+#          DuplicatedNoNeed([params[1]], deepcopy([params[1]])), 
+#          DuplicatedNoNeed([x₀s[1]], deepcopy([x₀s[1]])), 
+#          DuplicatedNoNeed(ps_baseclosure, deepcopy(ps_baseclosure)), 
+#          Const(sts), 
+#          Const(NNs), 
+#          DuplicatedNoNeed([loss_prefactors[1]], deepcopy([loss_prefactors[1]])),
+#          Const(params[1].scaled_time[2] - params[1].scaled_time[1]),
+#          Const(length(25:10:45)))
 
 function predict_residual_flux_dimensional(T_hat, S_hat, ∂ρ∂z_hat, p, params, sts, NNs)
     wT_hat, wS_hat = predict_residual_flux(T_hat, S_hat, ∂ρ∂z_hat, p, params, sts, NNs)

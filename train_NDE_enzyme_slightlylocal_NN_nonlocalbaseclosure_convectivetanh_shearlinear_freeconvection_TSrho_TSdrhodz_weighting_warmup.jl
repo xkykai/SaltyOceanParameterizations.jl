@@ -346,27 +346,51 @@ end
 sol_T, sol_S, sol_ρ = solve_NDE(ps, params[1], x₀s[1], ps_baseclosure, sts, NNs, params[1].scaled_time[2] - params[1].scaled_time[1], length(timeframes[1]))
 
 #%%
-truth = truths[1]
-fig = Figure(size=(900, 600))
-axT = CairoMakie.Axis(fig[1, 1], xlabel="T", ylabel="z")
-axS = CairoMakie.Axis(fig[1, 2], xlabel="S", ylabel="z")
-axρ = CairoMakie.Axis(fig[1, 3], xlabel="ρ", ylabel="z")
+# truth = truths[1]
+# fig = Figure(size=(900, 600))
+# axT = CairoMakie.Axis(fig[1, 1], xlabel="T", ylabel="z")
+# axS = CairoMakie.Axis(fig[1, 2], xlabel="S", ylabel="z")
+# axρ = CairoMakie.Axis(fig[1, 3], xlabel="ρ", ylabel="z")
 
-lines!(axT, sol_T[:, 1], params[1].zC, label="initial")
-lines!(axT, sol_T[:, end], params[1].zC, label="final")
-lines!(axT, truth.T[:, length(timeframes[1])], train_data.data[1].metadata["zC"], label="truth")
+# lines!(axT, sol_T[:, 1], params[1].zC, label="initial")
+# lines!(axT, sol_T[:, end], params[1].zC, label="final")
+# lines!(axT, truth.T[:, length(timeframes[1])], train_data.data[1].metadata["zC"], label="truth")
 
-lines!(axS, sol_S[:, 1], params[1].zC, label="initial")
-lines!(axS, sol_S[:, end], params[1].zC, label="final")
-lines!(axS, truth.S[:, length(timeframes[1])], train_data.data[1].metadata["zC"], label="truth")
+# lines!(axS, sol_S[:, 1], params[1].zC, label="initial")
+# lines!(axS, sol_S[:, end], params[1].zC, label="final")
+# lines!(axS, truth.S[:, length(timeframes[1])], train_data.data[1].metadata["zC"], label="truth")
 
-lines!(axρ, sol_ρ[:, 1], params[1].zC, label="initial")
-lines!(axρ, sol_ρ[:, end], params[1].zC, label="final")
-lines!(axρ, truth.ρ[:, length(timeframes[1])], train_data.data[1].metadata["zC"], label="truth")
+# lines!(axρ, sol_ρ[:, 1], params[1].zC, label="initial")
+# lines!(axρ, sol_ρ[:, end], params[1].zC, label="final")
+# lines!(axρ, truth.ρ[:, length(timeframes[1])], train_data.data[1].metadata["zC"], label="truth")
 
-axislegend(axT, orientation=:vertical, position=:rb)
-display(fig)
+# axislegend(axT, orientation=:vertical, position=:rb)
+# display(fig)
 #%%
+# function individual_loss(ps, truth, params, x₀, ps_baseclosure, sts, NNs, timestep, Nt, tstart=1, timestep_multiple=10)
+#     Dᶠ = params.Dᶠ
+#     scaling = params.scaling
+#     sol_T, sol_S, sol_ρ = solve_NDE(ps, params, x₀, ps_baseclosure, sts, NNs, timestep, Nt, timestep_multiple)
+
+#     T_loss = mean((sol_T .- truth.T[:, tstart:tstart+Nt-1]).^2)
+#     S_loss = mean((sol_S .- truth.S[:, tstart:tstart+Nt-1]).^2)
+#     ρ_loss = mean((sol_ρ .- truth.ρ[:, tstart:tstart+Nt-1]).^2)
+
+#     T = inv(scaling.T).(sol_T)
+#     S = inv(scaling.S).(sol_S)
+#     ρ = inv(scaling.ρ).(sol_ρ)
+
+#     ∂T∂z = scaling.∂T∂z.(Dᶠ * T)
+#     ∂S∂z = scaling.∂S∂z.(Dᶠ * S)
+#     ∂ρ∂z = scaling.∂ρ∂z.(Dᶠ * ρ)
+
+#     ∂T∂z_loss = mean((∂T∂z[1:end-2,:] .- truth.∂T∂z[1:end-2, tstart:tstart+Nt-1]).^2)
+#     ∂S∂z_loss = mean((∂S∂z[1:end-2,:] .- truth.∂S∂z[1:end-2, tstart:tstart+Nt-1]).^2)
+#     ∂ρ∂z_loss = mean((∂ρ∂z[1:end-2,:] .- truth.∂ρ∂z[1:end-2, tstart:tstart+Nt-1]).^2)
+
+#     return (; T=T_loss, S=S_loss, ρ=ρ_loss, ∂T∂z=∂T∂z_loss, ∂S∂z=∂S∂z_loss, ∂ρ∂z=∂ρ∂z_loss)
+# end
+
 function individual_loss(ps, truth, params, x₀, ps_baseclosure, sts, NNs, timestep, Nt, tstart=1, timestep_multiple=10)
     Dᶠ = params.Dᶠ
     scaling = params.scaling
@@ -374,24 +398,24 @@ function individual_loss(ps, truth, params, x₀, ps_baseclosure, sts, NNs, time
 
     T_loss = mean((sol_T .- truth.T[:, tstart:tstart+Nt-1]).^2)
     S_loss = mean((sol_S .- truth.S[:, tstart:tstart+Nt-1]).^2)
-    ρ_loss = mean((sol_ρ .- truth.ρ[:, tstart:tstart+Nt-1]).^2)
 
     T = inv(scaling.T).(sol_T)
     S = inv(scaling.S).(sol_S)
-    ρ = inv(scaling.ρ).(sol_ρ)
 
     ∂T∂z = scaling.∂T∂z.(Dᶠ * T)
     ∂S∂z = scaling.∂S∂z.(Dᶠ * S)
-    ∂ρ∂z = scaling.∂ρ∂z.(Dᶠ * ρ)
 
     ∂T∂z_loss = mean((∂T∂z[1:end-2,:] .- truth.∂T∂z[1:end-2, tstart:tstart+Nt-1]).^2)
     ∂S∂z_loss = mean((∂S∂z[1:end-2,:] .- truth.∂S∂z[1:end-2, tstart:tstart+Nt-1]).^2)
-    ∂ρ∂z_loss = mean((∂ρ∂z[1:end-2,:] .- truth.∂ρ∂z[1:end-2, tstart:tstart+Nt-1]).^2)
 
-    return (; T=T_loss, S=S_loss, ρ=ρ_loss, ∂T∂z=∂T∂z_loss, ∂S∂z=∂S∂z_loss, ∂ρ∂z=∂ρ∂z_loss)
+    return (; T=T_loss, S=S_loss, ∂T∂z=∂T∂z_loss, ∂S∂z=∂S∂z_loss)
 end
 
-function loss(ps, truth, params, x₀, ps_baseclosure, sts, NNs, timestep, Nt, tstart=1, timestep_multiple=10, losses_prefactor=(; T=1, S=1, ρ=1, ∂T∂z=1, ∂S∂z=1, ∂ρ∂z=1))
+# function loss(ps, truth, params, x₀, ps_baseclosure, sts, NNs, timestep, Nt, tstart=1, timestep_multiple=10, losses_prefactor=(; T=1, S=1, ρ=1, ∂T∂z=1, ∂S∂z=1, ∂ρ∂z=1))
+#     losses = individual_loss(ps, truth, params, x₀, ps_baseclosure, sts, NNs, timestep, Nt, tstart, timestep_multiple)
+#     return sum(values(losses) .* values(losses_prefactor))
+# end
+function loss(ps, truth, params, x₀, ps_baseclosure, sts, NNs, timestep, Nt, tstart=1, timestep_multiple=10, losses_prefactor=(; T=1, S=1, ∂T∂z=1, ∂S∂z=1))
     losses = individual_loss(ps, truth, params, x₀, ps_baseclosure, sts, NNs, timestep, Nt, tstart, timestep_multiple)
     return sum(values(losses) .* values(losses_prefactor))
 end
@@ -432,48 +456,21 @@ function compute_density_contribution(data)
     return (; T=T_contribution, S=S_contribution, ρ=Δρ)
 end
 
-function compute_loss_prefactor_density_contribution(individual_loss, contribution, S_scaling=1.0)
-    T_loss, S_loss, ρ_loss, ∂T∂z_loss, ∂S∂z_loss, ∂ρ∂z_loss = values(individual_loss)
-    
-    total_contribution = contribution.T + contribution.S
-    T_prefactor = total_contribution / contribution.T
-    S_prefactor = total_contribution / contribution.S
-
-    TS_loss = T_prefactor * T_loss + S_prefactor * S_loss
-
-    ρ_prefactor = TS_loss / ρ_loss * 0.1 / 0.9
-    ∂T∂z_prefactor = T_prefactor
-    ∂S∂z_prefactor = S_prefactor
-
-    ∂TS∂z_loss = ∂T∂z_loss + ∂S∂z_loss
-    ∂ρ∂z_prefactor = ∂TS∂z_loss / ∂ρ∂z_loss * 0.1 / 0.9
-
-    profile_loss = T_prefactor * T_loss + S_prefactor * S_loss + ρ_prefactor * ρ_loss
-    gradient_loss = ∂T∂z_prefactor * ∂T∂z_loss + ∂S∂z_prefactor * ∂S∂z_loss + ∂ρ∂z_prefactor * ∂ρ∂z_loss
-
-    gradient_prefactor = profile_loss / gradient_loss
-
-    ∂ρ∂z_prefactor *= gradient_prefactor
-    ∂T∂z_prefactor *= gradient_prefactor
-    ∂S∂z_prefactor *= gradient_prefactor
-
-    S_prefactor *= S_scaling
-    ∂S∂z_prefactor *= S_scaling
-
-    # return (T=T_prefactor, S=S_prefactor, ρ=ρ_prefactor, ∂T∂z=∂T∂z_prefactor, ∂S∂z=∂S∂z_prefactor, ∂ρ∂z=∂ρ∂z_prefactor)
-    return (T=T_prefactor, S=S_prefactor, ρ=0, ∂T∂z=∂T∂z_prefactor, ∂S∂z=∂S∂z_prefactor, ∂ρ∂z=0)
-end
-
-# function compute_loss_prefactor(individual_loss)
+# function compute_loss_prefactor_density_contribution(individual_loss, contribution, S_scaling=1.0)
 #     T_loss, S_loss, ρ_loss, ∂T∂z_loss, ∂S∂z_loss, ∂ρ∂z_loss = values(individual_loss)
+    
+#     total_contribution = contribution.T + contribution.S
+#     T_prefactor = total_contribution / contribution.T
+#     S_prefactor = total_contribution / contribution.S
 
-#     T_prefactor = 1
-#     S_prefactor = T_loss / S_loss
-#     ρ_prefactor = T_loss / ρ_loss
+#     TS_loss = T_prefactor * T_loss + S_prefactor * S_loss
 
-#     ∂T∂z_prefactor = 1
-#     ∂S∂z_prefactor = ∂T∂z_loss / ∂S∂z_loss
-#     ∂ρ∂z_prefactor = ∂T∂z_loss / ∂ρ∂z_loss
+#     ρ_prefactor = TS_loss / ρ_loss * 0.1 / 0.9
+#     ∂T∂z_prefactor = T_prefactor
+#     ∂S∂z_prefactor = S_prefactor
+
+#     ∂TS∂z_loss = ∂T∂z_loss + ∂S∂z_loss
+#     ∂ρ∂z_prefactor = ∂TS∂z_loss / ∂ρ∂z_loss * 0.1 / 0.9
 
 #     profile_loss = T_prefactor * T_loss + S_prefactor * S_loss + ρ_prefactor * ρ_loss
 #     gradient_loss = ∂T∂z_prefactor * ∂T∂z_loss + ∂S∂z_prefactor * ∂S∂z_loss + ∂ρ∂z_prefactor * ∂ρ∂z_loss
@@ -490,15 +487,31 @@ end
 #     return (T=T_prefactor, S=S_prefactor, ρ=ρ_prefactor, ∂T∂z=∂T∂z_prefactor, ∂S∂z=∂S∂z_prefactor, ∂ρ∂z=∂ρ∂z_prefactor)
 # end
 
-ind_losses = [individual_loss(ps, truth, param, x₀, ps_baseclosure, sts, NNs, param.scaled_time[2] - param.scaled_time[1], length(timeframe)) for (truth, x₀, param, timeframe) in zip(truths, x₀s, params, timeframes)]
-# ind_loss = (; T=sum([loss.T for loss in ind_losses]), 
-#               S=sum([loss.S for loss in ind_losses]), 
-#               ρ=sum([loss.ρ for loss in ind_losses]), 
-#               ∂T∂z=sum([loss.∂T∂z for loss in ind_losses]), 
-#               ∂S∂z=sum([loss.∂S∂z for loss in ind_losses]), 
-#               ∂ρ∂z=sum([loss.∂ρ∂z for loss in ind_losses]))
+function compute_loss_prefactor_density_contribution(individual_loss, contribution, S_scaling=1.0)
+    T_loss, S_loss, ∂T∂z_loss, ∂S∂z_loss = values(individual_loss)
+    
+    total_contribution = contribution.T + contribution.S
+    T_prefactor = total_contribution / contribution.T
+    S_prefactor = total_contribution / contribution.S
 
-# loss_prefactor = compute_loss_prefactor(ind_loss)
+    ∂T∂z_prefactor = T_prefactor
+    ∂S∂z_prefactor = S_prefactor
+
+    profile_loss = T_prefactor * T_loss + S_prefactor * S_loss
+    gradient_loss = ∂T∂z_prefactor * ∂T∂z_loss + ∂S∂z_prefactor * ∂S∂z_loss
+
+    gradient_prefactor = profile_loss / gradient_loss
+
+    ∂T∂z_prefactor *= gradient_prefactor
+    ∂S∂z_prefactor *= gradient_prefactor
+
+    S_prefactor *= S_scaling
+    ∂S∂z_prefactor *= S_scaling
+
+    return (T=T_prefactor, S=S_prefactor, ∂T∂z=∂T∂z_prefactor, ∂S∂z=∂S∂z_prefactor)
+end
+
+ind_losses = [individual_loss(ps, truth, param, x₀, ps_baseclosure, sts, NNs, param.scaled_time[2] - param.scaled_time[1], length(timeframe)) for (truth, x₀, param, timeframe) in zip(truths, x₀s, params, timeframes)]
 
 loss_prefactors = compute_loss_prefactor_density_contribution.(ind_losses, compute_density_contribution.(train_data.data), S_scaling)
 
@@ -1062,13 +1075,13 @@ end
 
 # training_timeframes = [timeframes[1][1:27], timeframes[1][1:27], timeframes[1][1:27]]
 
-optimizers = [Optimisers.Adam(1e-4)]
-maxiters = [10]
+optimizers = [Optimisers.Adam(3e-4), Optimisers.Adam(1e-4), Optimisers.Adam(3e-5), Optimisers.Adam(1e-5), Optimisers.Adam(3e-6)]
+maxiters = [2000, 2000, 2000, 2000, 2000]
 end_epochs = cumsum(maxiters)
 
 sim_indices = [1, 2, 3, 4, 5, 6, 7, 8]
 
-training_timeframes = [timeframes[1][1:27]]
+training_timeframes = [timeframes[1][1:27], timeframes[1][1:27], timeframes[1][1:27], timeframes[1][1:27], timeframes[1][1:27]]
 
 plot_timeframes = [training_timeframe[1]:training_timeframe[end] for training_timeframe in training_timeframes]
 sols = nothing

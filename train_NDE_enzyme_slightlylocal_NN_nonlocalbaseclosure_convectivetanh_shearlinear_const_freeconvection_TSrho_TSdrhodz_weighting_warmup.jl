@@ -76,7 +76,7 @@ end
 
 const S_scaling = args["S_scaling"]
 
-FILE_DIR = "./training_output/nonlocalfullrun_slightlylocalNN/NDE_enzyme_$(args["hidden_layer"])layer_$(args["hidden_layer_size"])_$(args["activation"])_$(S_scaling)Sscaling_const"
+FILE_DIR = "./training_output/nonlocalfullrun_slightlylocalNN/NDE_enzyme_$(args["hidden_layer"])layer_$(args["hidden_layer_size"])_$(args["activation"])_$(S_scaling)Sscaling_const_Adam3e-5"
 mkpath(FILE_DIR)
 @info FILE_DIR
 
@@ -1061,7 +1061,7 @@ end
 
 # training_timeframes = [timeframes[1][1:5]]
 
-optimizers = [Optimisers.Adam(1e-4), Optimisers.Adam(3e-5), Optimisers.Adam(1e-5), Optimisers.Adam(3e-6)]
+optimizers = [Optimisers.Adam(3e-5), Optimisers.Adam(1e-5), Optimisers.Adam(3e-6), Optimisers.Adam(1e-6)]
 maxiters = [4000, 2000, 2000, 2000, 2000]
 end_epochs = cumsum(maxiters)
 

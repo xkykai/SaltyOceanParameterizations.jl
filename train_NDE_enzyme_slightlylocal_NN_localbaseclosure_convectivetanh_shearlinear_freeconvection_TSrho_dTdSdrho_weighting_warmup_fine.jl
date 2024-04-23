@@ -31,11 +31,11 @@ function find_max(a...)
     return maximum(maximum.([a...]))
 end
 
-ps_file = jldopen("./training_output/localfullrun_slightlylocalNN_dTSrho/NDE_enzyme_2layer_64_relu_1.0Sscaling/training_results_epoch2000_end65.jld2", "r")
+ps_file = jldopen("./training_output/localfullrun_slightlylocalNN_dTSrho/NDE_enzyme_2layer_128_relu_1.0Sscaling/training_results_epoch2000_end65.jld2", "r")
 ps = ps_file["u"]
 close(ps_file)
 
-const hidden_layer_size = 64
+const hidden_layer_size = 128
 const N_hidden_layer = 2
 const activation = relu
 const S_scaling = 1.0

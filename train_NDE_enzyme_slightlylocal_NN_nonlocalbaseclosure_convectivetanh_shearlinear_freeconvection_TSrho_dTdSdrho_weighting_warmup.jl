@@ -34,7 +34,7 @@ function parse_commandline()
       "--hidden_layer_size"
         help = "Size of hidden layer"
         arg_type = Int64
-        default = 48
+        default = 64
       "--hidden_layer"
         help = "Number of hidden layers"
         arg_type = Int64
@@ -42,7 +42,7 @@ function parse_commandline()
       "--activation"
         help = "Activation function"
         arg_type = String
-        default = "swish"
+        default = "relu"
       "--S_scaling"
         help = "Scaling factor for S"
         arg_type = Float64
@@ -76,7 +76,7 @@ end
 
 const S_scaling = args["S_scaling"]
 
-FILE_DIR = "./training_output/nonlocalfullrun_slightlylocalNN_dTSrho/NDE_enzyme_$(args["hidden_layer"])layer_$(args["hidden_layer_size"])_$(args["activation"])_$(S_scaling)Sscaling_dTdSdrho"
+FILE_DIR = "./training_output/finalnonlocalfullrun_slightlylocalNN_dTSrho/NDE_enzyme_$(args["hidden_layer"])layer_$(args["hidden_layer_size"])_$(args["activation"])_$(S_scaling)Sscaling"
 mkpath(FILE_DIR)
 @info FILE_DIR
 
@@ -1028,13 +1028,21 @@ function train_NDE_multipleics(ps, params, ps_baseclosure, sts, NNs, truths, xâ‚
     return ps_min, (; total=losses), opt_statemin
 end
 
-optimizers = [Optimisers.Adam(3e-4), Optimisers.Adam(1e-4), Optimisers.Adam(1e-4), Optimisers.Adam(1e-4), Optimisers.Adam(1e-4), Optimisers.Adam(1e-4)]
-maxiters = [2000, 2000, 2000, 2000, 2000, 2000]
+optimizers = [Optimisers.Adam(3e-4), Optimisers.Adam(3e-5), Optimisers.Adam(3e-5), Optimisers.Adam(1e-5), Optimisers.Adam(1e-5), Optimisers.Adam(1e-5), Optimisers.Adam(1e-5)]
+maxiters = [2000, 5000, 5000, 2000, 2000, 2000, 2000]
 end_epochs = cumsum(maxiters)
 
 sim_indices = [1, 2, 3, 4, 5, 6, 7, 8]
 
-training_timeframes = [timeframes[1][1:5], timeframes[1][1:10], timeframes[1][1:15], timeframes[1][1:20], timeframes[1][1:25], timeframes[1][1:27]]
+training_timeframes = [timeframes[1][1:5], timeframes[1][1:5], timeframes[1][1:10], timeframes[1][1:15], timeframes[1][1:20], timeframes[1][1:25], timeframes[1][1:27]]
+
+# optimizers = [Optimisers.Adam(3e-4)]
+# maxiters = [10]
+# end_epochs = cumsum(maxiters)
+
+# sim_indices = [1, 2, 3, 4, 5, 6, 7, 8]
+
+# training_timeframes = [timeframes[1][1:5]]
 
 plot_timeframes = [training_timeframe[1]:training_timeframe[end] for training_timeframe in training_timeframes]
 sols = nothing

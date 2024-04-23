@@ -40,7 +40,7 @@ const N_hidden_layer = 2
 const activation = relu
 const S_scaling = 1.0
 
-FILE_DIR = "./training_output/localfullrun_slightlylocalNN_dTSrho/NDE_enzyme_$(N_hidden_layer)layer_$(hidden_layer_size)_$(activation)_$(S_scaling)Sscaling_round2_test"
+FILE_DIR = "./training_output/localfullrun_slightlylocalNN_dTSrho/NDE_enzyme_$(N_hidden_layer)layer_$(hidden_layer_size)_$(activation)_$(S_scaling)Sscaling_round2"
 mkpath(FILE_DIR)
 @info FILE_DIR
 

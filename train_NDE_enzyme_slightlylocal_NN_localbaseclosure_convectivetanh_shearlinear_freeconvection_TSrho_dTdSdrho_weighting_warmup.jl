@@ -76,7 +76,7 @@ end
 
 const S_scaling = args["S_scaling"]
 
-FILE_DIR = "./training_output/localfullrun_slightlylocalNN_dTSrho/NDE_enzyme_$(args["hidden_layer"])layer_$(args["hidden_layer_size"])_$(args["activation"])_$(S_scaling)Sscaling"
+FILE_DIR = "./training_output/finallocalfullrun_slightlylocalNN_dTSrho/NDE_enzyme_$(args["hidden_layer"])layer_$(args["hidden_layer_size"])_$(args["activation"])_$(S_scaling)Sscaling"
 mkpath(FILE_DIR)
 @info FILE_DIR
 
@@ -969,7 +969,7 @@ function train_NDE_multipleics(ps, params, ps_baseclosure, sts, NNs, truths, x�
             ps_min .= ps
         end
 
-        if iter % 10000 == 0
+        if iter % 1000 == 0
             @info "Saving intermediate results"
             jldsave("$(FILE_DIR)/intermediate_training_results_round$(epoch)_epoch$(iter)_end$(timeframes[end]).jld2"; u=ps_min, state=opt_statemin, loss=l_min)
             # sols = [diagnose_fields(ps_min, param, x₀, ps_baseclosure, sts, NNs, data) for (data, x₀, param) in zip(train_data_plot.data, x₀s, params)]
@@ -990,13 +990,13 @@ end
 
 # training_timeframes = [timeframes[1][1:5], timeframes[1][1:10], timeframes[1][1:15], timeframes[1][1:20], timeframes[1][1:25], timeframes[1][1:27]]
 
-optimizers = [Optimisers.Adam(3e-4), Optimisers.Adam(1e-4), Optimisers.Adam(1e-4), Optimisers.Adam(1e-4), Optimisers.Adam(1e-4), Optimisers.Adam(1e-4)]
-maxiters = [2000, 2000, 2000, 2000, 2000, 2000]
+optimizers = [Optimisers.Adam(3e-4), Optimisers.Adam(3e-5), Optimisers.Adam(3e-5), Optimisers.Adam(1e-5), Optimisers.Adam(1e-5), Optimisers.Adam(1e-5), Optimisers.Adam(1e-5)]
+maxiters = [2000, 5000, 5000, 2000, 2000, 2000, 2000]
 end_epochs = cumsum(maxiters)
 
 sim_indices = [1, 2, 3, 4, 5, 6, 7, 8]
 
-training_timeframes = [timeframes[1][1:5], timeframes[1][1:10], timeframes[1][1:15], timeframes[1][1:20], timeframes[1][1:25], timeframes[1][1:27]]
+training_timeframes = [timeframes[1][1:5], timeframes[1][1:5], timeframes[1][1:10], timeframes[1][1:15], timeframes[1][1:20], timeframes[1][1:25], timeframes[1][1:27]]
 
 plot_timeframes = [training_timeframe[1]:training_timeframe[end] for training_timeframe in training_timeframes]
 sols = nothing

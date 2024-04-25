@@ -49,7 +49,7 @@ function find_max(a...)
 end
 
 const S_scaling = args["S_scaling"]
-FILE_DIR = "./training_output/localbaseclosure_$(S_scaling)Sscaling_convectivetanh_shearlinear_TSrho_EKI"
+FILE_DIR = "./training_output/localbaseclosure_$(S_scaling)Sscaling_convectivetanh_shearlinear_TSrho_EKI_final"
 mkpath(FILE_DIR)
 
 LES_FILE_DIRS = [
@@ -131,7 +131,7 @@ caches = [(boundary=(uw=zeros(coarse_size+1), vw=zeros(coarse_size+1), wT=zeros(
 
 rng = Random.default_rng(123)
 
-ps = ComponentArray(ν_conv=2., ν_shear=6.484e-02, m=-1.736e-01, Pr=1.1, ΔRi=0.1)
+ps = ComponentArray(ν_conv=1.295, ν_shear=7.932e-02, m=-1.757e-01, Pr=1.193, ΔRi=0.0108)
 
 function predict_boundary_flux(params)
     uw = vcat(fill(params.uw.scaled.bottom, params.coarse_size), params.uw.scaled.top)
@@ -370,7 +370,7 @@ function compute_loss_prefactor_density_contribution(individual_loss, contributi
 
     TS_loss = T_prefactor * T_loss + S_prefactor * S_loss
 
-    ρ_prefactor = TS_loss / ρ_loss * 0.1 / 0.4
+    ρ_prefactor = TS_loss / ρ_loss * 0.1 / 0.9
 
     if u_loss > eps(eltype(u_loss))
         u_prefactor = TS_loss / u_loss * 0.2 / 0.4
@@ -389,7 +389,7 @@ function compute_loss_prefactor_density_contribution(individual_loss, contributi
 
     ∂TS∂z_loss = ∂T∂z_loss + ∂S∂z_loss
 
-    ∂ρ∂z_prefactor = ∂TS∂z_loss / ∂ρ∂z_loss * 0.1 / 0.4
+    ∂ρ∂z_prefactor = ∂TS∂z_loss / ∂ρ∂z_loss * 0.1 / 0.9
 
     if ∂u∂z_loss > eps(eltype(∂u∂z_loss))
         ∂u∂z_prefactor = ∂TS∂z_loss / ∂u∂z_loss * 0.2 / 0.4
@@ -795,7 +795,7 @@ function plot_loss(losses, FILE_DIR; epoch=1)
     save("$(FILE_DIR)/losses_epoch$(epoch).png", fig, px_per_unit=8)
 end
 
-ps_prior = ComponentArray(ν_conv=1., ν_shear=7.40022e-2, m=-1.70174e-1, Pr=1.18263, ΔRi=6.62497e-3)
+ps_prior = ComponentArray(ν_conv=1.295, ν_shear=7.932e-02, m=-1.757e-01, Pr=1.193, ΔRi=0.0108)
 
 ind_losses = [individual_loss(ps_prior, truth, param, x₀) for (truth, x₀, param) in zip(truths, x₀s, params)]
 loss_prefactors = compute_loss_prefactor_density_contribution.(ind_losses, compute_density_contribution.(train_data.data), S_scaling)
@@ -813,17 +813,17 @@ loss_prefactors = compute_loss_prefactor_density_contribution.(ind_losses, compu
 # loss_prefactor = compute_loss_prefactor(ind_loss)
 prior_loss = loss_multipleics(ps_prior, truths, params, x₀s, loss_prefactors)
 
-prior_ν_conv = constrained_gaussian("ν_conv", ps_prior.ν_conv, 0.05, -Inf, Inf)
-prior_ν_shear = constrained_gaussian("ν_shear", ps_prior.ν_shear, 1e-2, -Inf, Inf)
-prior_m = constrained_gaussian("m", ps_prior.m, 2e-2, -Inf, Inf)
+prior_ν_conv = constrained_gaussian("ν_conv", ps_prior.ν_conv, 0.24, -Inf, Inf)
+prior_ν_shear = constrained_gaussian("ν_shear", ps_prior.ν_shear, 1.5e-2, -Inf, Inf)
+prior_m = constrained_gaussian("m", ps_prior.m, 3e-2, -Inf, Inf)
 prior_Pr = constrained_gaussian("Pr", ps_prior.Pr, 0.2, -Inf, Inf)
-prior_ΔRi = constrained_gaussian("ΔRi", ps_prior.ΔRi, 1e-3, -Inf, Inf)
+prior_ΔRi = constrained_gaussian("ΔRi", ps_prior.ΔRi, 2e-3, -Inf, Inf)
 
 priors = combine_distributions([prior_ν_conv, prior_ν_shear, prior_m, prior_Pr, prior_ΔRi])
 target = [0.]
 
 N_ensemble = 100
-N_iterations = 1000
+N_iterations = 2000
 Γ = prior_loss / 1e6 * I
 
 ps_eki = EKP.construct_initial_ensemble(rng, priors, N_ensemble)

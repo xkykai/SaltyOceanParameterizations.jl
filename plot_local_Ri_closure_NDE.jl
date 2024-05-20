@@ -11,9 +11,9 @@ using SaltyOceanParameterizations
 using SaltyOceanParameterizations: calculate_Ri
 using SciMLBase
 
-FILE_DIR = "./training_output/training_local_diffusivity_NDE"
+FILE_DIR = "./training_output/local_diffusivity_NDE_gradient_relu_noclamp"
 
-filename = "$(FILE_DIR)/training_results.jld2"
+filename = "$(FILE_DIR)/training_results_2.jld2"
 
 file = jldopen(filename, "r")
 
@@ -24,7 +24,7 @@ res = file["res"]
 
 NN([0], res.u, st)
 
-Ris = -1:0.01:10
+Ris = -50:0.01:50
 νs = zeros(length(Ris))
 κs = zeros(length(Ris))
 

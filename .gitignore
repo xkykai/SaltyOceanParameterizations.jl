@@ -2,6 +2,7 @@
 ./batch_scripts
 ./logs
 ./ARGO
+./latex
 
 *.pdf
 *.png

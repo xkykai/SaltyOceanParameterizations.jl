@@ -1,5 +1,5 @@
 using Oceananigans: FieldDataset, interior, Face, Center
-using SaltyOceanParameterizations: Dᶠ
+using SaltyOceanParameterizations.Operators: Dᶠ
 
 struct LESDataset{D}
     data :: D

@@ -1,4 +1,4 @@
-using SaltyOceanParameterizations: Dᶜ, Dᶠ
+using SaltyOceanParameterizations.Operators: Dᶜ, Dᶠ
 
 struct ODEParam{F, FS, T, NT, ST, Z, L, G, CS, DC, DF, DCH, DFH, UW, VW, WT, WS, SC}
                        f :: F

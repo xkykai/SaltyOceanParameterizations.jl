@@ -1,9 +1,33 @@
 module SaltyOceanParameterizations
-export Dᶜ, Dᶠ, Dᶜ!, Dᶠ!, calculate_Ri, calculate_Ri!
+
+export 
+    find_min, find_max,
+    LESData, LESDatasets, LESDatasetsB,
+    ODEParam, ODEParams,
+    ZeroMeanUnitVarianceScaling, MinMaxScaling, DiffusivityScaling,
+    Dᶜ, Dᶠ, Dᶜ!, Dᶠ!,
+    calculate_Ri, calculate_Ri!,
+    local_Ri_ν_convectivetanh_shearlinear, local_Ri_κ_convectivetanh_shearlinear,
+    nonlocal_Ri_ν_convectivetanh_shearlinear, nonlocal_Ri_κ_convectivetanh_shearlinear,
+    predict_boundary_flux, predict_boundary_flux!, predict_diffusive_flux, predict_diffusive_boundary_flux_dimensional,
+    solve_NDE,
+    compute_density_contribution, s
 
 # Write your package code here.
-include("differentiation_operators.jl")
+include("utils.jl")
+include("Operators/Operators.jl")
 include("DataWrangling/DataWrangling.jl")
-include("base_closure.jl")
+include("Closures/Closures.jl")
+include("TrainingOperations/TrainingOperations.jl")
+include("ODEOperations/ODEOperations.jl")
+
+import SeawaterPolynomials.TEOS10: s, ΔS, Sₐᵤ
+s(Sᴬ::Number) = Sᴬ + ΔS >= 0 ? √((Sᴬ + ΔS) / Sₐᵤ) : NaN
+
+using .Operators
+using .ODEOperations
+using .DataWrangling
+using .Closures
+using .TrainingOperations
 
 end

@@ -179,7 +179,7 @@ const pickup = args["pickup"]
 const eos = TEOS10EquationOfState()
 
 FILE_NAME = "linearTS_dTdz_$(dTdz)_dSdz_$(dSdz)_QU_$(Qᵁ)_QT_$(Qᵀ)_QS_$(Qˢ)_T_$(T_surface)_S_$(S_surface)_f_$(f)_$(args["advection"])_Lxz_$(Lx)_$(Lz)_Nxz_$(Nx)_$(Nz)"
-FILE_DIR = "$(args["file_location"])/LES/$(FILE_NAME)"
+FILE_DIR = "$(args["file_location"])/LES2/$(FILE_NAME)"
 mkpath(FILE_DIR)
 
 size_halo = 5

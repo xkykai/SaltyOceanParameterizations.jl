@@ -389,20 +389,20 @@ function loss(ps, truth, params, x₀, ps_baseclosure, sts, NNs, Nt, tstart=1, t
     return sum(values(losses) .* values(losses_prefactor))
 end
 
-loss(ps, truths[1], params[1], x₀s[1], ps_baseclosure, sts, NNs, length(25:10:45))
+# loss(ps, truths[1], params[1], x₀s[1], ps_baseclosure, sts, NNs, length(25:10:45))
 
-dps = deepcopy(ps) .= 0
-autodiff(Enzyme.ReverseWithPrimal, 
-         loss, 
-         Active, 
-         DuplicatedNoNeed(ps, dps), 
-         Const(truths[1]), 
-         Const(params[1]), 
-         DuplicatedNoNeed(x₀s[1], deepcopy(x₀s[1])), 
-         Const(ps_baseclosure), 
-         Const(sts), 
-         Const(NNs),
-         Const(length(25:10:45)))
+# dps = deepcopy(ps) .= 0
+# autodiff(Enzyme.ReverseWithPrimal, 
+#          loss, 
+#          Active, 
+#          DuplicatedNoNeed(ps, dps), 
+#          Const(truths[1]), 
+#          Const(params[1]), 
+#          DuplicatedNoNeed(x₀s[1], deepcopy(x₀s[1])), 
+#          Const(ps_baseclosure), 
+#          Const(sts), 
+#          Const(NNs),
+#          Const(length(25:10:45)))
 
 function compute_loss_prefactor_density_contribution(individual_loss, contribution, S_scaling=1.0)
     u_loss, v_loss, T_loss, S_loss, ρ_loss, ∂u∂z_loss, ∂v∂z_loss, ∂T∂z_loss, ∂S∂z_loss, ∂ρ∂z_loss = values(individual_loss)
@@ -472,35 +472,35 @@ function loss_multipleics(ps, truths, params, x₀s, ps_baseclosure, sts, NNs, l
     return mean(losses)
 end
 
-loss_multipleics(ps, [truths[1]], [params[1]], [x₀s[1]], ps_baseclosure, sts, NNs, [loss_prefactors[1]], length(25:10:45))
+# loss_multipleics(ps, [truths[1]], [params[1]], [x₀s[1]], ps_baseclosure, sts, NNs, [loss_prefactors[1]], length(25:10:45))
 
-dps = deepcopy(ps) .= 0
-autodiff(Enzyme.ReverseWithPrimal, 
-         loss_multipleics, 
-         Active, 
-         DuplicatedNoNeed(ps, dps), 
-         DuplicatedNoNeed([truths[1]], deepcopy([truths[1]])), 
-         DuplicatedNoNeed([params[1]], deepcopy([params[1]])), 
-         DuplicatedNoNeed([x₀s[1]], deepcopy([x₀s[1]])), 
-         DuplicatedNoNeed(ps_baseclosure, deepcopy(ps_baseclosure)), 
-         Const(sts), 
-         Const(NNs), 
-         DuplicatedNoNeed([loss_prefactors[1]], deepcopy([loss_prefactors[1]])),
-         Const(length(25:10:45)))
+# dps = deepcopy(ps) .= 0
+# autodiff(Enzyme.ReverseWithPrimal, 
+#          loss_multipleics, 
+#          Active, 
+#          DuplicatedNoNeed(ps, dps), 
+#          DuplicatedNoNeed([truths[1]], deepcopy([truths[1]])), 
+#          DuplicatedNoNeed([params[1]], deepcopy([params[1]])), 
+#          DuplicatedNoNeed([x₀s[1]], deepcopy([x₀s[1]])), 
+#          DuplicatedNoNeed(ps_baseclosure, deepcopy(ps_baseclosure)), 
+#          Const(sts), 
+#          Const(NNs), 
+#          DuplicatedNoNeed([loss_prefactors[1]], deepcopy([loss_prefactors[1]])),
+#          Const(length(25:10:45)))
 
-dps = deepcopy(ps) .= 0
-autodiff(Enzyme.ReverseWithPrimal, 
-         loss_multipleics, 
-         Active, 
-         DuplicatedNoNeed(ps, dps), 
-         DuplicatedNoNeed(truths[1:2], deepcopy(truths[1:2])), 
-         DuplicatedNoNeed(params[1:2], deepcopy(params[1:2])), 
-         DuplicatedNoNeed(x₀s[1:2], deepcopy(x₀s[1:2])), 
-         DuplicatedNoNeed(ps_baseclosure, deepcopy(ps_baseclosure)), 
-         Const(sts), 
-         Const(NNs), 
-         DuplicatedNoNeed(loss_prefactors[1:2], deepcopy(loss_prefactors[1:2])),
-         Const(length(25:10:45)))
+# dps = deepcopy(ps) .= 0
+# autodiff(Enzyme.ReverseWithPrimal, 
+#          loss_multipleics, 
+#          Active, 
+#          DuplicatedNoNeed(ps, dps), 
+#          DuplicatedNoNeed(truths[1:2], deepcopy(truths[1:2])), 
+#          DuplicatedNoNeed(params[1:2], deepcopy(params[1:2])), 
+#          DuplicatedNoNeed(x₀s[1:2], deepcopy(x₀s[1:2])), 
+#          DuplicatedNoNeed(ps_baseclosure, deepcopy(ps_baseclosure)), 
+#          Const(sts), 
+#          Const(NNs), 
+#          DuplicatedNoNeed(loss_prefactors[1:2], deepcopy(loss_prefactors[1:2])),
+#          Const(length(25:10:45)))
 
 function predict_residual_flux_dimensional(∂u∂z_hat, ∂v∂z_hat, ∂T∂z_hat, ∂S∂z_hat, ∂ρ∂z_hat, p, params, sts, NNs)
     uw_hat, vw_hat, wT_hat, wS_hat = predict_residual_flux(∂u∂z_hat, ∂v∂z_hat, ∂T∂z_hat, ∂S∂z_hat, ∂ρ∂z_hat, p, params, sts, NNs)
@@ -1012,7 +1012,7 @@ optimizers = [Optimisers.Adam(3e-4), Optimisers.Adam(3e-5), Optimisers.Adam(3e-5
 maxiters = [2000, 5000, 5000, 2000, 2000, 2000, 2000]
 end_epochs = cumsum(maxiters)
 
-sim_indices = [1, 2, 3, 4, 5, 6, 7, 8]
+sim_indices = 1:22
 
 training_timeframes = [timeframes[1][1:5], timeframes[1][1:5], timeframes[1][1:10], timeframes[1][1:15], timeframes[1][1:20], timeframes[1][1:25], timeframes[1][1:27]]
 

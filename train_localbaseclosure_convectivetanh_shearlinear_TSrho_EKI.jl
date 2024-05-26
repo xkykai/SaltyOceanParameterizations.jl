@@ -32,7 +32,7 @@ end
 
 args = parse_commandline()
 
-LES_FILE_DIRS = ["./LES2/$(file)/instantaneous_timeseries.jld2" for file in LES_suite["train22new"]]
+LES_FILE_DIRS = ["./LES2/$(file)/instantaneous_timeseries.jld2" for file in LES_suite["train34new"]]
 const S_scaling = args["S_scaling"]
 FILE_DIR = "./training_output/$(length(LES_FILE_DIRS))simnew_localbaseclosure_convectivetanh_shearlinear_EKI"
 mkpath(FILE_DIR)

@@ -649,17 +649,17 @@ losses = Array{Float64}(losses)
 losses = (; total=losses)
 final_ensemble = get_ϕ_final(priors, ensemble_kalman_process)
 ensemble_mean = vec(mean(final_ensemble, dims=2))
-ensemble_losses = [loss_multipleics(ComponentArray(ν_conv=p[1], ν_shear=p[2], m=p[3], Pr=p[4], ΔRi=p[5], C_en=p[6], x₀=p[7], Δx=p[8]), 
+ensemble_losses = [loss_multipleics(ComponentArray(ν_conv=p[1], ν_shear=p[2], m=p[3], Pr=p[4], ΔRi=p[5]), 
                                     truths, params, x₀s, loss_prefactors) for p in eachcol(final_ensemble)]
 
 ensemble_min = final_ensemble[:, argmin(ensemble_losses)]
 
-ps_final_min = ComponentArray(; ν_conv=ensemble_min[1], ν_shear=ensemble_min[2], m=ensemble_min[3], Pr=ensemble_min[4], ΔRi=ensemble_min[5], C_en=ensemble_min[6], x₀=ensemble_min[7], Δx=ensemble_min[8])
+ps_final_min = ComponentArray(; ν_conv=ensemble_min[1], ν_shear=ensemble_min[2], m=ensemble_min[3], Pr=ensemble_min[4], ΔRi=ensemble_min[5])
 
-ensemble_mean_loss = loss_multipleics(ComponentArray(ν_conv=ensemble_mean[1], ν_shear=ensemble_mean[2], m=ensemble_mean[3], Pr=ensemble_mean[4], ΔRi=ensemble_mean[5], C_en=ensemble_mean[6], x₀=ensemble_mean[7], Δx=ensemble_mean[8]), 
+ensemble_mean_loss = loss_multipleics(ComponentArray(ν_conv=ensemble_mean[1], ν_shear=ensemble_mean[2], m=ensemble_mean[3], Pr=ensemble_mean[4], ΔRi=ensemble_mean[5]), 
                                       truths, params, x₀s, loss_prefactors)
 
-ps_final_mean = ComponentArray(; ν_conv=ensemble_mean[1], ν_shear=ensemble_mean[2], m=ensemble_mean[3], Pr=ensemble_mean[4], ΔRi=ensemble_mean[5], C_en=ensemble_mean[6], x₀=ensemble_mean[7], Δx=ensemble_mean[8])
+ps_final_mean = ComponentArray(; ν_conv=ensemble_mean[1], ν_shear=ensemble_mean[2], m=ensemble_mean[3], Pr=ensemble_mean[4], ΔRi=ensemble_mean[5])
 
 jldsave("$(FILE_DIR)/training_results_mean.jld2", u=ps_final_mean)
 jldsave("$(FILE_DIR)/training_results_min.jld2", u=ps_final_min)

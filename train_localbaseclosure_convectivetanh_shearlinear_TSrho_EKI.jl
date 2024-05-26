@@ -1,10 +1,6 @@
 using LinearAlgebra
-using DiffEqBase
-import SciMLBase
 using Lux, ComponentArrays, Random
-using Optimization
 using Printf
-using Enzyme
 using SaltyOceanParameterizations
 using SaltyOceanParameterizations.DataWrangling
 using SaltyOceanParameterizations: calculate_Ri, local_Ri_ν_convectivetanh_shearlinear, local_Ri_κ_convectivetanh_shearlinear
@@ -12,8 +8,6 @@ using Oceananigans
 using JLD2
 using SeawaterPolynomials.TEOS10
 using CairoMakie
-using SparseArrays
-using Optimisers
 using Printf
 import Dates
 using Statistics
@@ -48,81 +42,28 @@ function find_max(a...)
     return maximum(maximum.([a...]))
 end
 
+LES_FILE_DIRS = ["./LES2/$(file)/instantaneous_timeseries.jld2" for file in LES_suite["train22new"]]
 const S_scaling = args["S_scaling"]
-FILE_DIR = "./training_output/localbaseclosure_$(S_scaling)Sscaling_convectivetanh_shearlinear_TSrho_EKI_final"
+FILE_DIR = "./training_output/$(length(LES_FILE_DIRS))simnew_localbaseclosure_convectivetanh_shearlinear_EKI"
 mkpath(FILE_DIR)
-
-LES_FILE_DIRS = [
-    "./LES_training/linearTS_dTdz_0.014_dSdz_0.0021_QU_-0.0005_QT_0.0_QS_0.0_T_18.0_S_36.6_f_8.0e-5_WENO9nu0_Lxz_512.0_256.0_Nxz_256_128/instantaneous_timeseries.jld2",
-    "./LES_training/linearTS_dTdz_0.014_dSdz_0.0021_QU_-0.0002_QT_0.0_QS_0.0_T_18.0_S_36.6_f_8.0e-5_WENO9nu0_Lxz_512.0_256.0_Nxz_256_128/instantaneous_timeseries.jld2",
-
-    "./LES_training/linearTS_dTdz_0.014_dSdz_0.0021_QU_0.0_QT_0.0005_QS_0.0_T_18.0_S_36.6_f_8.0e-5_WENO9nu0_Lxz_512.0_256.0_Nxz_256_128/instantaneous_timeseries.jld2",
-    "./LES_training/linearTS_dTdz_0.014_dSdz_0.0021_QU_0.0_QT_0.0001_QS_0.0_T_18.0_S_36.6_f_8.0e-5_WENO9nu0_Lxz_512.0_256.0_Nxz_256_128/instantaneous_timeseries.jld2",
-
-    "./LES_training/linearTS_dTdz_0.014_dSdz_0.0021_QU_0.0_QT_0.0_QS_-5.0e-5_T_18.0_S_36.6_f_8.0e-5_WENO9nu0_Lxz_512.0_256.0_Nxz_256_128/instantaneous_timeseries.jld2",
-    "./LES_training/linearTS_dTdz_0.014_dSdz_0.0021_QU_0.0_QT_0.0_QS_-2.0e-5_T_18.0_S_36.6_f_8.0e-5_WENO9nu0_Lxz_512.0_256.0_Nxz_256_128/instantaneous_timeseries.jld2",
-
-    "./LES_training/linearTS_dTdz_0.014_dSdz_0.0021_QU_-0.00015_QT_0.00045_QS_0.0_T_18.0_S_36.6_f_8.0e-5_WENO9nu0_Lxz_512.0_256.0_Nxz_256_128/instantaneous_timeseries.jld2",
-    "./LES_training/linearTS_dTdz_0.014_dSdz_0.0021_QU_-0.0004_QT_0.00015_QS_0.0_T_18.0_S_36.6_f_8.0e-5_WENO9nu0_Lxz_512.0_256.0_Nxz_256_128/instantaneous_timeseries.jld2",
-
-    "./LES_training/linearTS_dTdz_0.014_dSdz_0.0021_QU_-0.00015_QT_0.0_QS_-4.5e-5_T_18.0_S_36.6_f_8.0e-5_WENO9nu0_Lxz_512.0_256.0_Nxz_256_128/instantaneous_timeseries.jld2",
-    "./LES_training/linearTS_dTdz_0.014_dSdz_0.0021_QU_-0.0004_QT_0.0_QS_-2.5e-5_T_18.0_S_36.6_f_8.0e-5_WENO9nu0_Lxz_512.0_256.0_Nxz_256_128/instantaneous_timeseries.jld2",
-
-
-    "./LES_training/linearTS_dTdz_0.013_dSdz_0.00075_QU_-0.0005_QT_0.0_QS_0.0_T_14.5_S_35.0_f_0.0_WENO9nu0_Lxz_512.0_256.0_Nxz_256_128/instantaneous_timeseries.jld2",
-    "./LES_training/linearTS_dTdz_0.013_dSdz_0.00075_QU_-0.0002_QT_0.0_QS_0.0_T_14.5_S_35.0_f_0.0_WENO9nu0_Lxz_512.0_256.0_Nxz_256_128/instantaneous_timeseries.jld2",
-
-    "./LES_training/linearTS_dTdz_0.013_dSdz_0.00075_QU_0.0_QT_0.0005_QS_0.0_T_14.5_S_35.0_f_0.0_WENO9nu0_Lxz_512.0_256.0_Nxz_256_128/instantaneous_timeseries.jld2",
-    "./LES_training/linearTS_dTdz_0.013_dSdz_0.00075_QU_0.0_QT_0.0001_QS_0.0_T_14.5_S_35.0_f_0.0_WENO9nu0_Lxz_512.0_256.0_Nxz_256_128/instantaneous_timeseries.jld2",
-
-    "./LES_training/linearTS_dTdz_0.013_dSdz_0.00075_QU_0.0_QT_0.0_QS_-5.0e-5_T_14.5_S_35.0_f_0.0_WENO9nu0_Lxz_512.0_256.0_Nxz_256_128/instantaneous_timeseries.jld2",
-    "./LES_training/linearTS_dTdz_0.013_dSdz_0.00075_QU_0.0_QT_0.0_QS_-2.0e-5_T_14.5_S_35.0_f_0.0_WENO9nu0_Lxz_512.0_256.0_Nxz_256_128/instantaneous_timeseries.jld2",
-
-    "./LES_training/linearTS_dTdz_0.013_dSdz_0.00075_QU_-0.00015_QT_0.00045_QS_0.0_T_14.5_S_35.0_f_0.0_WENO9nu0_Lxz_512.0_256.0_Nxz_256_128/instantaneous_timeseries.jld2",
-    "./LES_training/linearTS_dTdz_0.013_dSdz_0.00075_QU_-0.0004_QT_0.00015_QS_0.0_T_14.5_S_35.0_f_0.0_WENO9nu0_Lxz_512.0_256.0_Nxz_256_128/instantaneous_timeseries.jld2",
-
-    "./LES_training/linearTS_dTdz_0.013_dSdz_0.00075_QU_-0.00015_QT_0.0_QS_-4.5e-5_T_14.5_S_35.0_f_0.0_WENO9nu0_Lxz_512.0_256.0_Nxz_256_128/instantaneous_timeseries.jld2",
-    "./LES_training/linearTS_dTdz_0.013_dSdz_0.00075_QU_-0.0004_QT_0.0_QS_-2.5e-5_T_14.5_S_35.0_f_0.0_WENO9nu0_Lxz_512.0_256.0_Nxz_256_128/instantaneous_timeseries.jld2",
-]
 
 field_datasets = [FieldDataset(FILE_DIR, backend=OnDisk()) for FILE_DIR in LES_FILE_DIRS]
 
 timeframes = [25:10:length(data["ubar"].times) for data in field_datasets]
 full_timeframes = [25:length(data["ubar"].times) for data in field_datasets]
-train_data = LESDatasets(field_datasets, ZeroMeanUnitVarianceScaling, timeframes)
 coarse_size = 32
+train_data = LESDatasets(field_datasets, ZeroMeanUnitVarianceScaling, timeframes, coarse_size)
+scaling = train_data.scaling
 
 truths = [(; u=data.profile.u.scaled, v=data.profile.v.scaled, T=data.profile.T.scaled, S=data.profile.S.scaled, ρ=data.profile.ρ.scaled, 
              ∂u∂z=data.profile.∂u∂z.scaled, ∂v∂z=data.profile.∂v∂z.scaled, ∂T∂z=data.profile.∂T∂z.scaled, ∂S∂z=data.profile.∂S∂z.scaled, ∂ρ∂z=data.profile.∂ρ∂z.scaled) for data in train_data.data]
 
 x₀s = [(; u=data.profile.u.scaled[:, 1], v=data.profile.v.scaled[:, 1], T=data.profile.T.scaled[:, 1], S=data.profile.S.scaled[:, 1]) for data in train_data.data]
 
-train_data_plot = LESDatasets(field_datasets, ZeroMeanUnitVarianceScaling, full_timeframes)
+train_data_plot = LESDatasets(field_datasets, ZeroMeanUnitVarianceScaling, full_timeframes, coarse_size)
 
-params = [(                   f = data.coriolis.unscaled,
-                     f_scaled = data.coriolis.scaled,
-                            τ = data.times[end] - data.times[1],
-                        N_timesteps = length(data.times),
-                    scaled_time = (data.times .- data.times[1]) ./ (data.times[end] - data.times[1]),
-        scaled_original_time = (plot_data.times .- plot_data.times[1]) ./ (plot_data.times[end] - plot_data.times[1]),
-                            zC = data.metadata["zC"],
-                            H = data.metadata["original_grid"].Lz,
-                            g = data.metadata["gravitational_acceleration"],
-                    coarse_size = coarse_size, 
-                            Dᶜ = Dᶜ(coarse_size, data.metadata["zC"][2] - data.metadata["zC"][1]),
-                            Dᶠ = Dᶠ(coarse_size, data.metadata["zF"][3] - data.metadata["zF"][2]),
-                        Dᶜ_hat = Dᶜ(coarse_size, data.metadata["zC"][2] - data.metadata["zC"][1]) .* data.metadata["original_grid"].Lz,
-                        Dᶠ_hat = Dᶠ(coarse_size, data.metadata["zF"][3] - data.metadata["zF"][2]) .* data.metadata["original_grid"].Lz,
-                            uw = (scaled = (top=data.flux.uw.surface.scaled, bottom=data.flux.uw.bottom.scaled),
-                                unscaled = (top=data.flux.uw.surface.unscaled, bottom=data.flux.uw.bottom.unscaled)),
-                            vw = (scaled = (top=data.flux.vw.surface.scaled, bottom=data.flux.vw.bottom.scaled),
-                                unscaled = (top=data.flux.vw.surface.unscaled, bottom=data.flux.vw.bottom.unscaled)),
-                            wT = (scaled = (top=data.flux.wT.surface.scaled, bottom=data.flux.wT.bottom.scaled),
-                                unscaled = (top=data.flux.wT.surface.unscaled, bottom=data.flux.wT.bottom.unscaled)),
-                            wS = (scaled = (top=data.flux.wS.surface.scaled, bottom=data.flux.wS.bottom.scaled),
-                                unscaled = (top=data.flux.wS.surface.unscaled, bottom=data.flux.wS.bottom.unscaled)),
-                        scaling = train_data.scaling,
-                        ) for (data, plot_data) in zip(train_data.data, train_data_plot.data)]
+params = ODEParams(train_data)
+params_plot = ODEParams(train_data_plot, scaling)
 
 caches = [(boundary=(uw=zeros(coarse_size+1), vw=zeros(coarse_size+1), wT=zeros(coarse_size+1), wS=zeros(coarse_size+1)),
            diffusivities=(ν=zeros(coarse_size+1), κ=zeros(coarse_size+1)),
@@ -223,8 +164,8 @@ function solve_NDE(ps, params, x₀, timestep_multiple=10)
     sol_T[:, 1] .= T_hat
     sol_S[:, 1] .= S_hat
 
-    ν_LHS = Tridiagonal(zeros(32, 32))
-    κ_LHS = Tridiagonal(zeros(32, 32))
+    ν_LHS = Tridiagonal(zeros(coarse_size, coarse_size))
+    κ_LHS = Tridiagonal(zeros(coarse_size, coarse_size))
 
     for i in 2:Nt_solve
         u .= inv(scaling.u).(u_hat)
@@ -420,35 +361,6 @@ function compute_loss_prefactor_density_contribution(individual_loss, contributi
     return (u=u_prefactor, v=v_prefactor, T=T_prefactor, S=S_prefactor, ρ=ρ_prefactor, ∂u∂z=∂u∂z_prefactor, ∂v∂z=∂v∂z_prefactor, ∂T∂z=∂T∂z_prefactor, ∂S∂z=∂S∂z_prefactor, ∂ρ∂z=∂ρ∂z_prefactor)
 end
 
-# function compute_loss_prefactor(individual_loss)
-#     u_loss, v_loss, T_loss, S_loss, ρ_loss, ∂u∂z_loss, ∂v∂z_loss, ∂T∂z_loss, ∂S∂z_loss, ∂ρ∂z_loss = values(individual_loss)
-
-#     T_prefactor = 1
-#     S_prefactor = T_loss / S_loss
-#     ρ_prefactor = T_loss / ρ_loss
-#     u_prefactor = T_loss / u_loss
-#     v_prefactor = T_loss / v_loss
-
-#     ∂T∂z_prefactor = 1
-#     ∂S∂z_prefactor = ∂T∂z_loss / ∂S∂z_loss
-#     ∂ρ∂z_prefactor = ∂T∂z_loss / ∂ρ∂z_loss
-#     ∂u∂z_prefactor = ∂T∂z_loss / ∂u∂z_loss
-#     ∂v∂z_prefactor = ∂T∂z_loss / ∂v∂z_loss
-
-#     profile_loss = u_prefactor * u_loss + v_prefactor * v_loss + T_prefactor * T_loss + S_prefactor * S_loss + ρ_prefactor * ρ_loss
-#     gradient_loss = ∂u∂z_prefactor * ∂u∂z_loss + ∂v∂z_prefactor * ∂v∂z_loss + ∂T∂z_prefactor * ∂T∂z_loss + ∂S∂z_prefactor * ∂S∂z_loss + ∂ρ∂z_prefactor * ∂ρ∂z_loss
-
-#     gradient_prefactor = profile_loss / gradient_loss
-
-#     ∂ρ∂z_prefactor *= gradient_prefactor
-#     ∂T∂z_prefactor *= gradient_prefactor
-#     ∂S∂z_prefactor *= gradient_prefactor
-#     ∂u∂z_prefactor *= gradient_prefactor
-#     ∂v∂z_prefactor *= gradient_prefactor
-
-#     return (u=u_prefactor, v=v_prefactor, T=T_prefactor, S=S_prefactor, ρ=ρ_prefactor, ∂u∂z=∂u∂z_prefactor, ∂v∂z=∂v∂z_prefactor, ∂T∂z=∂T∂z_prefactor, ∂S∂z=∂S∂z_prefactor, ∂ρ∂z=∂ρ∂z_prefactor)
-# end
-
 function loss_multipleics(ps, truths, params, x₀s, losses_prefactors)
     losses = [loss(ps, truth, param, x₀, loss_prefactor) for (truth, x₀, param, loss_prefactor) in zip(truths, x₀s, params, losses_prefactors)]
     return mean(losses)
@@ -542,8 +454,8 @@ function solve_NDE_postprocessing(ps, params, x₀, timestep_multiple=2)
     sol_T[:, 1] .= T_hat
     sol_S[:, 1] .= S_hat
 
-    ν_LHS = Tridiagonal(zeros(32, 32))
-    κ_LHS = Tridiagonal(zeros(32, 32))
+    ν_LHS = Tridiagonal(zeros(coarse_size, coarse_size))
+    κ_LHS = Tridiagonal(zeros(coarse_size, coarse_size))
 
     for i in 2:Nt_solve
         u .= inv(scaling.u).(u_hat)
@@ -799,18 +711,7 @@ ps_prior = ComponentArray(ν_conv=1.295, ν_shear=7.932e-02, m=-1.757e-01, Pr=1.
 
 ind_losses = [individual_loss(ps_prior, truth, param, x₀) for (truth, x₀, param) in zip(truths, x₀s, params)]
 loss_prefactors = compute_loss_prefactor_density_contribution.(ind_losses, compute_density_contribution.(train_data.data), S_scaling)
-# ind_loss = (; u=sum([loss.u for loss in ind_losses]),
-#               v=sum([loss.v for loss in ind_losses]),
-#               T=sum([loss.T for loss in ind_losses]), 
-#               S=sum([loss.S for loss in ind_losses]), 
-#               ρ=sum([loss.ρ for loss in ind_losses]), 
-#               ∂u∂z=sum([loss.∂u∂z for loss in ind_losses]),
-#               ∂v∂z=sum([loss.∂v∂z for loss in ind_losses]),
-#               ∂T∂z=sum([loss.∂T∂z for loss in ind_losses]), 
-#               ∂S∂z=sum([loss.∂S∂z for loss in ind_losses]), 
-#               ∂ρ∂z=sum([loss.∂ρ∂z for loss in ind_losses]))
 
-# loss_prefactor = compute_loss_prefactor(ind_loss)
 prior_loss = loss_multipleics(ps_prior, truths, params, x₀s, loss_prefactors)
 
 prior_ν_conv = constrained_gaussian("ν_conv", ps_prior.ν_conv, 0.24, -Inf, Inf)
@@ -860,6 +761,7 @@ jldsave("$(FILE_DIR)/training_results.jld2", u=ps_final)
 
 plot_loss(losses, FILE_DIR; epoch=1)
 for i in eachindex(params)
-    sols, fluxes, diffusivities = diagnose_fields(ps_final, params[i], x₀s[i], train_data_plot.data[i], 10)
+    @info i
+    sols, fluxes, diffusivities = diagnose_fields(ps_final, params_plot[i], x₀s[i], train_data_plot.data[i], 4)
     animate_data(train_data_plot.data[i], diffusivities, sols, fluxes, diffusivities, i, FILE_DIR; epoch=1)
 end

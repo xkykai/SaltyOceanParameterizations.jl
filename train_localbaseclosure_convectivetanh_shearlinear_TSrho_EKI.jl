@@ -17,8 +17,6 @@ using EnsembleKalmanProcesses
 using EnsembleKalmanProcesses.ParameterDistributions
 const EKP = EnsembleKalmanProcesses
 using SeawaterPolynomials
-import SeawaterPolynomials.TEOS10: s, ΔS, Sₐᵤ
-s(Sᴬ) = Sᴬ + ΔS >= 0 ? √((Sᴬ + ΔS) / Sₐᵤ) : NaN
 
 function parse_commandline()
     s = ArgParseSettings()
@@ -33,14 +31,6 @@ function parse_commandline()
 end
 
 args = parse_commandline()
-
-function find_min(a...)
-    return minimum(minimum.([a...]))
-end
-
-function find_max(a...)
-    return maximum(maximum.([a...]))
-end
 
 LES_FILE_DIRS = ["./LES2/$(file)/instantaneous_timeseries.jld2" for file in LES_suite["train34new"]]
 const S_scaling = args["S_scaling"]
@@ -403,104 +393,8 @@ function predict_diffusive_boundary_flux_dimensional(Ris, u_hat, v_hat, T_hat, S
     return uw, vw, wT, wS
 end
 
-function solve_NDE_postprocessing(ps, params, x₀, timestep_multiple=2)
-    eos = TEOS10EquationOfState()
-    coarse_size = params.coarse_size
-    Δt = (params.scaled_original_time[2] - params.scaled_original_time[1]) / timestep_multiple
-    Nt_solve = (length(params.scaled_original_time) - 1) * timestep_multiple + 1
-    Dᶜ_hat = params.Dᶜ_hat
-    Dᶠ_hat = params.Dᶠ_hat
-    Dᶠ = params.Dᶠ
-
-    scaling = params.scaling
-    τ, H = params.τ, params.H
-    f = params.f
-
-    u_hat = deepcopy(x₀.u)
-    v_hat = deepcopy(x₀.v)
-    T_hat = deepcopy(x₀.T)
-    S_hat = deepcopy(x₀.S)
-    ρ_hat = zeros(coarse_size)
-
-    u = zeros(coarse_size)
-    v = zeros(coarse_size)
-    T = zeros(coarse_size)
-    S = zeros(coarse_size)
-    ρ = zeros(coarse_size)
-    
-    u_RHS = zeros(coarse_size)
-    v_RHS = zeros(coarse_size)
-    T_RHS = zeros(coarse_size)
-    S_RHS = zeros(coarse_size)
-
-    sol_u = zeros(coarse_size, Nt_solve)
-    sol_v = zeros(coarse_size, Nt_solve)
-    sol_T = zeros(coarse_size, Nt_solve)
-    sol_S = zeros(coarse_size, Nt_solve)
-    sol_ρ = zeros(coarse_size, Nt_solve)
-
-    uw_boundary = zeros(coarse_size+1)
-    vw_boundary = zeros(coarse_size+1)
-    wT_boundary = zeros(coarse_size+1)
-    wS_boundary = zeros(coarse_size+1)
-
-    νs = zeros(coarse_size+1)
-    κs = zeros(coarse_size+1)
-
-    Ris = zeros(coarse_size+1)
-
-    sol_u[:, 1] .= u_hat
-    sol_v[:, 1] .= v_hat
-    sol_T[:, 1] .= T_hat
-    sol_S[:, 1] .= S_hat
-
-    ν_LHS = Tridiagonal(zeros(coarse_size, coarse_size))
-    κ_LHS = Tridiagonal(zeros(coarse_size, coarse_size))
-
-    for i in 2:Nt_solve
-        u .= inv(scaling.u).(u_hat)
-        v .= inv(scaling.v).(v_hat)
-        T .= inv(scaling.T).(T_hat)
-        S .= inv(scaling.S).(S_hat)
-
-        ρ .= TEOS10.ρ.(T, S, 0, Ref(eos))
-        ρ_hat .= scaling.ρ.(ρ)
-        sol_ρ[:, i-1] .= ρ_hat
-
-        Ris .= calculate_Ri(u, v, ρ, Dᶠ, params.g, eos.reference_density, clamp_lims=(-Inf, Inf))
-        predict_diffusivities!(νs, κs, Ris, ps)
-
-        Dν = Dᶜ_hat * (-νs .* Dᶠ_hat)
-        Dκ = Dᶜ_hat * (-κs .* Dᶠ_hat)
-
-        predict_boundary_flux!(uw_boundary, vw_boundary, wT_boundary, wS_boundary, params)
-
-        ν_LHS .= Tridiagonal(-τ / H^2 .* Dν)
-        κ_LHS .= Tridiagonal(-τ / H^2 .* Dκ)
-
-        u_RHS .= - τ / H * scaling.uw.σ / scaling.u.σ .* (Dᶜ_hat * (uw_boundary)) .+ f * τ ./ scaling.u.σ .* v
-        v_RHS .= - τ / H * scaling.vw.σ / scaling.v.σ .* (Dᶜ_hat * (vw_boundary)) .- f * τ ./ scaling.v.σ .* u
-        T_RHS .= - τ / H * scaling.wT.σ / scaling.T.σ .* (Dᶜ_hat * (wT_boundary))
-        S_RHS .= - τ / H * scaling.wS.σ / scaling.S.σ .* (Dᶜ_hat * (wS_boundary))
-
-        u_hat .= (I - Δt .* ν_LHS) \ (u_hat .+ Δt .* u_RHS)
-        v_hat .= (I - Δt .* ν_LHS) \ (v_hat .+ Δt .* v_RHS)
-        T_hat .= (I - Δt .* κ_LHS) \ (T_hat .+ Δt .* T_RHS)
-        S_hat .= (I - Δt .* κ_LHS) \ (S_hat .+ Δt .* S_RHS)
-
-        sol_u[:, i] .= u_hat
-        sol_v[:, i] .= v_hat
-        sol_T[:, i] .= T_hat
-        sol_S[:, i] .= S_hat
-    end
-
-    sol_ρ[:, end] .= scaling.ρ.(TEOS10.ρ.(inv(scaling.T).(T_hat), inv(scaling.S).(S_hat), 0, Ref(eos)))
-
-    return (; u=sol_u[:, 1:timestep_multiple:end], v=sol_v[:, 1:timestep_multiple:end], T=sol_T[:, 1:timestep_multiple:end], S=sol_S[:, 1:timestep_multiple:end], ρ=sol_ρ[:, 1:timestep_multiple:end])
-end
-
 function diagnose_fields(ps, params, x₀, train_data_plot, timestep_multiple=2)
-    sols = solve_NDE_postprocessing(ps, params, x₀, timestep_multiple)
+    sols = solve_NDE(ps, params, x₀, timestep_multiple)
 
     coarse_size = params.coarse_size
     Dᶠ = params.Dᶠ
@@ -755,13 +649,28 @@ losses = Array{Float64}(losses)
 losses = (; total=losses)
 final_ensemble = get_ϕ_final(priors, ensemble_kalman_process)
 ensemble_mean = vec(mean(final_ensemble, dims=2))
-ps_final = ComponentArray(; ν_conv=ensemble_mean[1], ν_shear=ensemble_mean[2], m=ensemble_mean[3], Pr=ensemble_mean[4], ΔRi=ensemble_mean[5])
+ensemble_losses = [loss_multipleics(ComponentArray(ν_conv=p[1], ν_shear=p[2], m=p[3], Pr=p[4], ΔRi=p[5], C_en=p[6], x₀=p[7], Δx=p[8]), 
+                                    truths, params, x₀s, loss_prefactors) for p in eachcol(final_ensemble)]
 
-jldsave("$(FILE_DIR)/training_results.jld2", u=ps_final)
+ensemble_min = final_ensemble[:, argmin(ensemble_losses)]
+
+ps_final_min = ComponentArray(; ν_conv=ensemble_min[1], ν_shear=ensemble_min[2], m=ensemble_min[3], Pr=ensemble_min[4], ΔRi=ensemble_min[5], C_en=ensemble_min[6], x₀=ensemble_min[7], Δx=ensemble_min[8])
+
+ensemble_mean_loss = loss_multipleics(ComponentArray(ν_conv=ensemble_mean[1], ν_shear=ensemble_mean[2], m=ensemble_mean[3], Pr=ensemble_mean[4], ΔRi=ensemble_mean[5], C_en=ensemble_mean[6], x₀=ensemble_mean[7], Δx=ensemble_mean[8]), 
+                                      truths, params, x₀s, loss_prefactors)
+
+ps_final_mean = ComponentArray(; ν_conv=ensemble_mean[1], ν_shear=ensemble_mean[2], m=ensemble_mean[3], Pr=ensemble_mean[4], ΔRi=ensemble_mean[5], C_en=ensemble_mean[6], x₀=ensemble_mean[7], Δx=ensemble_mean[8])
+
+jldsave("$(FILE_DIR)/training_results_mean.jld2", u=ps_final_mean)
+jldsave("$(FILE_DIR)/training_results_min.jld2", u=ps_final_min)
 
 plot_loss(losses, FILE_DIR; epoch=1)
 for i in eachindex(params)
-    @info i
-    sols, fluxes, diffusivities = diagnose_fields(ps_final, params_plot[i], x₀s[i], train_data_plot.data[i], 4)
-    animate_data(train_data_plot.data[i], diffusivities, sols, fluxes, diffusivities, i, FILE_DIR; epoch=1)
+    sols, fluxes, diffusivities = diagnose_fields(ps_final_mean, params_plot[i], x₀s[i], train_data_plot.data[i])
+    animate_data(train_data_plot.data[i], diffusivities, sols, fluxes, diffusivities, i, FILE_DIR; epoch="1_mean")
+end
+
+for i in eachindex(params)
+    sols, fluxes, diffusivities = diagnose_fields(ps_final_min, params_plot[i], x₀s[i], train_data_plot.data[i])
+    animate_data(train_data_plot.data[i], diffusivities, sols, fluxes, diffusivities, i, FILE_DIR; epoch="1_min")
 end

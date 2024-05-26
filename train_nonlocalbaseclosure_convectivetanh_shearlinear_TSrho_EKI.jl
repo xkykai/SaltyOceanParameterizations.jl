@@ -1,19 +1,13 @@
 using LinearAlgebra
-using DiffEqBase
-import SciMLBase
 using Lux, ComponentArrays, Random
-using Optimization
 using Printf
-using Enzyme
 using SaltyOceanParameterizations
 using SaltyOceanParameterizations.DataWrangling
-using SaltyOceanParameterizations: calculate_Ri, nonlocal_Ri_ν_convectivetanh_shearlinear, nonlocal_Ri_κ_convectivetanh_shearlinear
+using SaltyOceanParameterizations: calculate_Ri, local_Ri_ν_convectivetanh_shearlinear, local_Ri_κ_convectivetanh_shearlinear
 using Oceananigans
 using JLD2
 using SeawaterPolynomials.TEOS10
 using CairoMakie
-using SparseArrays
-using Optimisers
 using Printf
 import Dates
 using Statistics
@@ -23,8 +17,6 @@ using EnsembleKalmanProcesses
 using EnsembleKalmanProcesses.ParameterDistributions
 const EKP = EnsembleKalmanProcesses
 using SeawaterPolynomials
-import SeawaterPolynomials.TEOS10: s, ΔS, Sₐᵤ
-s(Sᴬ) = Sᴬ + ΔS >= 0 ? √((Sᴬ + ΔS) / Sₐᵤ) : NaN
 
 function parse_commandline()
     s = ArgParseSettings()
@@ -40,65 +32,24 @@ end
 
 args = parse_commandline()
 
-function find_min(a...)
-    return minimum(minimum.([a...]))
-end
-
-function find_max(a...)
-    return maximum(maximum.([a...]))
-end
-
+LES_FILE_DIRS = ["./LES2/$(file)/instantaneous_timeseries.jld2" for file in LES_suite["train22new"]]
 const S_scaling = args["S_scaling"]
-FILE_DIR = "./training_output/nonlocalbaseclosure_$(S_scaling)Sscaling_convectivetanh_shearlinear_TSrho_EKI_smallrho_2"
+FILE_DIR = "./training_output/$(length(LES_FILE_DIRS))simnew_nonlocalbaseclosure_convectivetanh_shearlinear_EKI"
 mkpath(FILE_DIR)
-@info "Saving to $FILE_DIR"
-
-LES_FILE_DIRS = [
-    "./LES_training/linearTS_dTdz_0.014_dSdz_0.0021_QU_-0.0005_QT_0.0_QS_0.0_T_18.0_S_36.6_f_8.0e-5_WENO9nu0_Lxz_512.0_256.0_Nxz_256_128/instantaneous_timeseries.jld2",
-    "./LES_training/linearTS_dTdz_0.014_dSdz_0.0021_QU_-0.0002_QT_0.0_QS_0.0_T_18.0_S_36.6_f_8.0e-5_WENO9nu0_Lxz_512.0_256.0_Nxz_256_128/instantaneous_timeseries.jld2",
-
-    "./LES_training/linearTS_dTdz_0.014_dSdz_0.0021_QU_0.0_QT_0.0005_QS_0.0_T_18.0_S_36.6_f_8.0e-5_WENO9nu0_Lxz_512.0_256.0_Nxz_256_128/instantaneous_timeseries.jld2",
-    "./LES_training/linearTS_dTdz_0.014_dSdz_0.0021_QU_0.0_QT_0.0001_QS_0.0_T_18.0_S_36.6_f_8.0e-5_WENO9nu0_Lxz_512.0_256.0_Nxz_256_128/instantaneous_timeseries.jld2",
-
-    "./LES_training/linearTS_dTdz_0.014_dSdz_0.0021_QU_0.0_QT_0.0_QS_-5.0e-5_T_18.0_S_36.6_f_8.0e-5_WENO9nu0_Lxz_512.0_256.0_Nxz_256_128/instantaneous_timeseries.jld2",
-    "./LES_training/linearTS_dTdz_0.014_dSdz_0.0021_QU_0.0_QT_0.0_QS_-2.0e-5_T_18.0_S_36.6_f_8.0e-5_WENO9nu0_Lxz_512.0_256.0_Nxz_256_128/instantaneous_timeseries.jld2",
-
-    "./LES_training/linearTS_dTdz_0.014_dSdz_0.0021_QU_-0.00015_QT_0.00045_QS_0.0_T_18.0_S_36.6_f_8.0e-5_WENO9nu0_Lxz_512.0_256.0_Nxz_256_128/instantaneous_timeseries.jld2",
-    "./LES_training/linearTS_dTdz_0.014_dSdz_0.0021_QU_-0.0004_QT_0.00015_QS_0.0_T_18.0_S_36.6_f_8.0e-5_WENO9nu0_Lxz_512.0_256.0_Nxz_256_128/instantaneous_timeseries.jld2",
-
-    "./LES_training/linearTS_dTdz_0.014_dSdz_0.0021_QU_-0.00015_QT_0.0_QS_-4.5e-5_T_18.0_S_36.6_f_8.0e-5_WENO9nu0_Lxz_512.0_256.0_Nxz_256_128/instantaneous_timeseries.jld2",
-    "./LES_training/linearTS_dTdz_0.014_dSdz_0.0021_QU_-0.0004_QT_0.0_QS_-2.5e-5_T_18.0_S_36.6_f_8.0e-5_WENO9nu0_Lxz_512.0_256.0_Nxz_256_128/instantaneous_timeseries.jld2",
-
-
-    "./LES_training/linearTS_dTdz_0.013_dSdz_0.00075_QU_-0.0005_QT_0.0_QS_0.0_T_14.5_S_35.0_f_0.0_WENO9nu0_Lxz_512.0_256.0_Nxz_256_128/instantaneous_timeseries.jld2",
-    "./LES_training/linearTS_dTdz_0.013_dSdz_0.00075_QU_-0.0002_QT_0.0_QS_0.0_T_14.5_S_35.0_f_0.0_WENO9nu0_Lxz_512.0_256.0_Nxz_256_128/instantaneous_timeseries.jld2",
-
-    "./LES_training/linearTS_dTdz_0.013_dSdz_0.00075_QU_0.0_QT_0.0005_QS_0.0_T_14.5_S_35.0_f_0.0_WENO9nu0_Lxz_512.0_256.0_Nxz_256_128/instantaneous_timeseries.jld2",
-    "./LES_training/linearTS_dTdz_0.013_dSdz_0.00075_QU_0.0_QT_0.0001_QS_0.0_T_14.5_S_35.0_f_0.0_WENO9nu0_Lxz_512.0_256.0_Nxz_256_128/instantaneous_timeseries.jld2",
-
-    "./LES_training/linearTS_dTdz_0.013_dSdz_0.00075_QU_0.0_QT_0.0_QS_-5.0e-5_T_14.5_S_35.0_f_0.0_WENO9nu0_Lxz_512.0_256.0_Nxz_256_128/instantaneous_timeseries.jld2",
-    "./LES_training/linearTS_dTdz_0.013_dSdz_0.00075_QU_0.0_QT_0.0_QS_-2.0e-5_T_14.5_S_35.0_f_0.0_WENO9nu0_Lxz_512.0_256.0_Nxz_256_128/instantaneous_timeseries.jld2",
-
-    "./LES_training/linearTS_dTdz_0.013_dSdz_0.00075_QU_-0.00015_QT_0.00045_QS_0.0_T_14.5_S_35.0_f_0.0_WENO9nu0_Lxz_512.0_256.0_Nxz_256_128/instantaneous_timeseries.jld2",
-    "./LES_training/linearTS_dTdz_0.013_dSdz_0.00075_QU_-0.0004_QT_0.00015_QS_0.0_T_14.5_S_35.0_f_0.0_WENO9nu0_Lxz_512.0_256.0_Nxz_256_128/instantaneous_timeseries.jld2",
-
-    "./LES_training/linearTS_dTdz_0.013_dSdz_0.00075_QU_-0.00015_QT_0.0_QS_-4.5e-5_T_14.5_S_35.0_f_0.0_WENO9nu0_Lxz_512.0_256.0_Nxz_256_128/instantaneous_timeseries.jld2",
-    "./LES_training/linearTS_dTdz_0.013_dSdz_0.00075_QU_-0.0004_QT_0.0_QS_-2.5e-5_T_14.5_S_35.0_f_0.0_WENO9nu0_Lxz_512.0_256.0_Nxz_256_128/instantaneous_timeseries.jld2",
-]
-
 field_datasets = [FieldDataset(FILE_DIR, backend=OnDisk()) for FILE_DIR in LES_FILE_DIRS]
 
 timeframes = [25:10:length(data["ubar"].times) for data in field_datasets]
 full_timeframes = [25:length(data["ubar"].times) for data in field_datasets]
-train_data = LESDatasets(field_datasets, ZeroMeanUnitVarianceScaling, timeframes)
 coarse_size = 32
+train_data = LESDatasets(field_datasets, ZeroMeanUnitVarianceScaling, timeframes, coarse_size)
+scaling = train_data.scaling
 
 truths = [(; u=data.profile.u.scaled, v=data.profile.v.scaled, T=data.profile.T.scaled, S=data.profile.S.scaled, ρ=data.profile.ρ.scaled, 
              ∂u∂z=data.profile.∂u∂z.scaled, ∂v∂z=data.profile.∂v∂z.scaled, ∂T∂z=data.profile.∂T∂z.scaled, ∂S∂z=data.profile.∂S∂z.scaled, ∂ρ∂z=data.profile.∂ρ∂z.scaled) for data in train_data.data]
 
 x₀s = [(; u=data.profile.u.scaled[:, 1], v=data.profile.v.scaled[:, 1], T=data.profile.T.scaled[:, 1], S=data.profile.S.scaled[:, 1]) for data in train_data.data]
 
-train_data_plot = LESDatasets(field_datasets, ZeroMeanUnitVarianceScaling, full_timeframes)
+train_data_plot = LESDatasets(field_datasets, ZeroMeanUnitVarianceScaling, full_timeframes, coarse_size)
 
 function compute_wρ(T, S, wT, wS)
     eos = TEOS10EquationOfState()
@@ -115,7 +66,6 @@ params = [(                   f = data.coriolis.unscaled,
                             τ = data.times[end] - data.times[1],
                         N_timesteps = length(data.times),
                     scaled_time = (data.times .- data.times[1]) ./ (data.times[end] - data.times[1]),
-        scaled_original_time = (plot_data.times .- plot_data.times[1]) ./ (plot_data.times[end] - plot_data.times[1]),
                             zC = data.metadata["zC"],
                             H = data.metadata["original_grid"].Lz,
                             g = data.metadata["gravitational_acceleration"],
@@ -135,7 +85,33 @@ params = [(                   f = data.coriolis.unscaled,
                             wρ = (; unscaled = (top=compute_wρ(data.profile.T.unscaled[end, 1], data.profile.S.unscaled[end, 1], data.flux.wT.surface.unscaled, data.flux.wS.surface.unscaled),
                                                 bottom=compute_wρ(data.profile.T.unscaled[1, 1], data.profile.S.unscaled[1, 1], data.flux.wT.bottom.unscaled, data.flux.wS.bottom.unscaled))),
                         scaling = train_data.scaling,
-                        ) for (data, plot_data) in zip(train_data.data, train_data_plot.data)]
+                        ) for data in train_data.data]
+
+params_plot = [(                   f = data.coriolis.unscaled,
+                     f_scaled = data.coriolis.scaled,
+                            τ = data.times[end] - data.times[1],
+                        N_timesteps = length(data.times),
+                    scaled_time = (data.times .- data.times[1]) ./ (data.times[end] - data.times[1]),
+                            zC = data.metadata["zC"],
+                            H = data.metadata["original_grid"].Lz,
+                            g = data.metadata["gravitational_acceleration"],
+                    coarse_size = coarse_size, 
+                            Dᶜ = Dᶜ(coarse_size, data.metadata["zC"][2] - data.metadata["zC"][1]),
+                            Dᶠ = Dᶠ(coarse_size, data.metadata["zF"][3] - data.metadata["zF"][2]),
+                        Dᶜ_hat = Dᶜ(coarse_size, data.metadata["zC"][2] - data.metadata["zC"][1]) .* data.metadata["original_grid"].Lz,
+                        Dᶠ_hat = Dᶠ(coarse_size, data.metadata["zF"][3] - data.metadata["zF"][2]) .* data.metadata["original_grid"].Lz,
+                            uw = (scaled = (top=data.flux.uw.surface.scaled, bottom=data.flux.uw.bottom.scaled),
+                                unscaled = (top=data.flux.uw.surface.unscaled, bottom=data.flux.uw.bottom.unscaled)),
+                            vw = (scaled = (top=data.flux.vw.surface.scaled, bottom=data.flux.vw.bottom.scaled),
+                                unscaled = (top=data.flux.vw.surface.unscaled, bottom=data.flux.vw.bottom.unscaled)),
+                            wT = (scaled = (top=data.flux.wT.surface.scaled, bottom=data.flux.wT.bottom.scaled),
+                                unscaled = (top=data.flux.wT.surface.unscaled, bottom=data.flux.wT.bottom.unscaled)),
+                            wS = (scaled = (top=data.flux.wS.surface.scaled, bottom=data.flux.wS.bottom.scaled),
+                                unscaled = (top=data.flux.wS.surface.unscaled, bottom=data.flux.wS.bottom.unscaled)),
+                            wρ = (; unscaled = (top=compute_wρ(data.profile.T.unscaled[end, 1], data.profile.S.unscaled[end, 1], data.flux.wT.surface.unscaled, data.flux.wS.surface.unscaled),
+                                                bottom=compute_wρ(data.profile.T.unscaled[1, 1], data.profile.S.unscaled[1, 1], data.flux.wT.bottom.unscaled, data.flux.wS.bottom.unscaled))),
+                        scaling = train_data.scaling,
+                        ) for data in train_data_plot.data]
 
 rng = Random.default_rng(123)
 
@@ -229,8 +205,8 @@ function solve_NDE(ps, params, x₀, timestep_multiple=10)
     sol_T[:, 1] .= T_hat
     sol_S[:, 1] .= S_hat
 
-    ν_LHS = Tridiagonal(zeros(32, 32))
-    κ_LHS = Tridiagonal(zeros(32, 32))
+    ν_LHS = Tridiagonal(zeros(coarse_size, coarse_size))
+    κ_LHS = Tridiagonal(zeros(coarse_size, coarse_size))
 
     for i in 2:Nt_solve
         u .= inv(scaling.u).(u_hat)
@@ -529,110 +505,8 @@ function predict_diffusive_boundary_flux_dimensional(Ris, Ris_above, ∂ρ∂z, 
     return uw, vw, wT, wS
 end
 
-function solve_NDE_postprocessing(ps, params, x₀, timestep_multiple=2)
-    eos = TEOS10EquationOfState()
-    coarse_size = params.coarse_size
-    Δt = (params.scaled_original_time[2] - params.scaled_original_time[1]) / timestep_multiple
-    Nt_solve = (length(params.scaled_original_time) - 1) * timestep_multiple + 1
-    Dᶜ_hat = params.Dᶜ_hat
-    Dᶠ_hat = params.Dᶠ_hat
-    Dᶠ = params.Dᶠ
-
-    scaling = params.scaling
-    τ, H = params.τ, params.H
-    f = params.f
-
-    u_hat = deepcopy(x₀.u)
-    v_hat = deepcopy(x₀.v)
-    T_hat = deepcopy(x₀.T)
-    S_hat = deepcopy(x₀.S)
-    ρ_hat = zeros(coarse_size)
-
-    u = zeros(coarse_size)
-    v = zeros(coarse_size)
-    T = zeros(coarse_size)
-    S = zeros(coarse_size)
-    ρ = zeros(coarse_size)
-    ∂ρ∂z = zeros(coarse_size+1)
-    
-    u_RHS = zeros(coarse_size)
-    v_RHS = zeros(coarse_size)
-    T_RHS = zeros(coarse_size)
-    S_RHS = zeros(coarse_size)
-
-    sol_u = zeros(coarse_size, Nt_solve)
-    sol_v = zeros(coarse_size, Nt_solve)
-    sol_T = zeros(coarse_size, Nt_solve)
-    sol_S = zeros(coarse_size, Nt_solve)
-    sol_ρ = zeros(coarse_size, Nt_solve)
-
-    uw_boundary = zeros(coarse_size+1)
-    vw_boundary = zeros(coarse_size+1)
-    wT_boundary = zeros(coarse_size+1)
-    wS_boundary = zeros(coarse_size+1)
-
-    νs = zeros(coarse_size+1)
-    κs = zeros(coarse_size+1)
-
-    Ris = zeros(coarse_size+1)
-    Ris_above = zeros(coarse_size+1)
-
-    sol_u[:, 1] .= u_hat
-    sol_v[:, 1] .= v_hat
-    sol_T[:, 1] .= T_hat
-    sol_S[:, 1] .= S_hat
-
-    ν_LHS = Tridiagonal(zeros(32, 32))
-    κ_LHS = Tridiagonal(zeros(32, 32))
-
-    for i in 2:Nt_solve
-        u .= inv(scaling.u).(u_hat)
-        v .= inv(scaling.v).(v_hat)
-        T .= inv(scaling.T).(T_hat)
-        S .= inv(scaling.S).(S_hat)
-
-        ρ .= TEOS10.ρ.(T, S, 0, Ref(eos))
-        ρ_hat .= scaling.ρ.(ρ)
-        sol_ρ[:, i-1] .= ρ_hat
-
-        ∂ρ∂z .= Dᶠ * ρ
-
-        Ris .= calculate_Ri(u, v, ρ, Dᶠ, params.g, eos.reference_density, clamp_lims=(-Inf, Inf), ϵ=1e-11)
-        Ris_above[1:end-1] .= Ris[2:end]
-
-        predict_diffusivities!(νs, κs, Ris, Ris_above, ∂ρ∂z, params.wρ.unscaled.top, ps)
-
-        Dν = Dᶜ_hat * (-νs .* Dᶠ_hat)
-        Dκ = Dᶜ_hat * (-κs .* Dᶠ_hat)
-
-        predict_boundary_flux!(uw_boundary, vw_boundary, wT_boundary, wS_boundary, params)
-
-        ν_LHS .= Tridiagonal(-τ / H^2 .* Dν)
-        κ_LHS .= Tridiagonal(-τ / H^2 .* Dκ)
-
-        u_RHS .= - τ / H * scaling.uw.σ / scaling.u.σ .* (Dᶜ_hat * (uw_boundary)) .+ f * τ ./ scaling.u.σ .* v
-        v_RHS .= - τ / H * scaling.vw.σ / scaling.v.σ .* (Dᶜ_hat * (vw_boundary)) .- f * τ ./ scaling.v.σ .* u
-        T_RHS .= - τ / H * scaling.wT.σ / scaling.T.σ .* (Dᶜ_hat * (wT_boundary))
-        S_RHS .= - τ / H * scaling.wS.σ / scaling.S.σ .* (Dᶜ_hat * (wS_boundary))
-
-        u_hat .= (I - Δt .* ν_LHS) \ (u_hat .+ Δt .* u_RHS)
-        v_hat .= (I - Δt .* ν_LHS) \ (v_hat .+ Δt .* v_RHS)
-        T_hat .= (I - Δt .* κ_LHS) \ (T_hat .+ Δt .* T_RHS)
-        S_hat .= (I - Δt .* κ_LHS) \ (S_hat .+ Δt .* S_RHS)
-
-        sol_u[:, i] .= u_hat
-        sol_v[:, i] .= v_hat
-        sol_T[:, i] .= T_hat
-        sol_S[:, i] .= S_hat
-    end
-
-    sol_ρ[:, end] .= scaling.ρ.(TEOS10.ρ.(inv(scaling.T).(T_hat), inv(scaling.S).(S_hat), 0, Ref(eos)))
-
-    return (; u=sol_u[:, 1:timestep_multiple:end], v=sol_v[:, 1:timestep_multiple:end], T=sol_T[:, 1:timestep_multiple:end], S=sol_S[:, 1:timestep_multiple:end], ρ=sol_ρ[:, 1:timestep_multiple:end])
-end
-
 function diagnose_fields(ps, params, x₀, train_data_plot, timestep_multiple=2)
-    sols = solve_NDE_postprocessing(ps, params, x₀, timestep_multiple)
+    sols = solve_NDE(ps, params, x₀, timestep_multiple)
 
     coarse_size = params.coarse_size
     Dᶠ = params.Dᶠ
@@ -885,7 +759,7 @@ priors = combine_distributions([prior_ν_conv, prior_ν_shear, prior_m, prior_Pr
 target = [0.]
 
 N_ensemble = 500
-N_iterations = 100
+N_iterations = 2000
 Γ = prior_loss / 1e6 * I
 
 ps_eki = EKP.construct_initial_ensemble(rng, priors, N_ensemble)
@@ -933,11 +807,11 @@ jldsave("$(FILE_DIR)/training_results_min.jld2", u=ps_final_min)
 
 plot_loss(losses, FILE_DIR; epoch=1)
 for i in eachindex(params)
-    sols, fluxes, diffusivities = diagnose_fields(ps_final_mean, params[i], x₀s[i], train_data_plot.data[i], 10)
+    sols, fluxes, diffusivities = diagnose_fields(ps_final_mean, params_plot[i], x₀s[i], train_data_plot.data[i])
     animate_data(train_data_plot.data[i], diffusivities, sols, fluxes, diffusivities, i, FILE_DIR; epoch="1_mean")
 end
 
 for i in eachindex(params)
-    sols, fluxes, diffusivities = diagnose_fields(ps_final_min, params[i], x₀s[i], train_data_plot.data[i], 10)
+    sols, fluxes, diffusivities = diagnose_fields(ps_final_min, params_plot[i], x₀s[i], train_data_plot.data[i])
     animate_data(train_data_plot.data[i], diffusivities, sols, fluxes, diffusivities, i, FILE_DIR; epoch="1_min")
 end

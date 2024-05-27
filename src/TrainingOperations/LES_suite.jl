@@ -243,32 +243,32 @@ LES_suite = Dict(
 
         # Southern Ocean
         # Pure Wind Stress
-        "linearTS_dTdz_-0.025_dSdz_-0.0045_QU_-0.0005_QT_0.0_QS_0.0_T_14.5_S_35.0_f_-0.000125_WENO9nu0_Lxz_512.0_256.0_Nxz_256_128",
-        "linearTS_dTdz_-0.025_dSdz_-0.0045_QU_-0.0002_QT_0.0_QS_0.0_T_14.5_S_35.0_f_-0.000125_WENO9nu0_Lxz_512.0_256.0_Nxz_256_128",
+        "linearTS_dTdz_-0.025_dSdz_-0.0045_QU_-0.0005_QT_0.0_QS_0.0_T_-3.6_S_33.9_f_-0.000125_WENO9nu0_Lxz_512.0_256.0_Nxz_256_128",
+        "linearTS_dTdz_-0.025_dSdz_-0.0045_QU_-0.0002_QT_0.0_QS_0.0_T_-3.6_S_33.9_f_-0.000125_WENO9nu0_Lxz_512.0_256.0_Nxz_256_128",
 
         # Free Convection
-        "linearTS_dTdz_-0.025_dSdz_-0.0045_QU_0.0_QT_0.0005_QS_0.0_T_14.5_S_35.0_f_-0.000125_WENO9nu0_Lxz_512.0_256.0_Nxz_256_128",
-        "linearTS_dTdz_-0.025_dSdz_-0.0045_QU_0.0_QT_0.0001_QS_0.0_T_14.5_S_35.0_f_-0.000125_WENO9nu0_Lxz_512.0_256.0_Nxz_256_128",
+        "linearTS_dTdz_-0.025_dSdz_-0.0045_QU_0.0_QT_0.0005_QS_0.0_T_-3.6_S_33.9_f_-0.000125_WENO9nu0_Lxz_512.0_256.0_Nxz_256_128",
+        "linearTS_dTdz_-0.025_dSdz_-0.0045_QU_0.0_QT_0.0001_QS_0.0_T_-3.6_S_33.9_f_-0.000125_WENO9nu0_Lxz_512.0_256.0_Nxz_256_128",
     
-        "linearTS_dTdz_-0.025_dSdz_-0.0045_QU_0.0_QT_0.0_QS_-5.0e-5_T_14.5_S_35.0_f_-0.000125_WENO9nu0_Lxz_512.0_256.0_Nxz_256_128",
-        "linearTS_dTdz_-0.025_dSdz_-0.0045_QU_0.0_QT_0.0_QS_-1.0e-5_T_14.5_S_35.0_f_-0.000125_WENO9nu0_Lxz_512.0_256.0_Nxz_256_128",
+        "linearTS_dTdz_-0.025_dSdz_-0.0045_QU_0.0_QT_0.0_QS_-5.0e-5_T_-3.6_S_33.9_f_-0.000125_WENO9nu0_Lxz_512.0_256.0_Nxz_256_128",
+        "linearTS_dTdz_-0.025_dSdz_-0.0045_QU_0.0_QT_0.0_QS_-1.0e-5_T_-3.6_S_33.9_f_-0.000125_WENO9nu0_Lxz_512.0_256.0_Nxz_256_128",
         
-        "linearTS_dTdz_-0.025_dSdz_-0.0045_QU_0.0_QT_0.0003_QS_-3.0e-5_T_14.5_S_35.0_f_-0.000125_WENO9nu0_Lxz_512.0_256.0_Nxz_256_128",
+        "linearTS_dTdz_-0.025_dSdz_-0.0045_QU_0.0_QT_0.0003_QS_-3.0e-5_T_-3.6_S_33.9_f_-0.000125_WENO9nu0_Lxz_512.0_256.0_Nxz_256_128",
 
         # Wind Stress and Free Convection
-        "linearTS_dTdz_-0.025_dSdz_-0.0045_QU_-0.0002_QT_0.0005_QS_0.0_T_14.5_S_35.0_f_-0.000125_WENO9nu0_Lxz_512.0_256.0_Nxz_256_128",
-        "linearTS_dTdz_-0.025_dSdz_-0.0045_QU_-0.0002_QT_0.0001_QS_0.0_T_14.5_S_35.0_f_-0.000125_WENO9nu0_Lxz_512.0_256.0_Nxz_256_128",
+        "linearTS_dTdz_-0.025_dSdz_-0.0045_QU_-0.0002_QT_0.0005_QS_0.0_T_-3.6_S_33.9_f_-0.000125_WENO9nu0_Lxz_512.0_256.0_Nxz_256_128",
+        "linearTS_dTdz_-0.025_dSdz_-0.0045_QU_-0.0002_QT_0.0001_QS_0.0_T_-3.6_S_33.9_f_-0.000125_WENO9nu0_Lxz_512.0_256.0_Nxz_256_128",
 
-        "linearTS_dTdz_-0.025_dSdz_-0.0045_QU_-0.0005_QT_0.0005_QS_0.0_T_14.5_S_35.0_f_-0.000125_WENO9nu0_Lxz_512.0_256.0_Nxz_256_128",
-        "linearTS_dTdz_-0.025_dSdz_-0.0045_QU_-0.0005_QT_0.0001_QS_0.0_T_14.5_S_35.0_f_-0.000125_WENO9nu0_Lxz_512.0_256.0_Nxz_256_128",
+        "linearTS_dTdz_-0.025_dSdz_-0.0045_QU_-0.0005_QT_0.0005_QS_0.0_T_-3.6_S_33.9_f_-0.000125_WENO9nu0_Lxz_512.0_256.0_Nxz_256_128",
+        "linearTS_dTdz_-0.025_dSdz_-0.0045_QU_-0.0005_QT_0.0001_QS_0.0_T_-3.6_S_33.9_f_-0.000125_WENO9nu0_Lxz_512.0_256.0_Nxz_256_128",
         
-        "linearTS_dTdz_-0.025_dSdz_-0.0045_QU_-0.0002_QT_0.0_QS_-5.0e-5_T_14.5_S_35.0_f_-0.000125_WENO9nu0_Lxz_512.0_256.0_Nxz_256_128",
-        "linearTS_dTdz_-0.025_dSdz_-0.0045_QU_-0.0002_QT_0.0_QS_-1.0e-5_T_14.5_S_35.0_f_-0.000125_WENO9nu0_Lxz_512.0_256.0_Nxz_256_128",
+        "linearTS_dTdz_-0.025_dSdz_-0.0045_QU_-0.0002_QT_0.0_QS_-5.0e-5_T_-3.6_S_33.9_f_-0.000125_WENO9nu0_Lxz_512.0_256.0_Nxz_256_128",
+        "linearTS_dTdz_-0.025_dSdz_-0.0045_QU_-0.0002_QT_0.0_QS_-1.0e-5_T_-3.6_S_33.9_f_-0.000125_WENO9nu0_Lxz_512.0_256.0_Nxz_256_128",
         
-        "linearTS_dTdz_-0.025_dSdz_-0.0045_QU_-0.0005_QT_0.0_QS_-5.0e-5_T_14.5_S_35.0_f_-0.000125_WENO9nu0_Lxz_512.0_256.0_Nxz_256_128",
-        "linearTS_dTdz_-0.025_dSdz_-0.0045_QU_-0.0005_QT_0.0_QS_-1.0e-5_T_14.5_S_35.0_f_-0.000125_WENO9nu0_Lxz_512.0_256.0_Nxz_256_128",
+        "linearTS_dTdz_-0.025_dSdz_-0.0045_QU_-0.0005_QT_0.0_QS_-5.0e-5_T_-3.6_S_33.9_f_-0.000125_WENO9nu0_Lxz_512.0_256.0_Nxz_256_128",
+        "linearTS_dTdz_-0.025_dSdz_-0.0045_QU_-0.0005_QT_0.0_QS_-1.0e-5_T_-3.6_S_33.9_f_-0.000125_WENO9nu0_Lxz_512.0_256.0_Nxz_256_128",
 
-        "linearTS_dTdz_-0.025_dSdz_-0.0045_QU_-0.0005_QT_0.0003_QS_-3.0e-5_T_14.5_S_35.0_f_-0.000125_WENO9nu0_Lxz_512.0_256.0_Nxz_256_128",
-        "linearTS_dTdz_-0.025_dSdz_-0.0045_QU_-0.0002_QT_0.0003_QS_-3.0e-5_T_14.5_S_35.0_f_-0.000125_WENO9nu0_Lxz_512.0_256.0_Nxz_256_128",
+        "linearTS_dTdz_-0.025_dSdz_-0.0045_QU_-0.0005_QT_0.0003_QS_-3.0e-5_T_-3.6_S_33.9_f_-0.000125_WENO9nu0_Lxz_512.0_256.0_Nxz_256_128",
+        "linearTS_dTdz_-0.025_dSdz_-0.0045_QU_-0.0002_QT_0.0003_QS_-3.0e-5_T_-3.6_S_33.9_f_-0.000125_WENO9nu0_Lxz_512.0_256.0_Nxz_256_128",
     ],
 )

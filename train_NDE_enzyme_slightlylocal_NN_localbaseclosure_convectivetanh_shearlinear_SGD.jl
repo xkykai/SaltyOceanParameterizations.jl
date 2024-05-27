@@ -1006,7 +1006,7 @@ optimizers = [Optimisers.Adam(3e-4), Optimisers.Adam(3e-5), Optimisers.Adam(3e-5
 maxiters = [2000, 5000, 5000, 2000, 2000, 2000, 2000]
 end_epochs = cumsum(maxiters)
 
-sim_indices = collect(1:34)
+sim_indices = collect(1:length(LES_FILE_DIRS))
 
 training_timeframes = [timeframes[1][1:5], timeframes[1][1:5], timeframes[1][1:10], timeframes[1][1:15], timeframes[1][1:20], timeframes[1][1:25], timeframes[1][1:27]]
 

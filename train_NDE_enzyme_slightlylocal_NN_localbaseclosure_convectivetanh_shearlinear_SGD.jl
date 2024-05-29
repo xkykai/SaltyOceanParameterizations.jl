@@ -59,15 +59,16 @@ else
 end
 
 const S_scaling = args["S_scaling"]
+const batch_size = 4
 
-LES_FILE_DIRS = ["./LES2/$(file)/instantaneous_timeseries.jld2" for file in LES_suite["train20"]]
+LES_FILE_DIRS = ["./LES2/$(file)/instantaneous_timeseries.jld2" for file in LES_suite["train22new"]]
 
-FILE_DIR = "./training_output/NDE_$(length(LES_FILE_DIRS))sim_$(args["hidden_layer"])layer_$(args["hidden_layer_size"])_$(args["activation"])_localbaseclosure_SGD"
+FILE_DIR = "./training_output/NDE_$(length(LES_FILE_DIRS))simnew_$(args["hidden_layer"])layer_$(args["hidden_layer_size"])_$(args["activation"])_localbaseclosure_new_SGD$(batch_size)"
 mkpath(FILE_DIR)
 @info FILE_DIR
 
-BASECLOSURE_FILE_DIR = "./training_output/localbaseclosure_convectivetanh_shearlinear_TSrho_EKI/training_results.jld2"
-# BASECLOSURE_FILE_DIR = "./training_output/22simnew_localbaseclosure_convectivetanh_shearlinear_EKI/training_results_mean.jld2"
+# BASECLOSURE_FILE_DIR = "./training_output/localbaseclosure_convectivetanh_shearlinear_TSrho_EKI/training_results.jld2"
+BASECLOSURE_FILE_DIR = "./training_output/22simnew_localbaseclosure_convectivetanh_shearlinear_EKI/training_results_mean.jld2"
 
 field_datasets = [FieldDataset(FILE_DIR, backend=OnDisk()) for FILE_DIR in LES_FILE_DIRS]
 
@@ -1015,7 +1016,7 @@ sols = nothing
 for (i, (epoch, optimizer, maxiter, training_timeframe, plot_timeframe)) in enumerate(zip(end_epochs, optimizers, maxiters, training_timeframes, plot_timeframes))
     global ps = ps
     global sols = sols
-    ps, losses, opt_state = train_NDE_stochastic(ps, params, ps_baseclosure, sts, NNs, truths, x₀s, train_data_plot, training_timeframe, S_scaling, rng; indices_training=sim_indices, epoch=i, maxiter=maxiter, rule=optimizer)
+    ps, losses, opt_state = train_NDE_stochastic(ps, params, ps_baseclosure, sts, NNs, truths, x₀s, train_data_plot, training_timeframe, S_scaling, rng; indices_training=sim_indices, epoch=i, maxiter=maxiter, rule=optimizer, batchsize=batch_size)
     
     jldsave("$(FILE_DIR)/training_results_epoch$(epoch)_end$(training_timeframe[end]).jld2"; u=ps, losses=losses, state=opt_state)
 

@@ -342,19 +342,19 @@ function loss(ps, truth, params, x₀, sts, NNs, Nt, tstart=1, timestep_multiple
     return sum(values(losses) .* values(losses_prefactor))
 end
 
-loss(ps, truths[1], params[1], x₀s[1], sts, NNs, length(25:10:45))
+# loss(ps, truths[1], params[1], x₀s[1], sts, NNs, length(25:10:45))
 
-dps = deepcopy(ps) .= 0
-autodiff(Enzyme.ReverseWithPrimal, 
-         loss, 
-         Active, 
-         DuplicatedNoNeed(ps, dps), 
-         Const(truths[1]), 
-         Const(params[1]), 
-         DuplicatedNoNeed(x₀s[1], deepcopy(x₀s[1])), 
-         Const(sts), 
-         Const(NNs),
-         Const(length(25:10:45)))
+# dps = deepcopy(ps) .= 0
+# autodiff(Enzyme.ReverseWithPrimal, 
+#          loss, 
+#          Active, 
+#          DuplicatedNoNeed(ps, dps), 
+#          Const(truths[1]), 
+#          Const(params[1]), 
+#          DuplicatedNoNeed(x₀s[1], deepcopy(x₀s[1])), 
+#          Const(sts), 
+#          Const(NNs),
+#          Const(length(25:10:45)))
 
 function compute_loss_prefactor_density_contribution(individual_loss, contribution, S_scaling=1.0)
     u_loss, v_loss, T_loss, S_loss, ρ_loss, ∂u∂z_loss, ∂v∂z_loss, ∂T∂z_loss, ∂S∂z_loss, ∂ρ∂z_loss = values(individual_loss)
@@ -424,33 +424,33 @@ function loss_multipleics(ps, truths, params, x₀s, sts, NNs, losses_prefactor,
     return mean(losses)
 end
 
-loss_multipleics(ps, [truths[1]], [params[1]], [x₀s[1]], sts, NNs, [loss_prefactors[1]], length(25:10:45))
+# loss_multipleics(ps, [truths[1]], [params[1]], [x₀s[1]], sts, NNs, [loss_prefactors[1]], length(25:10:45))
 
-dps = deepcopy(ps) .= 0
-autodiff(Enzyme.ReverseWithPrimal, 
-         loss_multipleics, 
-         Active, 
-         DuplicatedNoNeed(ps, dps), 
-         DuplicatedNoNeed([truths[1]], deepcopy([truths[1]])), 
-         DuplicatedNoNeed([params[1]], deepcopy([params[1]])), 
-         DuplicatedNoNeed([x₀s[1]], deepcopy([x₀s[1]])), 
-         Const(sts), 
-         Const(NNs), 
-         DuplicatedNoNeed([loss_prefactors[1]], deepcopy([loss_prefactors[1]])),
-         Const(length(25:10:45)))
+# dps = deepcopy(ps) .= 0
+# autodiff(Enzyme.ReverseWithPrimal, 
+#          loss_multipleics, 
+#          Active, 
+#          DuplicatedNoNeed(ps, dps), 
+#          DuplicatedNoNeed([truths[1]], deepcopy([truths[1]])), 
+#          DuplicatedNoNeed([params[1]], deepcopy([params[1]])), 
+#          DuplicatedNoNeed([x₀s[1]], deepcopy([x₀s[1]])), 
+#          Const(sts), 
+#          Const(NNs), 
+#          DuplicatedNoNeed([loss_prefactors[1]], deepcopy([loss_prefactors[1]])),
+#          Const(length(25:10:45)))
 
-dps = deepcopy(ps) .= 0
-autodiff(Enzyme.ReverseWithPrimal, 
-         loss_multipleics, 
-         Active, 
-         DuplicatedNoNeed(ps, dps), 
-         DuplicatedNoNeed(truths[1:2], deepcopy(truths[1:2])), 
-         DuplicatedNoNeed(params[1:2], deepcopy(params[1:2])), 
-         DuplicatedNoNeed(x₀s[1:2], deepcopy(x₀s[1:2])), 
-         Const(sts), 
-         Const(NNs), 
-         DuplicatedNoNeed(loss_prefactors[1:2], deepcopy(loss_prefactors[1:2])),
-         Const(length(25:10:45)))
+# dps = deepcopy(ps) .= 0
+# autodiff(Enzyme.ReverseWithPrimal, 
+#          loss_multipleics, 
+#          Active, 
+#          DuplicatedNoNeed(ps, dps), 
+#          DuplicatedNoNeed(truths[1:2], deepcopy(truths[1:2])), 
+#          DuplicatedNoNeed(params[1:2], deepcopy(params[1:2])), 
+#          DuplicatedNoNeed(x₀s[1:2], deepcopy(x₀s[1:2])), 
+#          Const(sts), 
+#          Const(NNs), 
+#          DuplicatedNoNeed(loss_prefactors[1:2], deepcopy(loss_prefactors[1:2])),
+#          Const(length(25:10:45)))
 
 function predict_residual_flux_dimensional(∂u∂z_hat, ∂v∂z_hat, ∂T∂z_hat, ∂S∂z_hat, ∂ρ∂z_hat, p, params, sts, NNs)
     uw_hat, vw_hat, wT_hat, wS_hat = predict_residual_flux(∂u∂z_hat, ∂v∂z_hat, ∂T∂z_hat, ∂S∂z_hat, ∂ρ∂z_hat, p, params, sts, NNs)
@@ -776,7 +776,7 @@ for (i, (epoch, optimizer, maxiter, training_timeframe, plot_timeframe)) in enum
     global ps = ps
     global sols = sols
     # ps, losses, opt_state = train_NDE_multipleics(ps, params, ps_baseclosure, sts, NNs, truths, x₀s, train_data_plot, training_timeframe, S_scaling; sim_index=sim_indices, epoch=i, maxiter=maxiter, rule=optimizer)
-    ps, losses, opt_state = train_NDE_multipleics(ps, params, sts, NNs, truths, x₀s, train_data_plot, training_timeframe, S_scaling; sim_index=sim_indices, epoch=i+4, maxiter=maxiter, rule=optimizer)
+    ps, losses, opt_state = train_NDE_multipleics(ps, params, sts, NNs, truths, x₀s, train_data_plot, training_timeframe, S_scaling; sim_index=sim_indices, epoch=i, maxiter=maxiter, rule=optimizer)
     
     jldsave("$(FILE_DIR)/training_results_epoch$(epoch)_end$(training_timeframe[end]).jld2"; u=ps, losses=losses, state=opt_state)
 

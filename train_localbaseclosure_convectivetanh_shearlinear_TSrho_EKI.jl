@@ -29,7 +29,7 @@ function parse_commandline()
       "--momentum_ratio"
         help = "Momentum ratio"
         arg_type = Float64
-        default = 1
+        default = 1.0
     end
     return parse_args(s)
 end

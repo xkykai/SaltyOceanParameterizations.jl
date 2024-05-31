@@ -26,15 +26,20 @@ function parse_commandline()
         help = "Scaling factor for S"
         arg_type = Float64
         default = 1.0
+      "--momentum_ratio"
+        help = "Momentum ratio"
+        arg_type = Float64
+        default = 0.25
     end
     return parse_args(s)
 end
 
 args = parse_commandline()
 
-LES_FILE_DIRS = ["./LES2/$(file)/instantaneous_timeseries.jld2" for file in LES_suite["train51new"]]
+LES_FILE_DIRS = ["./LES2/$(file)/instantaneous_timeseries.jld2" for file in LES_suite["train22"]]
 const S_scaling = args["S_scaling"]
-FILE_DIR = "./training_output/$(length(LES_FILE_DIRS))simnew_localbaseclosure_convectivetanh_shearlinear_EKI"
+const momentum_ratio = args["momentum_ratio"]
+FILE_DIR = "./training_output/$(length(LES_FILE_DIRS))sim_mom_$(momentum_ratio)_localbaseclosure_convectivetanh_shearlinear_EKI"
 mkpath(FILE_DIR)
 
 field_datasets = [FieldDataset(FILE_DIR, backend=OnDisk()) for FILE_DIR in LES_FILE_DIRS]
@@ -292,7 +297,7 @@ function compute_density_contribution(data)
     return (; T=T_contribution, S=S_contribution, ρ=Δρ)
 end
 
-function compute_loss_prefactor_density_contribution(individual_loss, contribution, S_scaling=1.0)
+function compute_loss_prefactor_density_contribution(individual_loss, contribution, S_scaling=1.0, momentum_ratio=0.25)
     u_loss, v_loss, T_loss, S_loss, ρ_loss, ∂u∂z_loss, ∂v∂z_loss, ∂T∂z_loss, ∂S∂z_loss, ∂ρ∂z_loss = values(individual_loss)
     
     total_contribution = contribution.T + contribution.S
@@ -303,16 +308,12 @@ function compute_loss_prefactor_density_contribution(individual_loss, contributi
 
     ρ_prefactor = TS_loss / ρ_loss * 0.1 / 0.9
 
-    if u_loss > eps(eltype(u_loss))
-        u_prefactor = TS_loss / u_loss * 0.2 / 0.4
-    else
-        u_prefactor = TS_loss * 0.2 / 0.4
-    end
+    uv_loss = u_loss + v_loss
 
-    if v_loss > eps(eltype(v_loss))
-        v_prefactor = TS_loss / v_loss * 0.2 / 0.4
+    if uv_loss > eps(eltype(uv_loss))
+        uv_prefactor = TS_loss / uv_loss * momentum_ratio
     else
-        v_prefactor = TS_loss * 0.2 / 0.4
+        uv_prefactor = TS_loss * 1000
     end
 
     ∂T∂z_prefactor = T_prefactor
@@ -322,33 +323,28 @@ function compute_loss_prefactor_density_contribution(individual_loss, contributi
 
     ∂ρ∂z_prefactor = ∂TS∂z_loss / ∂ρ∂z_loss * 0.1 / 0.9
 
-    if ∂u∂z_loss > eps(eltype(∂u∂z_loss))
-        ∂u∂z_prefactor = ∂TS∂z_loss / ∂u∂z_loss * 0.2 / 0.4
+    ∂uv∂z_loss = ∂u∂z_loss + ∂v∂z_loss
+
+    if ∂uv∂z_loss > eps(eltype(∂uv∂z_loss))
+        ∂uv∂z_prefactor = ∂TS∂z_loss / ∂uv∂z_loss * momentum_ratio
     else
-        ∂u∂z_prefactor = ∂TS∂z_loss * 0.2 / 0.4
+        ∂uv∂z_prefactor = ∂TS∂z_loss * 1000
     end
 
-    if ∂v∂z_loss > eps(eltype(∂v∂z_loss))
-        ∂v∂z_prefactor = ∂TS∂z_loss / ∂v∂z_loss * 0.2 / 0.4
-    else
-        ∂v∂z_prefactor = ∂TS∂z_loss * 0.2 / 0.4
-    end
-
-    profile_loss = u_prefactor * u_loss + v_prefactor * v_loss + T_prefactor * T_loss + S_prefactor * S_loss + ρ_prefactor * ρ_loss
-    gradient_loss = ∂u∂z_prefactor * ∂u∂z_loss + ∂v∂z_prefactor * ∂v∂z_loss + ∂T∂z_prefactor * ∂T∂z_loss + ∂S∂z_prefactor * ∂S∂z_loss + ∂ρ∂z_prefactor * ∂ρ∂z_loss
+    profile_loss = uv_prefactor * u_loss + uv_prefactor * v_loss + T_prefactor * T_loss + S_prefactor * S_loss + ρ_prefactor * ρ_loss
+    gradient_loss = ∂uv∂z_prefactor * ∂u∂z_loss + ∂uv∂z_prefactor * ∂v∂z_loss + ∂T∂z_prefactor * ∂T∂z_loss + ∂S∂z_prefactor * ∂S∂z_loss + ∂ρ∂z_prefactor * ∂ρ∂z_loss
 
     gradient_prefactor = profile_loss / gradient_loss
 
     ∂ρ∂z_prefactor *= gradient_prefactor
     ∂T∂z_prefactor *= gradient_prefactor
     ∂S∂z_prefactor *= gradient_prefactor
-    ∂u∂z_prefactor *= gradient_prefactor
-    ∂v∂z_prefactor *= gradient_prefactor
+    ∂uv∂z_prefactor *= gradient_prefactor
 
     S_prefactor *= S_scaling
     ∂S∂z_prefactor *= S_scaling
 
-    return (u=u_prefactor, v=v_prefactor, T=T_prefactor, S=S_prefactor, ρ=ρ_prefactor, ∂u∂z=∂u∂z_prefactor, ∂v∂z=∂v∂z_prefactor, ∂T∂z=∂T∂z_prefactor, ∂S∂z=∂S∂z_prefactor, ∂ρ∂z=∂ρ∂z_prefactor)
+    return (u=uv_prefactor, v=uv_prefactor, T=T_prefactor, S=S_prefactor, ρ=ρ_prefactor, ∂u∂z=∂uv∂z_prefactor, ∂v∂z=∂uv∂z_prefactor, ∂T∂z=∂T∂z_prefactor, ∂S∂z=∂S∂z_prefactor, ∂ρ∂z=∂ρ∂z_prefactor)
 end
 
 function loss_multipleics(ps, truths, params, x₀s, losses_prefactors)

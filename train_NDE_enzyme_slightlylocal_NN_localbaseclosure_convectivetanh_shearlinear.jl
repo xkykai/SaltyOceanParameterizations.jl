@@ -39,6 +39,10 @@ function parse_commandline()
         help = "Scaling factor for S"
         arg_type = Float64
         default = 1.0
+      "--momentum_ratio"
+        help = "Momentum ratio"
+        arg_type = Float64
+        default = 0.25
     end
     return parse_args(s)
 end
@@ -59,15 +63,16 @@ else
 end
 
 const S_scaling = args["S_scaling"]
+const momentum_ratio = args["momentum_ratio"]
 
-LES_FILE_DIRS = ["./LES2/$(file)/instantaneous_timeseries.jld2" for file in LES_suite["train34"]]
+LES_FILE_DIRS = ["./LES2/$(file)/instantaneous_timeseries.jld2" for file in LES_suite["train22"]]
 
-FILE_DIR = "./training_output/NDE_$(length(LES_FILE_DIRS))sim_$(args["hidden_layer"])layer_$(args["hidden_layer_size"])_$(args["activation"])_localbaseclosure_new"
+FILE_DIR = "./training_output/NDE_$(length(LES_FILE_DIRS))sim_$(args["hidden_layer"])layer_$(args["hidden_layer_size"])_$(args["activation"])_mom_$(momentum_ratio)_localbaseclosure"
 mkpath(FILE_DIR)
 @info FILE_DIR
 
-# BASECLOSURE_FILE_DIR = "./training_output/localbaseclosure_convectivetanh_shearlinear_TSrho_EKI/training_results.jld2"
-BASECLOSURE_FILE_DIR = "./training_output/34simnew_localbaseclosure_convectivetanh_shearlinear_EKI/training_results_mean.jld2"
+BASECLOSURE_FILE_DIR = "./training_output/localbaseclosure_convectivetanh_shearlinear_TSrho_EKI/training_results.jld2"
+# BASECLOSURE_FILE_DIR = "./training_output/22simnew_localbaseclosure_convectivetanh_shearlinear_EKI/training_results_mean.jld2"
 
 field_datasets = [FieldDataset(FILE_DIR, backend=OnDisk()) for FILE_DIR in LES_FILE_DIRS]
 
@@ -126,6 +131,15 @@ ps_wS .= glorot_uniform(rng, Float64, length(ps_wS))
 # ps_wS .*= 0
 
 x₀s = [(; u=data.profile.u.scaled[:, 1], v=data.profile.v.scaled[:, 1], T=data.profile.T.scaled[:, 1], S=data.profile.S.scaled[:, 1]) for data in train_data.data]
+
+# PS_DIR = "./training_output/NDE_22simnew_2layer_64_relu_localbaseclosure/training_results_epoch18000_end265.jld2"
+# PS_DIR = "./training_output/NDE_34sim_2layer_128_relu_localbaseclosure_new/training_results_epoch7000_end65.jld2"
+# ps = jldopen(PS_DIR, "r")["u"]
+
+# pw_uw = ps.uw
+# pw_vw = ps.vw
+# pw_wT = ps.wT
+# pw_wS = ps.wS
 
 ps = ComponentArray(; uw=ps_uw, vw=ps_vw, wT=ps_wT, wS=ps_wS)
 NNs = (uw=uw_NN, vw=vw_NN, wT=wT_NN, wS=wS_NN)
@@ -370,7 +384,7 @@ end
 #          Const(NNs),
 #          Const(length(25:10:45)))
 
-function compute_loss_prefactor_density_contribution(individual_loss, contribution, S_scaling=1.0)
+function compute_loss_prefactor_density_contribution(individual_loss, contribution, S_scaling=1.0, momentum_ratio=0.25)
     u_loss, v_loss, T_loss, S_loss, ρ_loss, ∂u∂z_loss, ∂v∂z_loss, ∂T∂z_loss, ∂S∂z_loss, ∂ρ∂z_loss = values(individual_loss)
     
     total_contribution = contribution.T + contribution.S
@@ -381,16 +395,12 @@ function compute_loss_prefactor_density_contribution(individual_loss, contributi
 
     ρ_prefactor = TS_loss / ρ_loss * 0.1 / 0.9
 
-    if u_loss > eps(eltype(u_loss))
-        u_prefactor = TS_loss / u_loss * 0.2 / 0.4
-    else
-        u_prefactor = TS_loss * 0.2 / 0.4
-    end
+    uv_loss = u_loss + v_loss
 
-    if v_loss > eps(eltype(v_loss))
-        v_prefactor = TS_loss / v_loss * 0.2 / 0.4
+    if uv_loss > eps(eltype(uv_loss))
+        uv_prefactor = TS_loss / uv_loss * momentum_ratio
     else
-        v_prefactor = TS_loss * 0.2 / 0.4
+        uv_prefactor = TS_loss * 1000
     end
 
     ∂T∂z_prefactor = T_prefactor
@@ -400,38 +410,33 @@ function compute_loss_prefactor_density_contribution(individual_loss, contributi
 
     ∂ρ∂z_prefactor = ∂TS∂z_loss / ∂ρ∂z_loss * 0.1 / 0.9
 
-    if ∂u∂z_loss > eps(eltype(∂u∂z_loss))
-        ∂u∂z_prefactor = ∂TS∂z_loss / ∂u∂z_loss * 0.2 / 0.4
+    ∂uv∂z_loss = ∂u∂z_loss + ∂v∂z_loss
+
+    if ∂uv∂z_loss > eps(eltype(∂uv∂z_loss))
+        ∂uv∂z_prefactor = ∂TS∂z_loss / ∂uv∂z_loss * momentum_ratio
     else
-        ∂u∂z_prefactor = ∂TS∂z_loss * 0.2 / 0.4
+        ∂uv∂z_prefactor = ∂TS∂z_loss * 1000
     end
 
-    if ∂v∂z_loss > eps(eltype(∂v∂z_loss))
-        ∂v∂z_prefactor = ∂TS∂z_loss / ∂v∂z_loss * 0.2 / 0.4
-    else
-        ∂v∂z_prefactor = ∂TS∂z_loss * 0.2 / 0.4
-    end
-
-    profile_loss = u_prefactor * u_loss + v_prefactor * v_loss + T_prefactor * T_loss + S_prefactor * S_loss + ρ_prefactor * ρ_loss
-    gradient_loss = ∂u∂z_prefactor * ∂u∂z_loss + ∂v∂z_prefactor * ∂v∂z_loss + ∂T∂z_prefactor * ∂T∂z_loss + ∂S∂z_prefactor * ∂S∂z_loss + ∂ρ∂z_prefactor * ∂ρ∂z_loss
+    profile_loss = uv_prefactor * u_loss + uv_prefactor * v_loss + T_prefactor * T_loss + S_prefactor * S_loss + ρ_prefactor * ρ_loss
+    gradient_loss = ∂uv∂z_prefactor * ∂u∂z_loss + ∂uv∂z_prefactor * ∂v∂z_loss + ∂T∂z_prefactor * ∂T∂z_loss + ∂S∂z_prefactor * ∂S∂z_loss + ∂ρ∂z_prefactor * ∂ρ∂z_loss
 
     gradient_prefactor = profile_loss / gradient_loss
 
     ∂ρ∂z_prefactor *= gradient_prefactor
     ∂T∂z_prefactor *= gradient_prefactor
     ∂S∂z_prefactor *= gradient_prefactor
-    ∂u∂z_prefactor *= gradient_prefactor
-    ∂v∂z_prefactor *= gradient_prefactor
+    ∂uv∂z_prefactor *= gradient_prefactor
 
     S_prefactor *= S_scaling
     ∂S∂z_prefactor *= S_scaling
 
-    return (u=u_prefactor, v=v_prefactor, T=T_prefactor, S=S_prefactor, ρ=ρ_prefactor, ∂u∂z=∂u∂z_prefactor, ∂v∂z=∂v∂z_prefactor, ∂T∂z=∂T∂z_prefactor, ∂S∂z=∂S∂z_prefactor, ∂ρ∂z=∂ρ∂z_prefactor)
+    return (u=uv_prefactor, v=uv_prefactor, T=T_prefactor, S=S_prefactor, ρ=ρ_prefactor, ∂u∂z=∂uv∂z_prefactor, ∂v∂z=∂uv∂z_prefactor, ∂T∂z=∂T∂z_prefactor, ∂S∂z=∂S∂z_prefactor, ∂ρ∂z=∂ρ∂z_prefactor)
 end
 
 ind_losses = [individual_loss(ps, truth, param, x₀, ps_baseclosure, sts, NNs, length(timeframe)) for (truth, x₀, param, timeframe) in zip(truths, x₀s, params, timeframes)]
 
-loss_prefactors = compute_loss_prefactor_density_contribution.(ind_losses, compute_density_contribution.(train_data.data), S_scaling)
+loss_prefactors = compute_loss_prefactor_density_contribution.(ind_losses, compute_density_contribution.(train_data.data), S_scaling, momentum_ratio)
 
 function loss_multipleics(ps, truths, params, x₀s, ps_baseclosure, sts, NNs, losses_prefactor, Nt, tstart=1, timestep_multiple=10)
     losses = [loss(ps, truth, param, x₀, ps_baseclosure, sts, NNs, Nt, tstart, timestep_multiple, loss_prefactor) for (truth, x₀, param, loss_prefactor) in zip(truths, x₀s, params, losses_prefactor)]
@@ -833,87 +838,7 @@ function plot_loss(losses, FILE_DIR; suffix=1)
     save("$(FILE_DIR)/losses_$(suffix).png", fig, px_per_unit=8)
 end
 
-function train_NDE_stochastic(ps, params, ps_baseclosure, sts, NNs, truths, x₀s, losses_prefactors, rng, train_data_plot; epoch=1, maxiter=2, rule=Optimisers.Adam())
-    opt_state = Optimisers.setup(rule, ps)
-    opt_statemin = deepcopy(opt_state)
-    l_min = Inf
-    ps_min = deepcopy(ps)
-    dps = deepcopy(ps) .= 0
-    wall_clock = [time_ns()]
-    losses = zeros(maxiter)
-    mean_loss = mean(losses)
-    stochastic_batch = collect(1:length(truths))
-    ind_loss = zeros(length(truths))
-    for iter in 1:maxiter
-        shuffle!(rng, stochastic_batch)
-        for sim_index in stochastic_batch
-            truth = truths[sim_index]
-            x₀ = x₀s[sim_index]
-            param = params[sim_index]
-            loss_prefactor = losses_prefactors[sim_index]
-            _, l = autodiff(Enzyme.ReverseWithPrimal, 
-                            loss, 
-                            Active, 
-                            Duplicated(ps, dps), 
-                            Const(truth), 
-                            Const(param), 
-                            DuplicatedNoNeed(x₀, deepcopy(x₀)), 
-                            Const(ps_baseclosure), 
-                            Const(sts), 
-                            Const(NNs),
-                            Const(loss_prefactor))
-            ind_loss[sim_index] = l
-
-            opt_state, ps = Optimisers.update!(opt_state, ps, dps)
-
-            losses[iter] = l
-            dps .= 0
-        end
-        mean_loss = mean(ind_loss)
-
-        @printf("%s, Δt %s, iter %d/%d, loss average %6.10e, max NN weight %6.5e\n",
-                Dates.now(), prettytime(1e-9 * (time_ns() - wall_clock[1])), iter, maxiter, mean_loss, 
-                maximum(abs, ps))
-
-        if mean_loss < l_min
-            l_min = mean_loss
-            opt_statemin = deepcopy(opt_state)
-            ps_min .= ps
-        end
-
-        if iter % 200 == 0
-            @info "Saving intermediate results"
-            jldsave("$(FILE_DIR)/intermediate_training_results_round$(epoch)_epoch$(iter).jld2"; u=ps_min, state=opt_statemin, loss=l_min)
-            sols = [diagnose_fields(ps_min, param, x₀, ps_baseclosure, sts, NNs, data) for (data, x₀, param) in zip(train_data_plot.data, x₀s, params)]
-            for (index, sol) in enumerate(sols)
-                animate_data(train_data_plot.data[index], sol.sols_dimensional, sol.fluxes, sol.diffusivities, sol.sols_dimensional_noNN, sol.fluxes_noNN, sol.diffusivities_noNN, index, FILE_DIR; epoch="intermediateround$(epoch)_$(iter)")
-            end
-        end
-        wall_clock = [time_ns()]
-    end
-    return ps_min, (; total=losses), opt_statemin
-end
-
-# optimizers = [Optimisers.Adam(3e-4), Optimisers.Adam(1e-4), Optimisers.Adam(3e-5)]
-# maxiters = [1000, 1000, 1000]
-# end_epochs = cumsum(maxiters)
-# # optimizers = [Optimisers.Adam(3e-4)]
-# # maxiters = [3]
-# # end_epochs = cumsum(maxiters)
-
-# for (i, (epoch, optimizer, maxiter)) in enumerate(zip(end_epochs, optimizers, maxiters))
-#     global ps = ps
-#     ps, losses, opt_state = train_NDE_stochastic(ps, params, ps_baseclosure, sts, NNs, truths, x₀s, loss_prefactors, rng, train_data_plot; epoch=i, maxiter=maxiter, rule=optimizer)
-    
-#     jldsave("$(FILE_DIR)/training_results_epoch$(epoch).jld2"; u=ps, losses=losses, state=opt_state)
-#     sols = [diagnose_fields(ps, param, x₀, ps_baseclosure, sts, NNs, data) for (data, x₀, param) in zip(train_data_plot.data, x₀s, params)]
-#     for (index, sol) in enumerate(sols)
-#         animate_data(train_data_plot.data[index], sol.sols_dimensional, sol.fluxes, sol.diffusivities, sol.sols_dimensional_noNN, sol.fluxes_noNN, sol.diffusivities_noNN, index, FILE_DIR; epoch=epoch)
-#     end
-#     plot_loss(losses, FILE_DIR; epoch=epoch)
-# end
-
-function train_NDE_multipleics(ps, params, ps_baseclosure, sts, NNs, truths, x₀s, train_data_plot, timeframes, S_scaling; sim_index=[1], epoch=1, maxiter=2, rule=Optimisers.Adam())
+function train_NDE_multipleics(ps, params, ps_baseclosure, sts, NNs, truths, x₀s, train_data_plot, timeframes, S_scaling, momentum_ratio; sim_index=[1], epoch=1, maxiter=2, rule=Optimisers.Adam())
     opt_state = Optimisers.setup(rule, ps)
     opt_statemin = deepcopy(opt_state)
     l_min = Inf
@@ -923,7 +848,7 @@ function train_NDE_multipleics(ps, params, ps_baseclosure, sts, NNs, truths, x�
     losses = zeros(maxiter)
     mean_loss = mean(losses)
     ind_losses = [individual_loss(ps, truth, param, x₀, ps_baseclosure, sts, NNs, length(timeframes)) for (truth, x₀, param) in zip(truths[sim_index], x₀s[sim_index], params[sim_index])]
-    loss_prefactors = compute_loss_prefactor_density_contribution.(ind_losses, compute_density_contribution.(train_data.data), S_scaling)
+    loss_prefactors = compute_loss_prefactor_density_contribution.(ind_losses, compute_density_contribution.(train_data.data), S_scaling, momentum_ratio)
 
     for iter in 1:maxiter
         _, l = autodiff(Enzyme.ReverseWithPrimal, 
@@ -977,25 +902,29 @@ end
 optimizers = [Optimisers.Adam(3e-4), Optimisers.Adam(3e-5), Optimisers.Adam(3e-5), Optimisers.Adam(1e-5), Optimisers.Adam(1e-5), Optimisers.Adam(1e-5), Optimisers.Adam(1e-5)]
 maxiters = [2000, 5000, 5000, 2000, 2000, 2000, 2000]
 end_epochs = cumsum(maxiters)
+training_timeframes = [timeframes[1][1:5], timeframes[1][1:5], timeframes[1][1:10], timeframes[1][1:15], timeframes[1][1:20], timeframes[1][1:25], timeframes[1][1:27]]
+
+# optimizers = [Optimisers.Adam(1e-5)]
+# maxiters = [2000]
+# end_epochs = cumsum(maxiters) .+ 18000
+# training_timeframes = [timeframes[1][1:27]]
 
 sim_indices = 1:length(LES_FILE_DIRS)
 
-training_timeframes = [timeframes[1][1:5], timeframes[1][1:5], timeframes[1][1:10], timeframes[1][1:15], timeframes[1][1:20], timeframes[1][1:25], timeframes[1][1:27]]
-
 # optimizers = [Optimisers.Adam(3e-4)]
 # maxiters = [5]
-# end_epochs = cumsum(maxiters)
-
-# sim_indices = 1:12
-
+# end_epochs = cumsum(maxiters) .+ 18000
 # training_timeframes = [timeframes[1][1:27]]
+
+# sim_indices = 1:length(LES_FILE_DIRS)
 
 plot_timeframes = [training_timeframe[1]:training_timeframe[end] for training_timeframe in training_timeframes]
 sols = nothing
 for (i, (epoch, optimizer, maxiter, training_timeframe, plot_timeframe)) in enumerate(zip(end_epochs, optimizers, maxiters, training_timeframes, plot_timeframes))
     global ps = ps
     global sols = sols
-    ps, losses, opt_state = train_NDE_multipleics(ps, params, ps_baseclosure, sts, NNs, truths, x₀s, train_data_plot, training_timeframe, S_scaling; sim_index=sim_indices, epoch=i, maxiter=maxiter, rule=optimizer)
+    ps, losses, opt_state = train_NDE_multipleics(ps, params, ps_baseclosure, sts, NNs, truths, x₀s, train_data_plot, training_timeframe, S_scaling, momentum_ratio; sim_index=sim_indices, epoch=i, maxiter=maxiter, rule=optimizer)
+    # ps, losses, opt_state = train_NDE_multipleics(ps, params, ps_baseclosure, sts, NNs, truths, x₀s, train_data_plot, training_timeframe, S_scaling; sim_index=sim_indices, epoch=i+6, maxiter=maxiter, rule=optimizer)
     
     jldsave("$(FILE_DIR)/training_results_epoch$(epoch)_end$(training_timeframe[end]).jld2"; u=ps, losses=losses, state=opt_state)
 
@@ -1009,33 +938,3 @@ for (i, (epoch, optimizer, maxiter, training_timeframe, plot_timeframe)) in enum
     plot_loss(losses, FILE_DIR; suffix="epoch$(epoch)_end$(training_timeframe[end])")
 
 end
-
-# #%%
-# index = 8
-# fig = Figure(size=(1200, 600))
-# axT = CairoMakie.Axis(fig[1, 1], title="T", xlabel="T (°C)", ylabel="z (m)")
-# axS = CairoMakie.Axis(fig[1, 2], title="S", xlabel="S (g kg⁻¹)", ylabel="z (m)")
-# axρ = CairoMakie.Axis(fig[1, 3], title="ρ", xlabel="ρ (kg m⁻³)", ylabel="z (m)")
-
-# zC = train_data_plot.data[1].metadata["zC"]
-
-# lines!(axT, sols[index].sols_dimensional.T[:, 1], zC, label="initial")
-# lines!(axT, sols[index].sols_dimensional_noNN.T[:, end], zC, label="no NN")
-# lines!(axT, train_data_plot.data[index].profile.T.unscaled[:, length(plot_timeframes)], zC, label="truth")
-# lines!(axT, sols[index].sols_dimensional.T[:, length(plot_timeframes)], zC, label="NDE")
-
-# lines!(axS, sols[index].sols_dimensional.S[:, 1], zC, label="initial")
-# lines!(axS, sols[index].sols_dimensional_noNN.S[:, end], zC, label="no NN")
-# lines!(axS, train_data_plot.data[index].profile.S.unscaled[:, length(plot_timeframes)], zC, label="truth")
-# lines!(axS, sols[index].sols_dimensional.S[:, length(plot_timeframes)], zC, label="NDE")
-
-# lines!(axρ, sols[index].sols_dimensional.ρ[:, 1], zC, label="initial")
-# lines!(axρ, sols[index].sols_dimensional_noNN.ρ[:, end], zC, label="no NN")
-# lines!(axρ, train_data_plot.data[index].profile.ρ.unscaled[:, length(plot_timeframes)], zC, label="truth")
-# lines!(axρ, sols[index].sols_dimensional.ρ[:, length(plot_timeframes)], zC, label="NDE")
-
-# axislegend(axT, position=:lb)
-
-# display(fig)
-
-#%%

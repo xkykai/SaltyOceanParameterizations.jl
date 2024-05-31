@@ -36,10 +36,10 @@ end
 
 args = parse_commandline()
 
-LES_FILE_DIRS = ["./LES2/$(file)/instantaneous_timeseries.jld2" for file in LES_suite["train14PWFC"]]
+LES_FILE_DIRS = ["./LES2/$(file)/instantaneous_timeseries.jld2" for file in LES_suite["train22new"]]
 const S_scaling = args["S_scaling"]
 const momentum_ratio = args["momentum_ratio"]
-FILE_DIR = "./training_output/$(length(LES_FILE_DIRS))simPWFC_mom_$(momentum_ratio)_localbaseclosure_convectivetanh_shearlinear_EKI_oldprior"
+FILE_DIR = "./training_output/$(length(LES_FILE_DIRS))simnew_mom_$(momentum_ratio)_localbaseclosure_convectivetanh_shearlinear_EKI_oldprior"
 mkpath(FILE_DIR)
 
 field_datasets = [FieldDataset(FILE_DIR, backend=OnDisk()) for FILE_DIR in LES_FILE_DIRS]

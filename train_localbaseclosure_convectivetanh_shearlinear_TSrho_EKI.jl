@@ -29,17 +29,17 @@ function parse_commandline()
       "--momentum_ratio"
         help = "Momentum ratio"
         arg_type = Float64
-        default = 0.25
+        default = 1
     end
     return parse_args(s)
 end
 
 args = parse_commandline()
 
-LES_FILE_DIRS = ["./LES2/$(file)/instantaneous_timeseries.jld2" for file in LES_suite["train34new"]]
+LES_FILE_DIRS = ["./LES2/$(file)/instantaneous_timeseries.jld2" for file in LES_suite["train14PWFC"]]
 const S_scaling = args["S_scaling"]
 const momentum_ratio = args["momentum_ratio"]
-FILE_DIR = "./training_output/$(length(LES_FILE_DIRS))simnew_mom_$(momentum_ratio)_localbaseclosure_convectivetanh_shearlinear_EKI"
+FILE_DIR = "./training_output/$(length(LES_FILE_DIRS))simPWFC_mom_$(momentum_ratio)_localbaseclosure_convectivetanh_shearlinear_EKI"
 mkpath(FILE_DIR)
 
 field_datasets = [FieldDataset(FILE_DIR, backend=OnDisk()) for FILE_DIR in LES_FILE_DIRS]

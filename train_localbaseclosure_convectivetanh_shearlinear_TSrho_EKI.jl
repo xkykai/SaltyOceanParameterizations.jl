@@ -600,7 +600,7 @@ end
 ps_prior = ComponentArray(ν_conv=1.295, ν_shear=7.932e-02, m=-1.757e-01, Pr=1.193, ΔRi=0.0108)
 
 ind_losses = [individual_loss(ps_prior, truth, param, x₀) for (truth, x₀, param) in zip(truths, x₀s, params)]
-loss_prefactors = compute_loss_prefactor_density_contribution.(ind_losses, compute_density_contribution.(train_data.data), S_scaling)
+loss_prefactors = compute_loss_prefactor_density_contribution.(ind_losses, compute_density_contribution.(train_data.data), S_scaling, momentum_ratio)
 
 prior_loss = loss_multipleics(ps_prior, truths, params, x₀s, loss_prefactors)
 

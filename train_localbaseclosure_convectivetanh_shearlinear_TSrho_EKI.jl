@@ -39,7 +39,7 @@ args = parse_commandline()
 LES_FILE_DIRS = ["./LES2/$(file)/instantaneous_timeseries.jld2" for file in LES_suite["train21PWFC"]]
 const S_scaling = args["S_scaling"]
 const momentum_ratio = args["momentum_ratio"]
-FILE_DIR = "./training_output/$(length(LES_FILE_DIRS))simPWFC_mom_$(momentum_ratio)_localbaseclosure_convectivetanh_shearlinear_EKI"
+FILE_DIR = "./training_output/$(length(LES_FILE_DIRS))simPWFC_mom_$(momentum_ratio)_localbaseclosure_convectivetanh_shearlinear_EKI_oldprior"
 mkpath(FILE_DIR)
 
 field_datasets = [FieldDataset(FILE_DIR, backend=OnDisk()) for FILE_DIR in LES_FILE_DIRS]
@@ -67,7 +67,7 @@ caches = [(boundary=(uw=zeros(coarse_size+1), vw=zeros(coarse_size+1), wT=zeros(
 
 rng = Random.default_rng(123)
 
-ps = ComponentArray(ν_conv=1.295, ν_shear=7.932e-02, m=-1.757e-01, Pr=1.193, ΔRi=0.0108)
+ps = ComponentArray(ν_conv=0.5, ν_shear=0.05, m=-0.2, Pr=1, ΔRi=0.05)
 
 function predict_boundary_flux(params)
     uw = vcat(fill(params.uw.scaled.bottom, params.coarse_size), params.uw.scaled.top)
@@ -597,18 +597,18 @@ function plot_loss(losses, FILE_DIR; epoch=1)
     save("$(FILE_DIR)/losses_epoch$(epoch).png", fig, px_per_unit=8)
 end
 
-ps_prior = ComponentArray(ν_conv=1.295, ν_shear=7.932e-02, m=-1.757e-01, Pr=1.193, ΔRi=0.0108)
+ps_prior = ComponentArray(ν_conv=0.5, ν_shear=0.05, m=-0.2, Pr=1, ΔRi=0.05)
 
 ind_losses = [individual_loss(ps_prior, truth, param, x₀) for (truth, x₀, param) in zip(truths, x₀s, params)]
 loss_prefactors = compute_loss_prefactor_density_contribution.(ind_losses, compute_density_contribution.(train_data.data), S_scaling, momentum_ratio)
 
 prior_loss = loss_multipleics(ps_prior, truths, params, x₀s, loss_prefactors)
 
-prior_ν_conv = constrained_gaussian("ν_conv", ps_prior.ν_conv, 0.24, -Inf, Inf)
-prior_ν_shear = constrained_gaussian("ν_shear", ps_prior.ν_shear, 1.5e-2, -Inf, Inf)
-prior_m = constrained_gaussian("m", ps_prior.m, 3e-2, -Inf, Inf)
-prior_Pr = constrained_gaussian("Pr", ps_prior.Pr, 0.2, -Inf, Inf)
-prior_ΔRi = constrained_gaussian("ΔRi", ps_prior.ΔRi, 2e-3, -Inf, Inf)
+prior_ν_conv = constrained_gaussian("ν_conv", ps_prior.ν_conv, ps_prior.ν_conv/5, -Inf, Inf)
+prior_ν_shear = constrained_gaussian("ν_shear", ps_prior.ν_shear, ps_prior.ν_shear/5, -Inf, Inf)
+prior_m = constrained_gaussian("m", ps_prior.m, abs(ps_prior.m/5), -Inf, Inf)
+prior_Pr = constrained_gaussian("Pr", ps_prior.Pr, ps_prior.Pr/5, -Inf, Inf)
+prior_ΔRi = constrained_gaussian("ΔRi", ps_prior.ΔRi, ps_prior.ΔRi/5, -Inf, Inf)
 
 priors = combine_distributions([prior_ν_conv, prior_ν_shear, prior_m, prior_Pr, prior_ΔRi])
 target = [0.]

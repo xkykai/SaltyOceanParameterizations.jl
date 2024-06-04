@@ -65,14 +65,14 @@ end
 const S_scaling = args["S_scaling"]
 const momentum_ratio = args["momentum_ratio"]
 
-LES_FILE_DIRS = ["./LES2/$(file)/instantaneous_timeseries.jld2" for file in LES_suite["train22"]]
+LES_FILE_DIRS = ["./LES2/$(file)/instantaneous_timeseries.jld2" for file in LES_suite["train22new"]]
 
-FILE_DIR = "./training_output/NDE_$(length(LES_FILE_DIRS))sim_$(args["hidden_layer"])layer_$(args["hidden_layer_size"])_$(args["activation"])_mom_$(momentum_ratio)_localbaseclosure_2"
+FILE_DIR = "./training_output/NDE_$(length(LES_FILE_DIRS))simnew_$(args["hidden_layer"])layer_$(args["hidden_layer_size"])_$(args["activation"])_mom_$(momentum_ratio)_localbaseclosure_2"
 mkpath(FILE_DIR)
 @info FILE_DIR
 
-BASECLOSURE_FILE_DIR = "./training_output/localbaseclosure_convectivetanh_shearlinear_TSrho_EKI/training_results.jld2"
-# BASECLOSURE_FILE_DIR = "./training_output/22simnew_localbaseclosure_convectivetanh_shearlinear_EKI/training_results_mean.jld2"
+# BASECLOSURE_FILE_DIR = "./training_output/localbaseclosure_convectivetanh_shearlinear_TSrho_EKI/training_results.jld2"
+BASECLOSURE_FILE_DIR = "./training_output/14simPWFC_mom_1.0_localbaseclosure_convectivetanh_shearlinear_EKI/training_results_mean.jld2"
 
 field_datasets = [FieldDataset(FILE_DIR, backend=OnDisk()) for FILE_DIR in LES_FILE_DIRS]
 

@@ -1,8 +1,8 @@
-./Data
-./batch_scripts
-./logs
-./ARGO
-./latex
+/Data
+/batch_scripts
+/logs
+/ARGO
+/latex
 
 *.pdf
 *.png

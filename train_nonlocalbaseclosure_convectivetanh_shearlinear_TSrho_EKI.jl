@@ -1,9 +1,7 @@
 using LinearAlgebra
-using Lux, ComponentArrays, Random
+using ComponentArrays, Random
 using Printf
 using SaltyOceanParameterizations
-using SaltyOceanParameterizations.DataWrangling
-using SaltyOceanParameterizations: calculate_Ri, local_Ri_ν_convectivetanh_shearlinear, local_Ri_κ_convectivetanh_shearlinear
 using Oceananigans
 using JLD2
 using SeawaterPolynomials.TEOS10
@@ -32,9 +30,9 @@ end
 
 args = parse_commandline()
 
-LES_FILE_DIRS = ["./LES2/$(file)/instantaneous_timeseries.jld2" for file in LES_suite["train51new"]]
+LES_FILE_DIRS = ["./LES2/$(file)/instantaneous_timeseries.jld2" for file in LES_suite["train34new"]]
 const S_scaling = args["S_scaling"]
-FILE_DIR = "./training_output/$(length(LES_FILE_DIRS))simnew_nonlocalbaseclosure_convectivetanh_shearlinear_EKI"
+FILE_DIR = "./training_output/$(length(LES_FILE_DIRS))simnew_mom_1.0_nonlocalbaseclosure_convectivetanh_shearlinear_EKI"
 mkpath(FILE_DIR)
 field_datasets = [FieldDataset(FILE_DIR, backend=OnDisk()) for FILE_DIR in LES_FILE_DIRS]
 
@@ -51,6 +49,9 @@ x₀s = [(; u=data.profile.u.scaled[:, 1], v=data.profile.v.scaled[:, 1], T=data
 
 train_data_plot = LESDatasets(field_datasets, ZeroMeanUnitVarianceScaling, full_timeframes, coarse_size)
 
+params = ODEParams(train_data)
+params_plot = ODEParams(train_data_plot, scaling)
+
 function compute_wρ(T, S, wT, wS)
     eos = TEOS10EquationOfState()
     ρ₀ = eos.reference_density
@@ -61,61 +62,9 @@ end
 
 compute_wρ(train_data.data[3].profile.T.unscaled[end, 1], train_data.data[3].profile.S.unscaled[end, 1], train_data.data[3].flux.wT.surface.unscaled, train_data.data[3].flux.wS.surface.unscaled)
 
-params = [(                   f = data.coriolis.unscaled,
-                     f_scaled = data.coriolis.scaled,
-                            τ = data.times[end] - data.times[1],
-                        N_timesteps = length(data.times),
-                    scaled_time = (data.times .- data.times[1]) ./ (data.times[end] - data.times[1]),
-                            zC = data.metadata["zC"],
-                            H = data.metadata["original_grid"].Lz,
-                            g = data.metadata["gravitational_acceleration"],
-                    coarse_size = coarse_size, 
-                            Dᶜ = Dᶜ(coarse_size, data.metadata["zC"][2] - data.metadata["zC"][1]),
-                            Dᶠ = Dᶠ(coarse_size, data.metadata["zF"][3] - data.metadata["zF"][2]),
-                        Dᶜ_hat = Dᶜ(coarse_size, data.metadata["zC"][2] - data.metadata["zC"][1]) .* data.metadata["original_grid"].Lz,
-                        Dᶠ_hat = Dᶠ(coarse_size, data.metadata["zF"][3] - data.metadata["zF"][2]) .* data.metadata["original_grid"].Lz,
-                            uw = (scaled = (top=data.flux.uw.surface.scaled, bottom=data.flux.uw.bottom.scaled),
-                                unscaled = (top=data.flux.uw.surface.unscaled, bottom=data.flux.uw.bottom.unscaled)),
-                            vw = (scaled = (top=data.flux.vw.surface.scaled, bottom=data.flux.vw.bottom.scaled),
-                                unscaled = (top=data.flux.vw.surface.unscaled, bottom=data.flux.vw.bottom.unscaled)),
-                            wT = (scaled = (top=data.flux.wT.surface.scaled, bottom=data.flux.wT.bottom.scaled),
-                                unscaled = (top=data.flux.wT.surface.unscaled, bottom=data.flux.wT.bottom.unscaled)),
-                            wS = (scaled = (top=data.flux.wS.surface.scaled, bottom=data.flux.wS.bottom.scaled),
-                                unscaled = (top=data.flux.wS.surface.unscaled, bottom=data.flux.wS.bottom.unscaled)),
-                            wρ = (; unscaled = (top=compute_wρ(data.profile.T.unscaled[end, 1], data.profile.S.unscaled[end, 1], data.flux.wT.surface.unscaled, data.flux.wS.surface.unscaled),
-                                                bottom=compute_wρ(data.profile.T.unscaled[1, 1], data.profile.S.unscaled[1, 1], data.flux.wT.bottom.unscaled, data.flux.wS.bottom.unscaled))),
-                        scaling = train_data.scaling,
-                        ) for data in train_data.data]
-
-params_plot = [(                   f = data.coriolis.unscaled,
-                     f_scaled = data.coriolis.scaled,
-                            τ = data.times[end] - data.times[1],
-                        N_timesteps = length(data.times),
-                    scaled_time = (data.times .- data.times[1]) ./ (data.times[end] - data.times[1]),
-                            zC = data.metadata["zC"],
-                            H = data.metadata["original_grid"].Lz,
-                            g = data.metadata["gravitational_acceleration"],
-                    coarse_size = coarse_size, 
-                            Dᶜ = Dᶜ(coarse_size, data.metadata["zC"][2] - data.metadata["zC"][1]),
-                            Dᶠ = Dᶠ(coarse_size, data.metadata["zF"][3] - data.metadata["zF"][2]),
-                        Dᶜ_hat = Dᶜ(coarse_size, data.metadata["zC"][2] - data.metadata["zC"][1]) .* data.metadata["original_grid"].Lz,
-                        Dᶠ_hat = Dᶠ(coarse_size, data.metadata["zF"][3] - data.metadata["zF"][2]) .* data.metadata["original_grid"].Lz,
-                            uw = (scaled = (top=data.flux.uw.surface.scaled, bottom=data.flux.uw.bottom.scaled),
-                                unscaled = (top=data.flux.uw.surface.unscaled, bottom=data.flux.uw.bottom.unscaled)),
-                            vw = (scaled = (top=data.flux.vw.surface.scaled, bottom=data.flux.vw.bottom.scaled),
-                                unscaled = (top=data.flux.vw.surface.unscaled, bottom=data.flux.vw.bottom.unscaled)),
-                            wT = (scaled = (top=data.flux.wT.surface.scaled, bottom=data.flux.wT.bottom.scaled),
-                                unscaled = (top=data.flux.wT.surface.unscaled, bottom=data.flux.wT.bottom.unscaled)),
-                            wS = (scaled = (top=data.flux.wS.surface.scaled, bottom=data.flux.wS.bottom.scaled),
-                                unscaled = (top=data.flux.wS.surface.unscaled, bottom=data.flux.wS.bottom.unscaled)),
-                            wρ = (; unscaled = (top=compute_wρ(data.profile.T.unscaled[end, 1], data.profile.S.unscaled[end, 1], data.flux.wT.surface.unscaled, data.flux.wS.surface.unscaled),
-                                                bottom=compute_wρ(data.profile.T.unscaled[1, 1], data.profile.S.unscaled[1, 1], data.flux.wT.bottom.unscaled, data.flux.wS.bottom.unscaled))),
-                        scaling = train_data.scaling,
-                        ) for data in train_data_plot.data]
-
 rng = Random.default_rng(123)
 
-ps = ComponentArray(ν_conv=1., ν_shear=6.484e-02, m=-1.736e-01, Pr=1.1, ΔRi=0.1, C_en=0.3, x₀=5e-2, Δx=1e-2)
+ps = ComponentArray(ν_conv=1.369, ν_shear=7.712e-02, m=-1.79e-01, Pr=1.15, ΔRi=3.43e-3, C_en=0.16, x₀=2.69e-2, Δx=8e-3)
 
 function predict_boundary_flux(params)
     uw = vcat(fill(params.uw.scaled.bottom, params.coarse_size), params.uw.scaled.top)
@@ -223,7 +172,9 @@ function solve_NDE(ps, params, x₀, timestep_multiple=10)
         Ris .= calculate_Ri(u, v, ρ, Dᶠ, params.g, eos.reference_density, clamp_lims=(-Inf, Inf), ϵ=1e-11)
         Ris_above[1:end-1] .= Ris[2:end]
 
-        predict_diffusivities!(νs, κs, Ris, Ris_above, ∂ρ∂z, params.wρ.unscaled.top, ps)
+        wρ = compute_wρ(T[end], S[end], params.wT.unscaled.top, params.wS.unscaled.top)
+
+        predict_diffusivities!(νs, κs, Ris, Ris_above, ∂ρ∂z, wρ, ps)
 
         Dν = Dᶜ_hat * (-νs .* Dᶠ_hat)
         Dκ = Dᶜ_hat * (-κs .* Dᶠ_hat)
@@ -259,7 +210,7 @@ end
 # sol_u, sol_v, sol_T, sol_S, sol_ρ = solve_NDE(ps, params[1], x₀s[1], 10)
 
 #%%
-# sim_number = 12
+# sim_number = 8
 # sol_u, sol_v, sol_T, sol_S, sol_ρ = solve_NDE(ps, params[sim_number], x₀s[sim_number])
 # truth = truths[sim_number]
 # fig = Figure(size=(900, 600))
@@ -291,6 +242,7 @@ end
 
 # Legend(fig[1, 3], axT, orientation=:vertical, tellwidth=false)
 # display(fig)
+# save("$(FILE_DIR)/testplot.png", fig, px_per_unit=8)
 #%%
 function individual_loss(ps, truth, params, x₀)
     Dᶠ = params.Dᶠ
@@ -329,36 +281,7 @@ function loss(ps, truth, params, x₀, losses_prefactor=(; u=1, v=1, T=1, S=1, �
     return sum(values(losses) .* values(losses_prefactor))
 end
 
-# dps = deepcopy(ps) .= 0
-# autodiff(Enzyme.ReverseWithPrimal, 
-#          loss, 
-#          Active, 
-#          DuplicatedNoNeed(ps, dps), 
-#          Const(truths[1]), 
-#          Const(params[1]), 
-#          DuplicatedNoNeed(x₀s[1], deepcopy(x₀s[1])))
-
-function compute_density_contribution(data)
-    eos = TEOS10EquationOfState()
-    ρ = data.profile.ρ.unscaled[:, 1]
-    T = data.profile.T.unscaled[:, 1]
-    S = data.profile.S.unscaled[:, 1]
-
-    Δρ = maximum(ρ) - minimum(ρ)
-    ΔT = maximum(T) - minimum(T)
-    ΔS = maximum(S) - minimum(S)
-
-    α = mean(SeawaterPolynomials.thermal_expansion.(T, S, 0, Ref(eos)))
-    β = mean(SeawaterPolynomials.haline_contraction.(T, S, 0, Ref(eos)))
-    ρ₀ = eos.reference_density
-
-    T_contribution = α * ΔT * ρ₀
-    S_contribution = β * ΔS * ρ₀
-
-    return (; T=T_contribution, S=S_contribution, ρ=Δρ)
-end
-
-function compute_loss_prefactor_density_contribution(individual_loss, contribution, S_scaling=1.0)
+function compute_loss_prefactor_density_contribution(individual_loss, contribution, S_scaling=1.0, momentum_ratio=1.0)
     u_loss, v_loss, T_loss, S_loss, ρ_loss, ∂u∂z_loss, ∂v∂z_loss, ∂T∂z_loss, ∂S∂z_loss, ∂ρ∂z_loss = values(individual_loss)
     
     total_contribution = contribution.T + contribution.S
@@ -369,18 +292,12 @@ function compute_loss_prefactor_density_contribution(individual_loss, contributi
 
     ρ_prefactor = TS_loss / ρ_loss * 0.1 / 0.9
 
-    if u_loss > eps(eltype(u_loss))
-        u_prefactor = TS_loss / u_loss * 0.2 / 0.4
-    else
-        u_prefactor = TS_loss * 0.2 / 0.4
-        T_prefactor *= 2
-        S_prefactor *= 2
-    end
+    uv_loss = u_loss + v_loss
 
-    if v_loss > eps(eltype(v_loss))
-        v_prefactor = TS_loss / v_loss * 0.2 / 0.4
+    if uv_loss > eps(eltype(uv_loss))
+        uv_prefactor = TS_loss / uv_loss * momentum_ratio
     else
-        v_prefactor = TS_loss * 0.2 / 0.4
+        uv_prefactor = TS_loss * 1000
     end
 
     ∂T∂z_prefactor = T_prefactor
@@ -390,63 +307,29 @@ function compute_loss_prefactor_density_contribution(individual_loss, contributi
 
     ∂ρ∂z_prefactor = ∂TS∂z_loss / ∂ρ∂z_loss * 0.1 / 0.9
 
-    if ∂u∂z_loss > eps(eltype(∂u∂z_loss))
-        ∂u∂z_prefactor = ∂TS∂z_loss / ∂u∂z_loss * 0.2 / 0.4
+    ∂uv∂z_loss = ∂u∂z_loss + ∂v∂z_loss
+
+    if ∂uv∂z_loss > eps(eltype(∂uv∂z_loss))
+        ∂uv∂z_prefactor = ∂TS∂z_loss / ∂uv∂z_loss * momentum_ratio
     else
-        ∂u∂z_prefactor = ∂TS∂z_loss * 0.2 / 0.4
+        ∂uv∂z_prefactor = ∂TS∂z_loss * 1000
     end
 
-    if ∂v∂z_loss > eps(eltype(∂v∂z_loss))
-        ∂v∂z_prefactor = ∂TS∂z_loss / ∂v∂z_loss * 0.2 / 0.4
-    else
-        ∂v∂z_prefactor = ∂TS∂z_loss * 0.2 / 0.4
-    end
-
-    profile_loss = u_prefactor * u_loss + v_prefactor * v_loss + T_prefactor * T_loss + S_prefactor * S_loss + ρ_prefactor * ρ_loss
-    gradient_loss = ∂u∂z_prefactor * ∂u∂z_loss + ∂v∂z_prefactor * ∂v∂z_loss + ∂T∂z_prefactor * ∂T∂z_loss + ∂S∂z_prefactor * ∂S∂z_loss + ∂ρ∂z_prefactor * ∂ρ∂z_loss
+    profile_loss = uv_prefactor * u_loss + uv_prefactor * v_loss + T_prefactor * T_loss + S_prefactor * S_loss + ρ_prefactor * ρ_loss
+    gradient_loss = ∂uv∂z_prefactor * ∂u∂z_loss + ∂uv∂z_prefactor * ∂v∂z_loss + ∂T∂z_prefactor * ∂T∂z_loss + ∂S∂z_prefactor * ∂S∂z_loss + ∂ρ∂z_prefactor * ∂ρ∂z_loss
 
     gradient_prefactor = profile_loss / gradient_loss
 
     ∂ρ∂z_prefactor *= gradient_prefactor
     ∂T∂z_prefactor *= gradient_prefactor
     ∂S∂z_prefactor *= gradient_prefactor
-    ∂u∂z_prefactor *= gradient_prefactor
-    ∂v∂z_prefactor *= gradient_prefactor
+    ∂uv∂z_prefactor *= gradient_prefactor
 
     S_prefactor *= S_scaling
     ∂S∂z_prefactor *= S_scaling
 
-    return (u=u_prefactor, v=v_prefactor, T=T_prefactor, S=S_prefactor, ρ=ρ_prefactor, ∂u∂z=∂u∂z_prefactor, ∂v∂z=∂v∂z_prefactor, ∂T∂z=∂T∂z_prefactor, ∂S∂z=∂S∂z_prefactor, ∂ρ∂z=∂ρ∂z_prefactor)
+    return (u=uv_prefactor, v=uv_prefactor, T=T_prefactor, S=S_prefactor, ρ=ρ_prefactor, ∂u∂z=∂uv∂z_prefactor, ∂v∂z=∂uv∂z_prefactor, ∂T∂z=∂T∂z_prefactor, ∂S∂z=∂S∂z_prefactor, ∂ρ∂z=∂ρ∂z_prefactor)
 end
-
-# function compute_loss_prefactor(individual_loss)
-#     u_loss, v_loss, T_loss, S_loss, ρ_loss, ∂u∂z_loss, ∂v∂z_loss, ∂T∂z_loss, ∂S∂z_loss, ∂ρ∂z_loss = values(individual_loss)
-
-#     T_prefactor = 1
-#     S_prefactor = T_loss / S_loss
-#     ρ_prefactor = T_loss / ρ_loss
-#     u_prefactor = T_loss / u_loss
-#     v_prefactor = T_loss / v_loss
-
-#     ∂T∂z_prefactor = 1
-#     ∂S∂z_prefactor = ∂T∂z_loss / ∂S∂z_loss
-#     ∂ρ∂z_prefactor = ∂T∂z_loss / ∂ρ∂z_loss
-#     ∂u∂z_prefactor = ∂T∂z_loss / ∂u∂z_loss
-#     ∂v∂z_prefactor = ∂T∂z_loss / ∂v∂z_loss
-
-#     profile_loss = u_prefactor * u_loss + v_prefactor * v_loss + T_prefactor * T_loss + S_prefactor * S_loss + ρ_prefactor * ρ_loss
-#     gradient_loss = ∂u∂z_prefactor * ∂u∂z_loss + ∂v∂z_prefactor * ∂v∂z_loss + ∂T∂z_prefactor * ∂T∂z_loss + ∂S∂z_prefactor * ∂S∂z_loss + ∂ρ∂z_prefactor * ∂ρ∂z_loss
-
-#     gradient_prefactor = profile_loss / gradient_loss
-
-#     ∂ρ∂z_prefactor *= gradient_prefactor
-#     ∂T∂z_prefactor *= gradient_prefactor
-#     ∂S∂z_prefactor *= gradient_prefactor
-#     ∂u∂z_prefactor *= gradient_prefactor
-#     ∂v∂z_prefactor *= gradient_prefactor
-
-#     return (u=u_prefactor, v=v_prefactor, T=T_prefactor, S=S_prefactor, ρ=ρ_prefactor, ∂u∂z=∂u∂z_prefactor, ∂v∂z=∂v∂z_prefactor, ∂T∂z=∂T∂z_prefactor, ∂S∂z=∂S∂z_prefactor, ∂ρ∂z=∂ρ∂z_prefactor)
-# end
 
 function loss_multipleics(ps, truths, params, x₀s, losses_prefactors)
     losses = [loss(ps, truth, param, x₀, loss_prefactor) for (truth, x₀, param, loss_prefactor) in zip(truths, x₀s, params, losses_prefactors)]
@@ -455,18 +338,6 @@ end
 
 ind_losses = [individual_loss(ps, truth, param, x₀) for (truth, x₀, param) in zip(truths, x₀s, params)]
 loss_prefactors = compute_loss_prefactor_density_contribution.(ind_losses, compute_density_contribution.(train_data.data))
-
-# dps = deepcopy(ps) .= 0
-# autodiff(Enzyme.ReverseWithPrimal, 
-#          loss_multipleics, 
-#          Active, 
-#          DuplicatedNoNeed(ps, dps), 
-#          DuplicatedNoNeed(truths, deepcopy(truths)), 
-#          DuplicatedNoNeed(params, deepcopy(params)), 
-#          DuplicatedNoNeed(x₀s, deepcopy(x₀s)),
-#          DuplicatedNoNeed(loss_prefactors, deepcopy(loss_prefactors)))
-
-# @info "Gradient taken $(dps)"
 
 function predict_diffusive_flux(Ris, Ris_above, ∂ρ∂z, Qρ, u_hat, v_hat, T_hat, S_hat, ps_baseclosure, params)
     νs, κs = predict_diffusivities(Ris, Ris_above, ∂ρ∂z, Qρ, ps_baseclosure)
@@ -530,7 +401,12 @@ function diagnose_fields(ps, params, x₀, train_data_plot, timestep_multiple=2)
     Ris_above = zeros(coarse_size+1, size(Ris, 2))
     Ris_above[1:end-1, :] .= Ris[2:end, :]
 
-    νs, κs = predict_diffusivities(Ris, Ris_above, ∂ρ∂zs, params.wρ.unscaled.top, ps)
+    wρs = zeros(size(Ris))
+    for (i, wρ) in enumerate(eachcol(wρs))
+        wρ .= compute_wρ(Ts[end, i], Ss[end, i], params.wT.unscaled.top, params.wS.unscaled.top)
+    end
+
+    νs, κs = predict_diffusivities(Ris, Ris_above, ∂ρ∂zs, wρs, ps)
 
     uw_diffusive_boundarys = zeros(coarse_size+1, size(Ts, 2))
     vw_diffusive_boundarys = zeros(coarse_size+1, size(Ts, 2))
@@ -538,7 +414,7 @@ function diagnose_fields(ps, params, x₀, train_data_plot, timestep_multiple=2)
     wS_diffusive_boundarys = zeros(coarse_size+1, size(Ts, 2))
 
     for i in 1:size(wT_diffusive_boundarys, 2)
-        uw_diffusive_boundarys[:, i], vw_diffusive_boundarys[:, i], wT_diffusive_boundarys[:, i], wS_diffusive_boundarys[:, i] = predict_diffusive_boundary_flux_dimensional(Ris[:, i], Ris_above[:, i], ∂ρ∂zs[:, i], params.wρ.unscaled.top, sols.u[:, i], sols.v[:, i], sols.T[:, i], sols.S[:, i], ps, params)
+        uw_diffusive_boundarys[:, i], vw_diffusive_boundarys[:, i], wT_diffusive_boundarys[:, i], wS_diffusive_boundarys[:, i] = predict_diffusive_boundary_flux_dimensional(Ris[:, i], Ris_above[:, i], ∂ρ∂zs[:, i], wρs[:, i], sols.u[:, i], sols.v[:, i], sols.T[:, i], sols.S[:, i], ps, params)
     end
 
     uw_totals = uw_diffusive_boundarys
@@ -728,32 +604,20 @@ function plot_loss(losses, FILE_DIR; epoch=1)
     save("$(FILE_DIR)/losses_epoch$(epoch).png", fig, px_per_unit=8)
 end
 
-ps_prior = ComponentArray(ν_conv=1.369, ν_shear=7.712e-02, m=-1.79e-01, Pr=1.15, ΔRi=3.43e-3, C_en=0.16, x₀=2.69e-2, Δx=8e-3)
+ps_prior = ps
 
 ind_losses = [individual_loss(ps_prior, truth, param, x₀) for (truth, x₀, param) in zip(truths, x₀s, params)]
 loss_prefactors = compute_loss_prefactor_density_contribution.(ind_losses, compute_density_contribution.(train_data.data), S_scaling)
-# ind_loss = (; u=sum([loss.u for loss in ind_losses]),
-#               v=sum([loss.v for loss in ind_losses]),
-#               T=sum([loss.T for loss in ind_losses]), 
-#               S=sum([loss.S for loss in ind_losses]), 
-#               ρ=sum([loss.ρ for loss in ind_losses]), 
-#               ∂u∂z=sum([loss.∂u∂z for loss in ind_losses]),
-#               ∂v∂z=sum([loss.∂v∂z for loss in ind_losses]),
-#               ∂T∂z=sum([loss.∂T∂z for loss in ind_losses]), 
-#               ∂S∂z=sum([loss.∂S∂z for loss in ind_losses]), 
-#               ∂ρ∂z=sum([loss.∂ρ∂z for loss in ind_losses]))
-
-# loss_prefactor = compute_loss_prefactor(ind_loss)
 prior_loss = loss_multipleics(ps_prior, truths, params, x₀s, loss_prefactors)
 
-prior_ν_conv = constrained_gaussian("ν_conv", ps_prior.ν_conv, 0.1, -Inf, Inf)
-prior_ν_shear = constrained_gaussian("ν_shear", ps_prior.ν_shear, 1e-2, -Inf, Inf)
-prior_m = constrained_gaussian("m", ps_prior.m, 3e-2, -Inf, Inf)
-prior_Pr = constrained_gaussian("Pr", ps_prior.Pr, 0.2, -Inf, Inf)
-prior_ΔRi = constrained_gaussian("ΔRi", ps_prior.ΔRi, 5e-4, -Inf, Inf)
-prior_C_en = constrained_gaussian("C_en", ps_prior.C_en, 3e-2, -Inf, Inf)
-prior_x₀ = constrained_gaussian("x₀", ps_prior.x₀, 5e-3, -Inf, Inf)
-prior_Δx = constrained_gaussian("Δx", ps_prior.Δx, 1e-3, -Inf, Inf)
+prior_ν_conv = constrained_gaussian("ν_conv", ps_prior.ν_conv, ps_prior.ν_conv/5, -Inf, Inf)
+prior_ν_shear = constrained_gaussian("ν_shear", ps_prior.ν_shear, ps_prior.ν_shear/5, -Inf, Inf)
+prior_m = constrained_gaussian("m", ps_prior.m, abs(ps_prior.m/5), -Inf, Inf)
+prior_Pr = constrained_gaussian("Pr", ps_prior.Pr, ps_prior.Pr/5, -Inf, Inf)
+prior_ΔRi = constrained_gaussian("ΔRi", ps_prior.ΔRi, ps_prior.ΔRi/5, -Inf, Inf)
+prior_C_en = constrained_gaussian("C_en", ps_prior.C_en, ps_prior.C_en/5, -Inf, Inf)
+prior_x₀ = constrained_gaussian("x₀", ps_prior.x₀, ps_prior.x₀/5, -Inf, Inf)
+prior_Δx = constrained_gaussian("Δx", ps_prior.Δx, ps_prior.Δx/5, -Inf, Inf)
 
 priors = combine_distributions([prior_ν_conv, prior_ν_shear, prior_m, prior_Pr, prior_ΔRi, prior_C_en, prior_x₀, prior_Δx])
 target = [0.]
@@ -806,12 +670,14 @@ jldsave("$(FILE_DIR)/training_results_mean.jld2", u=ps_final_mean)
 jldsave("$(FILE_DIR)/training_results_min.jld2", u=ps_final_min)
 
 plot_loss(losses, FILE_DIR; epoch=1)
-for i in eachindex(params)
+Threads.@threads for i in eachindex(params)
+    @info i
     sols, fluxes, diffusivities = diagnose_fields(ps_final_mean, params_plot[i], x₀s[i], train_data_plot.data[i])
     animate_data(train_data_plot.data[i], diffusivities, sols, fluxes, diffusivities, i, FILE_DIR; epoch="1_mean")
 end
 
-for i in eachindex(params)
+Threads.@threads for i in eachindex(params)
+    @info i
     sols, fluxes, diffusivities = diagnose_fields(ps_final_min, params_plot[i], x₀s[i], train_data_plot.data[i])
     animate_data(train_data_plot.data[i], diffusivities, sols, fluxes, diffusivities, i, FILE_DIR; epoch="1_min")
 end

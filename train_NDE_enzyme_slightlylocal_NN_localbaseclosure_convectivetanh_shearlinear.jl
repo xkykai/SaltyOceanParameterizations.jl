@@ -42,7 +42,7 @@ function parse_commandline()
       "--momentum_ratio"
         help = "Momentum ratio"
         arg_type = Float64
-        default = 0.25
+        default = 1.0
     end
     return parse_args(s)
 end
@@ -67,7 +67,7 @@ const momentum_ratio = args["momentum_ratio"]
 
 LES_FILE_DIRS = ["./LES2/$(file)/instantaneous_timeseries.jld2" for file in LES_suite["train22"]]
 
-FILE_DIR = "./training_output/NDE_$(length(LES_FILE_DIRS))sim_$(args["hidden_layer"])layer_$(args["hidden_layer_size"])_$(args["activation"])_mom_$(momentum_ratio)_localbaseclosure"
+FILE_DIR = "./training_output/NDE_$(length(LES_FILE_DIRS))sim_$(args["hidden_layer"])layer_$(args["hidden_layer_size"])_$(args["activation"])_mom_$(momentum_ratio)_localbaseclosure_2"
 mkpath(FILE_DIR)
 @info FILE_DIR
 

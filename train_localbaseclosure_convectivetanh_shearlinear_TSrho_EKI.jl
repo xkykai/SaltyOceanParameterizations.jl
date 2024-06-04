@@ -1,9 +1,7 @@
 using LinearAlgebra
-using Lux, ComponentArrays, Random
+using ComponentArrays, Random
 using Printf
 using SaltyOceanParameterizations
-using SaltyOceanParameterizations.DataWrangling
-using SaltyOceanParameterizations: calculate_Ri, local_Ri_ν_convectivetanh_shearlinear, local_Ri_κ_convectivetanh_shearlinear
 using Oceananigans
 using JLD2
 using SeawaterPolynomials.TEOS10

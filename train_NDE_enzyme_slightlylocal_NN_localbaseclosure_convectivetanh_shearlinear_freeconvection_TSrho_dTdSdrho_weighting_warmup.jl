@@ -1,8 +1,5 @@
 using LinearAlgebra
-using DiffEqBase
-import SciMLBase
 using Lux, ComponentArrays, Random
-using Optimization
 using Printf
 using Enzyme
 using SaltyOceanParameterizations
@@ -12,7 +9,6 @@ using Oceananigans
 using JLD2
 using SeawaterPolynomials.TEOS10
 using CairoMakie
-using SparseArrays
 using Optimisers
 using Printf
 import Dates
@@ -76,7 +72,7 @@ end
 
 const S_scaling = args["S_scaling"]
 
-FILE_DIR = "./training_output/finallocalfullrun_slightlylocalNN_dTSrho/NDE_enzyme_$(args["hidden_layer"])layer_$(args["hidden_layer_size"])_$(args["activation"])_$(S_scaling)Sscaling"
+FILE_DIR = "./training_output/NDE_enzyme_$(args["hidden_layer"])layer_$(args["hidden_layer_size"])_$(args["activation"])_$(S_scaling)Sscaling_testenzyme"
 mkpath(FILE_DIR)
 @info FILE_DIR
 
@@ -280,7 +276,8 @@ function solve_NDE(ps, params, x₀, ps_baseclosure, sts, NNs, timestep, Nt, tim
         Ris .= calculate_Ri(zeros(coarse_size), zeros(coarse_size), ρ, Dᶠ, params.g, eos.reference_density, clamp_lims=(-Inf, Inf))
         predict_diffusivities!(νs, κs, Ris, ps_baseclosure)
 
-        LHS .= Dᶜ_hat * (-κs .* Dᶠ_hat)
+        LHS .= Tridiagonal(Dᶜ_hat * (-κs .* Dᶠ_hat))
+        # LHS .= Dᶜ_hat * (-κs .* Dᶠ_hat)
         LHS .*= -τ / H^2
 
         wT_residual, wS_residual = predict_residual_flux(∂T∂z_hat, ∂S∂z_hat, ∂ρ∂z_hat, ps, params, sts, NNs)
@@ -356,19 +353,19 @@ end
 
 loss(ps, truths[1], params[1], x₀s[1], ps_baseclosure, sts, NNs, params[1].scaled_time[2] - params[1].scaled_time[1], length(25:10:45))
 
-# dps = deepcopy(ps) .= 0
-# autodiff(Enzyme.ReverseWithPrimal, 
-#          loss, 
-#          Active, 
-#          DuplicatedNoNeed(ps, dps), 
-#          Const(truths[1]), 
-#          Const(params[1]), 
-#          DuplicatedNoNeed(x₀s[1], deepcopy(x₀s[1])), 
-#          Const(ps_baseclosure), 
-#          Const(sts), 
-#          Const(NNs),
-#          Const(params[1].scaled_time[2] - params[1].scaled_time[1]),
-#          Const(length(25:10:45)))
+dps = deepcopy(ps) .= 0
+autodiff(Enzyme.ReverseWithPrimal, 
+         loss, 
+         Active, 
+         DuplicatedNoNeed(ps, dps), 
+         Const(truths[1]), 
+         Const(params[1]), 
+         DuplicatedNoNeed(x₀s[1], deepcopy(x₀s[1])), 
+         Const(ps_baseclosure), 
+         Const(sts), 
+         Const(NNs),
+         Const(params[1].scaled_time[2] - params[1].scaled_time[1]),
+         Const(length(25:10:45)))
 
 function compute_density_contribution(data)
     eos = TEOS10EquationOfState()
@@ -466,20 +463,20 @@ end
 
 loss_multipleics(ps, [truths[1]], [params[1]], [x₀s[1]], ps_baseclosure, sts, NNs, [loss_prefactors[1]], params[1].scaled_time[2] - params[1].scaled_time[1], length(25:10:45))
 
-# dps = deepcopy(ps) .= 0
-# autodiff(Enzyme.ReverseWithPrimal, 
-#          loss_multipleics, 
-#          Active, 
-#          DuplicatedNoNeed(ps, dps), 
-#          DuplicatedNoNeed([truths[1]], deepcopy([truths[1]])), 
-#          DuplicatedNoNeed([params[1]], deepcopy([params[1]])), 
-#          DuplicatedNoNeed([x₀s[1]], deepcopy([x₀s[1]])), 
-#          DuplicatedNoNeed(ps_baseclosure, deepcopy(ps_baseclosure)), 
-#          Const(sts), 
-#          Const(NNs), 
-#          DuplicatedNoNeed([loss_prefactors[1]], deepcopy([loss_prefactors[1]])),
-#          Const(params[1].scaled_time[2] - params[1].scaled_time[1]),
-#          Const(length(25:10:45)))
+dps = deepcopy(ps) .= 0
+autodiff(Enzyme.ReverseWithPrimal, 
+         loss_multipleics, 
+         Active, 
+         DuplicatedNoNeed(ps, dps), 
+         DuplicatedNoNeed([truths[1]], deepcopy([truths[1]])), 
+         DuplicatedNoNeed([params[1]], deepcopy([params[1]])), 
+         DuplicatedNoNeed([x₀s[1]], deepcopy([x₀s[1]])), 
+         DuplicatedNoNeed(ps_baseclosure, deepcopy(ps_baseclosure)), 
+         Const(sts), 
+         Const(NNs), 
+         DuplicatedNoNeed([loss_prefactors[1]], deepcopy([loss_prefactors[1]])),
+         Const(params[1].scaled_time[2] - params[1].scaled_time[1]),
+         Const(length(25:10:45)))
 
 function predict_residual_flux_dimensional(∂T∂z_hat, ∂S∂z_hat, ∂ρ∂z_hat, p, params, sts, NNs)
     wT_hat, wS_hat = predict_residual_flux(∂T∂z_hat, ∂S∂z_hat, ∂ρ∂z_hat, p, params, sts, NNs)

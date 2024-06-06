@@ -1029,33 +1029,3 @@ for (i, (epoch, optimizer, maxiter, training_timeframe, plot_timeframe)) in enum
     plot_loss(losses, FILE_DIR; suffix="epoch$(epoch)_end$(training_timeframe[end])")
 
 end
-
-# #%%
-# index = 8
-# fig = Figure(size=(1200, 600))
-# axT = CairoMakie.Axis(fig[1, 1], title="T", xlabel="T (°C)", ylabel="z (m)")
-# axS = CairoMakie.Axis(fig[1, 2], title="S", xlabel="S (g kg⁻¹)", ylabel="z (m)")
-# axρ = CairoMakie.Axis(fig[1, 3], title="ρ", xlabel="ρ (kg m⁻³)", ylabel="z (m)")
-
-# zC = train_data_plot.data[1].metadata["zC"]
-
-# lines!(axT, sols[index].sols_dimensional.T[:, 1], zC, label="initial")
-# lines!(axT, sols[index].sols_dimensional_noNN.T[:, end], zC, label="no NN")
-# lines!(axT, train_data_plot.data[index].profile.T.unscaled[:, length(plot_timeframes)], zC, label="truth")
-# lines!(axT, sols[index].sols_dimensional.T[:, length(plot_timeframes)], zC, label="NDE")
-
-# lines!(axS, sols[index].sols_dimensional.S[:, 1], zC, label="initial")
-# lines!(axS, sols[index].sols_dimensional_noNN.S[:, end], zC, label="no NN")
-# lines!(axS, train_data_plot.data[index].profile.S.unscaled[:, length(plot_timeframes)], zC, label="truth")
-# lines!(axS, sols[index].sols_dimensional.S[:, length(plot_timeframes)], zC, label="NDE")
-
-# lines!(axρ, sols[index].sols_dimensional.ρ[:, 1], zC, label="initial")
-# lines!(axρ, sols[index].sols_dimensional_noNN.ρ[:, end], zC, label="no NN")
-# lines!(axρ, train_data_plot.data[index].profile.ρ.unscaled[:, length(plot_timeframes)], zC, label="truth")
-# lines!(axρ, sols[index].sols_dimensional.ρ[:, length(plot_timeframes)], zC, label="NDE")
-
-# axislegend(axT, position=:lb)
-
-# display(fig)
-
-#%%

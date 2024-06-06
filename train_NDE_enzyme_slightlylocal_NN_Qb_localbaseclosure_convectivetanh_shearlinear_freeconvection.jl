@@ -60,13 +60,14 @@ end
 
 const S_scaling = args["S_scaling"]
 
-FILE_DIR = "./training_output/NDE_enzyme_Qb_$(args["hidden_layer"])layer_$(args["hidden_layer_size"])_$(args["activation"])_$(S_scaling)Sscaling_testenzyme"
+LES_FILE_DIRS = ["./LES2/$(file)/instantaneous_timeseries.jld2" for file in LES_suite["trainFC8"]]
+
+FILE_DIR = "./training_output/NDE_FC_Qb_$(length(LES_FILE_DIRS))sim_$(args["hidden_layer"])layer_$(args["hidden_layer_size"])_$(args["activation"])"
 mkpath(FILE_DIR)
 @info FILE_DIR
 
-LES_FILE_DIRS = ["./LES_training/$(file)/instantaneous_timeseries.jld2" for file in LES_suite["trainFC8"]]
-
-BASECLOSURE_FILE_DIR = "./training_output/21simPWFC_mom_1.0_localbaseclosure_convectivetanh_shearlinear_EKI/training_results_mean.jld2"
+# BASECLOSURE_FILE_DIR = "./training_output/21simPWFC_mom_1.0_localbaseclosure_convectivetanh_shearlinear_EKI/training_results_mean.jld2"
+BASECLOSURE_FILE_DIR = "./training_output/localbaseclosure_convectivetanh_shearlinear_TSrho_EKI/training_results.jld2"
 
 field_datasets = [FieldDataset(FILE_DIR, backend=OnDisk()) for FILE_DIR in LES_FILE_DIRS]
 
@@ -726,21 +727,21 @@ function train_NDE_multipleics(ps, params, ps_baseclosure, sts, NNs, truths, xâ‚
     return ps_min, (; total=losses), opt_statemin
 end
 
-# optimizers = [Optimisers.Adam(3e-4), Optimisers.Adam(1e-4), Optimisers.Adam(1e-4), Optimisers.Adam(1e-4), Optimisers.Adam(1e-4), Optimisers.Adam(1e-4)]
-# maxiters = [2000, 2000, 2000, 2000, 2000, 2000]
-# end_epochs = cumsum(maxiters)
-
-# sim_indices = [1, 2, 3, 4, 5, 6, 7, 8]
-
-# training_timeframes = [timeframes[1][1:5], timeframes[1][1:10], timeframes[1][1:15], timeframes[1][1:20], timeframes[1][1:25], timeframes[1][1:27]]
-
-optimizers = [Optimisers.Adam(3e-4)]
-maxiters = [20]
+optimizers = [Optimisers.Adam(3e-4), Optimisers.Adam(1e-4), Optimisers.Adam(1e-4), Optimisers.Adam(1e-4), Optimisers.Adam(1e-4), Optimisers.Adam(1e-4)]
+maxiters = [2000, 2000, 2000, 2000, 2000, 2000]
 end_epochs = cumsum(maxiters)
 
-sim_indices = [1, 2, 3, 4, 5, 6, 7, 8]
+sim_indices = 1:length(LES_FILE_DIRS)
 
-training_timeframes = [timeframes[1][1:5]]
+training_timeframes = [timeframes[1][1:5], timeframes[1][1:10], timeframes[1][1:15], timeframes[1][1:20], timeframes[1][1:25], timeframes[1][1:27]]
+
+# optimizers = [Optimisers.Adam(3e-4)]
+# maxiters = [20]
+# end_epochs = cumsum(maxiters)
+
+# sim_indices = 1:length(LES_FILE_DIRS)
+
+# training_timeframes = [timeframes[1][1:5]]
 
 plot_timeframes = [training_timeframe[1]:training_timeframe[end] for training_timeframe in training_timeframes]
 sols = nothing

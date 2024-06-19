@@ -39,6 +39,7 @@ const S_scaling = args["S_scaling"]
 const momentum_ratio = args["momentum_ratio"]
 FILE_DIR = "./training_output/$(length(LES_FILE_DIRS))simnew_mom_$(momentum_ratio)_localbaseclosure_convectivetanh_shearlinear_2Pr_EKI"
 mkpath(FILE_DIR)
+@info FILE_DIR
 
 field_datasets = [FieldDataset(FILE_DIR, backend=OnDisk()) for FILE_DIR in LES_FILE_DIRS]
 
@@ -204,40 +205,40 @@ end
 
 # sol_u, sol_v, sol_T, sol_S, sol_ρ = solve_NDE(ps, params[6], x₀s[6], 10)
 # sol_u, sol_v, sol_T, sol_S, sol_ρ = solve_NDE(ps, params[1], x₀s[1], 10)
-sol_u, sol_v, sol_T, sol_S, sol_ρ = solve_NDE(ps, params[4], x₀s[4])
+# sol_u, sol_v, sol_T, sol_S, sol_ρ = solve_NDE(ps, params[4], x₀s[4])
 
-# #%%
-truth = truths[4]
-fig = Figure(size=(900, 600))
-axu = CairoMakie.Axis(fig[1, 1], xlabel="T", ylabel="z")
-axv = CairoMakie.Axis(fig[1, 2], xlabel="T", ylabel="z")
-axT = CairoMakie.Axis(fig[2, 1], xlabel="T", ylabel="z")
-axS = CairoMakie.Axis(fig[2, 2], xlabel="S", ylabel="z")
-axρ = CairoMakie.Axis(fig[2, 3], xlabel="ρ", ylabel="z")
+# # #%%
+# truth = truths[4]
+# fig = Figure(size=(900, 600))
+# axu = CairoMakie.Axis(fig[1, 1], xlabel="T", ylabel="z")
+# axv = CairoMakie.Axis(fig[1, 2], xlabel="T", ylabel="z")
+# axT = CairoMakie.Axis(fig[2, 1], xlabel="T", ylabel="z")
+# axS = CairoMakie.Axis(fig[2, 2], xlabel="S", ylabel="z")
+# axρ = CairoMakie.Axis(fig[2, 3], xlabel="ρ", ylabel="z")
 
-lines!(axu, sol_u[:, 1], params[1].zC, label="initial")
-lines!(axu, sol_u[:, end], params[1].zC, label="final")
-lines!(axu, truth.u[:, end], train_data.data[1].metadata["zC"], label="truth")
+# lines!(axu, sol_u[:, 1], params[1].zC, label="initial")
+# lines!(axu, sol_u[:, end], params[1].zC, label="final")
+# lines!(axu, truth.u[:, end], train_data.data[1].metadata["zC"], label="truth")
 
-lines!(axv, sol_v[:, 1], params[1].zC, label="initial")
-lines!(axv, sol_v[:, end], params[1].zC, label="final")
-lines!(axv, truth.v[:, end], train_data.data[1].metadata["zC"], label="truth")
+# lines!(axv, sol_v[:, 1], params[1].zC, label="initial")
+# lines!(axv, sol_v[:, end], params[1].zC, label="final")
+# lines!(axv, truth.v[:, end], train_data.data[1].metadata["zC"], label="truth")
 
-lines!(axT, sol_T[:, 1], params[1].zC, label="initial")
-lines!(axT, sol_T[:, end], params[1].zC, label="final")
-lines!(axT, truth.T[:, end], train_data.data[1].metadata["zC"], label="truth")
+# lines!(axT, sol_T[:, 1], params[1].zC, label="initial")
+# lines!(axT, sol_T[:, end], params[1].zC, label="final")
+# lines!(axT, truth.T[:, end], train_data.data[1].metadata["zC"], label="truth")
 
-lines!(axS, sol_S[:, 1], params[1].zC, label="initial")
-lines!(axS, sol_S[:, end], params[1].zC, label="final")
-lines!(axS, truth.S[:, end], train_data.data[1].metadata["zC"], label="truth")
+# lines!(axS, sol_S[:, 1], params[1].zC, label="initial")
+# lines!(axS, sol_S[:, end], params[1].zC, label="final")
+# lines!(axS, truth.S[:, end], train_data.data[1].metadata["zC"], label="truth")
 
-lines!(axρ, sol_ρ[:, 1], params[1].zC, label="initial")
-lines!(axρ, sol_ρ[:, end], params[1].zC, label="final")
-lines!(axρ, truth.ρ[:, end], train_data.data[1].metadata["zC"], label="truth")
+# lines!(axρ, sol_ρ[:, 1], params[1].zC, label="initial")
+# lines!(axρ, sol_ρ[:, end], params[1].zC, label="final")
+# lines!(axρ, truth.ρ[:, end], train_data.data[1].metadata["zC"], label="truth")
 
-Legend(fig[1, 3], axT, orientation=:vertical, tellwidth=false)
-save("$(FILE_DIR)/initial_final.png", fig)
-display(fig)
+# Legend(fig[1, 3], axT, orientation=:vertical, tellwidth=false)
+# save("$(FILE_DIR)/initial_final.png", fig)
+# display(fig)
 #%%
 function individual_loss(ps, truth, params, x₀)
     Dᶠ = params.Dᶠ

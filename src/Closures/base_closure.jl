@@ -118,3 +118,35 @@ end
 function nonlocal_Ri_κ_convectivetanh_shearlinear_const(ν, Pr)
     return ν / Pr
 end
+
+function local_Ri_ν_convectivetanh_shearlinear_2Pr(Ri, ν_conv, ν_shear, Riᶜ, ΔRi)
+    Riᶜ <= 0 && return NaN
+    ν₀ = 1e-5
+
+    if Ri >= 0
+        ν = clamp((ν₀ - ν_shear) * Ri / Riᶜ + ν_shear, ν₀, ν_shear)
+    else
+        ν = (ν_shear - ν_conv) * tanh_fast(Ri / ΔRi) + ν_shear
+    end
+
+    return ν
+end
+
+function local_Ri_κ_convectivetanh_shearlinear_2Pr(Ri, ν_conv, ν_shear, Riᶜ, ΔRi, Pr_conv, Pr_shear)
+    # ν = local_Ri_ν_convectivetanh_shearlinear(Ri, ν_conv, ν_shear, m, ΔRi)
+    # return ν / Pr
+
+    Riᶜ <= 0 && return NaN
+    κ₀ = 1e-5 / Pr_shear
+    κ_shear = ν_shear / Pr_shear
+    κ_conv = ν_conv / Pr_conv
+
+    if Ri >= 0
+        κ = clamp((κ₀ - κ_shear) * Ri / Riᶜ + κ_shear, κ₀, κ_shear)
+    else
+        κ = (κ_shear - κ_conv) * tanh_fast(Ri / ΔRi) + κ_shear
+    end
+
+    return κ
+end
+

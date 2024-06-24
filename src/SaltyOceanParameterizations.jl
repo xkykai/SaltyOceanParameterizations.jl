@@ -11,7 +11,7 @@ export
     local_Ri_ν_convectivetanh_shearlinear, local_Ri_κ_convectivetanh_shearlinear,
     nonlocal_Ri_ν_convectivetanh_shearlinear, nonlocal_Ri_κ_convectivetanh_shearlinear,
     local_Ri_ν_convectivetanh_shearlinear_2Pr, local_Ri_κ_convectivetanh_shearlinear_2Pr,
-    nonlocal_Ri_ν_convectivetanh_shearlinear_2Pr, nonlocal_Ri_κ_convectivetanh_shearlinear_2Pr
+    nonlocal_Ri_ν_convectivetanh_shearlinear_2Pr, nonlocal_Ri_κ_convectivetanh_shearlinear_2Pr,
     predict_boundary_flux, predict_boundary_flux!, predict_diffusive_flux, predict_diffusive_boundary_flux_dimensional,
     compute_density_contribution, s,
     LES_suite

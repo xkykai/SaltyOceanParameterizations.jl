@@ -60,14 +60,14 @@ end
 
 const S_scaling = args["S_scaling"]
 
-LES_FILE_DIRS = ["./LES2/$(file)/instantaneous_timeseries.jld2" for file in LES_suite["trainFC8"]]
+LES_FILE_DIRS = ["./LES2/$(file)/instantaneous_timeseries.jld2" for file in LES_suite["trainFC15new"]]
 
-FILE_DIR = "./training_output/NDE_FC_Qb_$(length(LES_FILE_DIRS))sim_$(args["hidden_layer"])layer_$(args["hidden_layer_size"])_$(args["activation"])"
+FILE_DIR = "./training_output/NDE_FC_Qb_$(length(LES_FILE_DIRS))simnew_$(args["hidden_layer"])layer_$(args["hidden_layer_size"])_$(args["activation"])_2Pr"
 mkpath(FILE_DIR)
 @info FILE_DIR
 
-# BASECLOSURE_FILE_DIR = "./training_output/21simPWFC_mom_1.0_localbaseclosure_convectivetanh_shearlinear_EKI/training_results_mean.jld2"
-BASECLOSURE_FILE_DIR = "./training_output/localbaseclosure_convectivetanh_shearlinear_TSrho_EKI/training_results.jld2"
+BASECLOSURE_FILE_DIR = "./training_output/51simnew_mom_1.0_localbaseclosure_convectivetanh_shearlinear_2Pr_EKI/training_results_mean.jld2"
+# BASECLOSURE_FILE_DIR = "./training_output/localbaseclosure_convectivetanh_shearlinear_TSrho_EKI/training_results.jld2"
 
 field_datasets = [FieldDataset(FILE_DIR, backend=OnDisk()) for FILE_DIR in LES_FILE_DIRS]
 
@@ -111,6 +111,8 @@ ps = ComponentArray(; wT=ps_wT, wS=ps_wS)
 NNs = (wT=wT_NN, wS=wS_NN)
 sts = (wT=st_wT, wS=st_wS)
 
+scaling_params = write_scaling_params(scaling)
+
 function predict_residual_flux(∂T∂z_hat, ∂S∂z_hat, ∂ρ∂z_hat, T_top, S_top, p, params, sts, NNs)
     eos = TEOS10EquationOfState()
     α = SeawaterPolynomials.thermal_expansion(T_top, S_top, 0, eos)
@@ -150,14 +152,14 @@ function predict_boundary_flux!(wT, wS, params)
 end
 
 function predict_diffusivities(Ris, ps_baseclosure)
-    νs = local_Ri_ν_convectivetanh_shearlinear.(Ris, ps_baseclosure.ν_conv, ps_baseclosure.ν_shear, ps_baseclosure.m, ps_baseclosure.ΔRi)
-    κs = local_Ri_κ_convectivetanh_shearlinear.(νs, ps_baseclosure.Pr)
+    νs = local_Ri_ν_convectivetanh_shearlinear_2Pr.(Ris, ps_baseclosure.ν_conv, ps_baseclosure.ν_shear, ps_baseclosure.Riᶜ, ps_baseclosure.ΔRi)
+    κs = local_Ri_κ_convectivetanh_shearlinear_2Pr.(Ris, ps_baseclosure.ν_conv, ps_baseclosure.ν_shear, ps_baseclosure.Riᶜ, ps_baseclosure.ΔRi, ps_baseclosure.Pr_conv, ps_baseclosure.Pr_shear)
     return νs, κs
 end
 
 function predict_diffusivities!(νs, κs, Ris, ps_baseclosure)
-    νs .= local_Ri_ν_convectivetanh_shearlinear.(Ris, ps_baseclosure.ν_conv, ps_baseclosure.ν_shear, ps_baseclosure.m, ps_baseclosure.ΔRi)
-    κs .= local_Ri_κ_convectivetanh_shearlinear.(νs, ps_baseclosure.Pr)
+    νs .= local_Ri_ν_convectivetanh_shearlinear_2Pr.(Ris, ps_baseclosure.ν_conv, ps_baseclosure.ν_shear, ps_baseclosure.Riᶜ, ps_baseclosure.ΔRi)
+    κs .= local_Ri_κ_convectivetanh_shearlinear_2Pr.(Ris, ps_baseclosure.ν_conv, ps_baseclosure.ν_shear, ps_baseclosure.Riᶜ, ps_baseclosure.ΔRi, ps_baseclosure.Pr_conv, ps_baseclosure.Pr_shear)
     return nothing
 end
 
@@ -252,26 +254,27 @@ end
 sol_T, sol_S, sol_ρ = solve_NDE(ps, params[1], x₀s[1], ps_baseclosure, sts, NNs, length(25:10:45))
 
 #%%
-truth = truths[1]
-fig = Figure(size=(900, 600))
-axT = CairoMakie.Axis(fig[1, 1], xlabel="T", ylabel="z")
-axS = CairoMakie.Axis(fig[1, 2], xlabel="S", ylabel="z")
-axρ = CairoMakie.Axis(fig[1, 3], xlabel="ρ", ylabel="z")
+# truth = truths[1]
+# fig = Figure(size=(900, 600))
+# axT = CairoMakie.Axis(fig[1, 1], xlabel="T", ylabel="z")
+# axS = CairoMakie.Axis(fig[1, 2], xlabel="S", ylabel="z")
+# axρ = CairoMakie.Axis(fig[1, 3], xlabel="ρ", ylabel="z")
 
-lines!(axT, sol_T[:, 1], params[1].zC, label="initial")
-lines!(axT, sol_T[:, end], params[1].zC, label="final")
-lines!(axT, truth.T[:, length(25:10:45)], train_data.data[1].metadata["zC"], label="truth")
+# lines!(axT, sol_T[:, 1], params[1].zC, label="initial")
+# lines!(axT, sol_T[:, end], params[1].zC, label="final")
+# lines!(axT, truth.T[:, length(25:10:45)], train_data.data[1].metadata["zC"], label="truth")
 
-lines!(axS, sol_S[:, 1], params[1].zC, label="initial")
-lines!(axS, sol_S[:, end], params[1].zC, label="final")
-lines!(axS, truth.S[:, length(25:10:45)], train_data.data[1].metadata["zC"], label="truth")
+# lines!(axS, sol_S[:, 1], params[1].zC, label="initial")
+# lines!(axS, sol_S[:, end], params[1].zC, label="final")
+# lines!(axS, truth.S[:, length(25:10:45)], train_data.data[1].metadata["zC"], label="truth")
 
-lines!(axρ, sol_ρ[:, 1], params[1].zC, label="initial")
-lines!(axρ, sol_ρ[:, end], params[1].zC, label="final")
-lines!(axρ, truth.ρ[:, length(25:10:45)], train_data.data[1].metadata["zC"], label="truth")
+# lines!(axρ, sol_ρ[:, 1], params[1].zC, label="initial")
+# lines!(axρ, sol_ρ[:, end], params[1].zC, label="final")
+# lines!(axρ, truth.ρ[:, length(25:10:45)], train_data.data[1].metadata["zC"], label="truth")
 
-axislegend(axT, orientation=:vertical, position=:rb)
-display(fig)
+# axislegend(axT, orientation=:vertical, position=:rb)
+# save("$(FILE_DIR)/initial_final_truth.png", fig)
+# display(fig)
 #%%
 function individual_loss(ps, truth, params, x₀, ps_baseclosure, sts, NNs, Nt, tstart=1, timestep_multiple=10)
     Dᶠ = params.Dᶠ
@@ -302,20 +305,20 @@ function loss(ps, truth, params, x₀, ps_baseclosure, sts, NNs, Nt, tstart=1, t
     return sum(values(losses) .* values(losses_prefactor))
 end
 
-loss(ps, truths[1], params[1], x₀s[1], ps_baseclosure, sts, NNs, length(25:10:45))
+# loss(ps, truths[1], params[1], x₀s[1], ps_baseclosure, sts, NNs, length(25:10:45))
 
-dps = deepcopy(ps) .= 0
-autodiff(Enzyme.ReverseWithPrimal, 
-         loss, 
-         Active, 
-         DuplicatedNoNeed(ps, dps), 
-         Const(truths[1]), 
-         Const(params[1]), 
-         DuplicatedNoNeed(x₀s[1], deepcopy(x₀s[1])), 
-         Const(ps_baseclosure), 
-         Const(sts), 
-         Const(NNs),
-         Const(length(25:10:45)))
+# dps = deepcopy(ps) .= 0
+# autodiff(Enzyme.ReverseWithPrimal, 
+#          loss, 
+#          Active, 
+#          DuplicatedNoNeed(ps, dps), 
+#          Const(truths[1]), 
+#          Const(params[1]), 
+#          DuplicatedNoNeed(x₀s[1], deepcopy(x₀s[1])), 
+#          Const(ps_baseclosure), 
+#          Const(sts), 
+#          Const(NNs),
+#          Const(length(25:10:45)))
 
 function compute_loss_prefactor_density_contribution(individual_loss, contribution, S_scaling=1.0)
     T_loss, S_loss, ρ_loss, ∂T∂z_loss, ∂S∂z_loss, ∂ρ∂z_loss = values(individual_loss)
@@ -357,35 +360,35 @@ function loss_multipleics(ps, truths, params, x₀s, ps_baseclosure, sts, NNs, l
     return mean(losses)
 end
 
-loss_multipleics(ps, [truths[1]], [params[1]], [x₀s[1]], ps_baseclosure, sts, NNs, [loss_prefactors[1]], length(25:10:45))
+# loss_multipleics(ps, [truths[1]], [params[1]], [x₀s[1]], ps_baseclosure, sts, NNs, [loss_prefactors[1]], length(25:10:45))
 
-dps = deepcopy(ps) .= 0
-autodiff(Enzyme.ReverseWithPrimal, 
-         loss_multipleics, 
-         Active, 
-         DuplicatedNoNeed(ps, dps), 
-         DuplicatedNoNeed([truths[1]], deepcopy([truths[1]])), 
-         DuplicatedNoNeed([params[1]], deepcopy([params[1]])), 
-         DuplicatedNoNeed([x₀s[1]], deepcopy([x₀s[1]])), 
-         DuplicatedNoNeed(ps_baseclosure, deepcopy(ps_baseclosure)), 
-         Const(sts), 
-         Const(NNs), 
-         DuplicatedNoNeed([loss_prefactors[1]], deepcopy([loss_prefactors[1]])),
-         Const(length(25:10:45)))
+# dps = deepcopy(ps) .= 0
+# autodiff(Enzyme.ReverseWithPrimal, 
+#          loss_multipleics, 
+#          Active, 
+#          DuplicatedNoNeed(ps, dps), 
+#          DuplicatedNoNeed([truths[1]], deepcopy([truths[1]])), 
+#          DuplicatedNoNeed([params[1]], deepcopy([params[1]])), 
+#          DuplicatedNoNeed([x₀s[1]], deepcopy([x₀s[1]])), 
+#          DuplicatedNoNeed(ps_baseclosure, deepcopy(ps_baseclosure)), 
+#          Const(sts), 
+#          Const(NNs), 
+#          DuplicatedNoNeed([loss_prefactors[1]], deepcopy([loss_prefactors[1]])),
+#          Const(length(25:10:45)))
 
-dps = deepcopy(ps) .= 0
-autodiff(Enzyme.ReverseWithPrimal, 
-         loss_multipleics, 
-         Active, 
-         DuplicatedNoNeed(ps, dps), 
-         DuplicatedNoNeed(truths[1:2], deepcopy(truths[1:2])), 
-         DuplicatedNoNeed(params[1:2], deepcopy(params[1:2])), 
-         DuplicatedNoNeed(x₀s[1:2], deepcopy(x₀s[1:2])), 
-         DuplicatedNoNeed(ps_baseclosure, deepcopy(ps_baseclosure)), 
-         Const(sts), 
-         Const(NNs), 
-         DuplicatedNoNeed(loss_prefactors[1:2], deepcopy(loss_prefactors[1:2])),
-         Const(length(25:10:45)))
+# dps = deepcopy(ps) .= 0
+# autodiff(Enzyme.ReverseWithPrimal, 
+#          loss_multipleics, 
+#          Active, 
+#          DuplicatedNoNeed(ps, dps), 
+#          DuplicatedNoNeed(truths[1:2], deepcopy(truths[1:2])), 
+#          DuplicatedNoNeed(params[1:2], deepcopy(params[1:2])), 
+#          DuplicatedNoNeed(x₀s[1:2], deepcopy(x₀s[1:2])), 
+#          DuplicatedNoNeed(ps_baseclosure, deepcopy(ps_baseclosure)), 
+#          Const(sts), 
+#          Const(NNs), 
+#          DuplicatedNoNeed(loss_prefactors[1:2], deepcopy(loss_prefactors[1:2])),
+#          Const(length(25:10:45)))
 
 function predict_residual_flux_dimensional(∂T∂z_hat, ∂S∂z_hat, ∂ρ∂z_hat, T_top, S_top, p, params, sts, NNs)
     wT_hat, wS_hat = predict_residual_flux(∂T∂z_hat, ∂S∂z_hat, ∂ρ∂z_hat, T_top, S_top, p, params, sts, NNs)
@@ -666,7 +669,7 @@ function plot_loss(losses, FILE_DIR; suffix=1)
     save("$(FILE_DIR)/losses_$(suffix).png", fig, px_per_unit=8)
 end
 
-function train_NDE_multipleics(ps, params, ps_baseclosure, sts, NNs, truths, x₀s, train_data_plot, timeframes, S_scaling; sim_index=[1], epoch=1, maxiter=2, rule=Optimisers.Adam())
+function train_NDE_multipleics(ps, params, ps_baseclosure, sts, NNs, truths, x₀s, train_data_plot, timeframes, S_scaling, scaling_params; sim_index=[1], epoch=1, maxiter=2, rule=Optimisers.Adam())
     opt_state = Optimisers.setup(rule, ps)
     opt_statemin = deepcopy(opt_state)
     l_min = Inf
@@ -716,7 +719,7 @@ function train_NDE_multipleics(ps, params, ps_baseclosure, sts, NNs, truths, x�
 
         if iter % 1000 == 0
             @info "Saving intermediate results"
-            jldsave("$(FILE_DIR)/intermediate_training_results_round$(epoch)_epoch$(iter)_end$(timeframes[end]).jld2"; u=ps_min, state=opt_statemin, loss=l_min)
+            jldsave("$(FILE_DIR)/intermediate_training_results_round$(epoch)_epoch$(iter)_end$(timeframes[end]).jld2"; u=ps_min, state=opt_statemin, loss=l_min, scaling=scaling_params, model=NNs, sts=sts)
             # sols = [diagnose_fields(ps_min, param, x₀, ps_baseclosure, sts, NNs, data) for (data, x₀, param) in zip(train_data_plot.data, x₀s, params)]
             # for (index, sol) in enumerate(sols)
             #     animate_data(train_data_plot.data[index], sol.sols_dimensional, sol.fluxes, sol.diffusivities, sol.sols_dimensional_noNN, sol.fluxes_noNN, sol.diffusivities_noNN, index, FILE_DIR; epoch="intermediateround$(epoch)_$(iter)")
@@ -727,13 +730,12 @@ function train_NDE_multipleics(ps, params, ps_baseclosure, sts, NNs, truths, x�
     return ps_min, (; total=losses), opt_statemin
 end
 
-optimizers = [Optimisers.Adam(3e-4), Optimisers.Adam(1e-4), Optimisers.Adam(1e-4), Optimisers.Adam(1e-4), Optimisers.Adam(1e-4), Optimisers.Adam(1e-4)]
-maxiters = [2000, 2000, 2000, 2000, 2000, 2000]
+optimizers = [Optimisers.Adam(3e-4), Optimisers.Adam(3e-5), Optimisers.Adam(3e-5), Optimisers.Adam(1e-5), Optimisers.Adam(1e-5), Optimisers.Adam(1e-5), Optimisers.Adam(1e-5)]
+maxiters = [2000, 5000, 5000, 2000, 2000, 2000, 2000]
 end_epochs = cumsum(maxiters)
+training_timeframes = [timeframes[1][1:5], timeframes[1][1:5], timeframes[1][1:10], timeframes[1][1:15], timeframes[1][1:20], timeframes[1][1:25], timeframes[1][1:27]]
 
 sim_indices = 1:length(LES_FILE_DIRS)
-
-training_timeframes = [timeframes[1][1:5], timeframes[1][1:10], timeframes[1][1:15], timeframes[1][1:20], timeframes[1][1:25], timeframes[1][1:27]]
 
 # optimizers = [Optimisers.Adam(3e-4)]
 # maxiters = [20]
@@ -748,9 +750,9 @@ sols = nothing
 for (i, (epoch, optimizer, maxiter, training_timeframe, plot_timeframe)) in enumerate(zip(end_epochs, optimizers, maxiters, training_timeframes, plot_timeframes))
     global ps = ps
     global sols = sols
-    ps, losses, opt_state = train_NDE_multipleics(ps, params, ps_baseclosure, sts, NNs, truths, x₀s, train_data_plot, training_timeframe, S_scaling; sim_index=sim_indices, epoch=i, maxiter=maxiter, rule=optimizer)
+    ps, losses, opt_state = train_NDE_multipleics(ps, params, ps_baseclosure, sts, NNs, truths, x₀s, train_data_plot, training_timeframe, S_scaling, scaling_params; sim_index=sim_indices, epoch=i, maxiter=maxiter, rule=optimizer)
     
-    jldsave("$(FILE_DIR)/training_results_epoch$(epoch)_end$(training_timeframe[end]).jld2"; u=ps, losses=losses, state=opt_state)
+    jldsave("$(FILE_DIR)/training_results_epoch$(epoch)_end$(training_timeframe[end]).jld2"; u=ps, losses=losses, state=opt_state, scaling=scaling_params, model=NNs, sts=sts)
 
     sols = [diagnose_fields(ps, param, x₀, ps_baseclosure, sts, NNs, data, length(plot_timeframe)) for (data, x₀, param) in zip(train_data_plot.data[sim_indices], x₀s[sim_indices], params_plot[sim_indices])]
 

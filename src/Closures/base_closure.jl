@@ -157,7 +157,7 @@ function nonlocal_Ri_ν_convectivetanh_shearlinear_2Pr(Ri, Ri_above, ∂ρ∂z, 
     return ν_local + ν_nonlocal
 end
 
-function nonlocal_Ri_κ_convectivetanh_shearlinear_2Pr(Ri, Ri_above, ∂ρ∂z, Qρ, ν_conv, ν_shear, Riᶜ, ΔRi, Pr_conv, Pr_shear, C_en, x₀, Δx, Pr, ϵ=1e-11)
+function nonlocal_Ri_κ_convectivetanh_shearlinear_2Pr(Ri, Ri_above, ∂ρ∂z, Qρ, ν_conv, ν_shear, Riᶜ, ΔRi, Pr_conv, Pr_shear, C_en, x₀, Δx, ϵ=1e-11)
     ν = nonlocal_Ri_ν_convectivetanh_shearlinear_2Pr(Ri, Ri_above, ∂ρ∂z, Qρ, ν_conv, ν_shear, Riᶜ, ΔRi, C_en, x₀, Δx, ϵ)
     return ifelse(Ri >= 0, ν / Pr_shear, ν / Pr_conv)
 end

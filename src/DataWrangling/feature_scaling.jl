@@ -81,4 +81,8 @@ end
 (s::DiffusivityScaling)(x) = scale(x, s)
 Base.inv(s::DiffusivityScaling) = y -> unscale(y, s)
 
+function write_scaling_params(scaling)
+    return NamedTuple(key=>NamedTuple(param=>getproperty(scaling[key], param) for param in fieldnames(typeof(scaling[key]))) for key in keys(scaling))
+end
+
 

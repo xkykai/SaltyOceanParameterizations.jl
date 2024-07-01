@@ -2,7 +2,7 @@ module DataWrangling
 export ZeroMeanUnitVarianceScaling, MinMaxScaling, DiffusivityScaling
 export LESData, LESDatasets, LESDatasetsB
 export ODEParam, ODEParams
-export write_scaling_params
+export construct_zeromeanunitvariance_scaling
 
 include("feature_scaling.jl")
 include("LES_data_processing.jl")

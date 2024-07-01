@@ -248,6 +248,9 @@ jldopen("$(FILE_DIR)/model_inference_run.jld2", "w") do file
     file["T₀s"] = T₀s
     file["S₀s"] = S₀s
     file["params"] = params
+    file["sol_T"] = sol_T
+    file["sol_S"] = sol_S
+    file["sol_ρ"] = sol_ρ
 end
 
 fig = Figure(size=(900, 600))

@@ -83,9 +83,9 @@ function parse_commandline()
         arg_type = Float64
         default = 0.1
       "--max_dt"
-        help = "Maximum timestep (seconds)"
+        help = "Maximum timestep (minutes)"
         arg_type = Float64
-        default = 10. * 60
+        default = 2.
       "--stop_time"
         help = "Stop time of simulation (days)"
         arg_type = Float64

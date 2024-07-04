@@ -21,10 +21,16 @@ struct ODEParam{F, FS, T, NT, ST, Z, L, G, CS, DC, DF, DCH, DFH, UW, VW, WT, WS,
                  scaling :: SC
 end
 
-function ODEParam(data::LESData, scaling)
+function ODEParam(data::LESData, scaling; abs_f=false)
     coarse_size = data.metadata["Nz"]
+    if abs_f
+        f_scaled = scaling.f(abs(data.coriolis.unscaled))
+    else
+        f_scaled = scaling.f(data.coriolis.unscaled)
+    end
+
     return ODEParam(data.coriolis.unscaled,
-                    scaling.f(data.coriolis.unscaled),
+                    f_scaled,
                     data.times[end] - data.times[1],
                     length(data.times),
                     (data.times .- data.times[1]) ./ (data.times[end] - data.times[1]),
@@ -47,6 +53,6 @@ function ODEParam(data::LESData, scaling)
                     scaling)
 end
 
-function ODEParams(dataset::LESDatasets, scaling=dataset.scaling)
-    return [ODEParam(data, scaling) for data in dataset.data]
+function ODEParams(dataset::LESDatasets, scaling=dataset.scaling; abs_f=false)
+    return [ODEParam(data, scaling, abs_f=abs_f) for data in dataset.data]
 end

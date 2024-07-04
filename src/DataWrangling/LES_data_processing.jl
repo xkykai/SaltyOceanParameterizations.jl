@@ -321,7 +321,7 @@ end
 """
     Construct a `LESDatasets` object from a list of `LESData` objects. `scaling` is applied to all `LESData` objects in `datasets`. `tim`
 """
-function LESDatasets(datasets::Vector, scaling::Type{<:AbstractFeatureScaling}, timeframes::Vector, coarse_size=32)
+function LESDatasets(datasets::Vector, scaling::Type{<:AbstractFeatureScaling}, timeframes::Vector, coarse_size=32; abs_f=false)
     eos = TEOS10EquationOfState()
     u = [hcat([coarse_grain(interior(data["ubar"][i], 1, 1, :), coarse_size, Center) for i in timeframe]...) for (data, timeframe) in zip(datasets, timeframes)]
     v = [hcat([coarse_grain(interior(data["vbar"][i], 1, 1, :), coarse_size, Center) for i in timeframe]...) for (data, timeframe) in zip(datasets, timeframes)]
@@ -378,7 +378,11 @@ function LESDatasets(datasets::Vector, scaling::Type{<:AbstractFeatureScaling}, 
     ∂S∂z = [hcat([D * S′[:, i] for i in axes(S′, 2)]...) for (D, S′) in zip(Dᶠs, S)]
     ∂ρ∂z = [hcat([D * ρ′[:, i] for i in axes(ρ′, 2)]...) for (D, ρ′) in zip(Dᶠs, ρ)]
 
-    f = [data.metadata["coriolis_parameter"] for data in datasets]
+    if abs_f
+        f = [abs(data.metadata["coriolis_parameter"]) for data in datasets]
+    else
+        f = [data.metadata["coriolis_parameter"] for data in datasets]
+    end
 
     scalings = (   u = scaling([(u...)...]), 
                    v = scaling([(v...)...]), 

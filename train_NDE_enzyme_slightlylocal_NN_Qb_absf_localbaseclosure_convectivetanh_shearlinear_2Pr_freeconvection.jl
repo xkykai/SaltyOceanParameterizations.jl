@@ -60,7 +60,7 @@ end
 
 const S_scaling = args["S_scaling"]
 
-LES_FILE_DIRS = ["./LES2/$(file)/instantaneous_timeseries.jld2" for file in LES_suite["trainFC18new"]]
+LES_FILE_DIRS = ["./LES2/$(file)/instantaneous_timeseries.jld2" for file in LES_suite["trainFC24new"]]
 
 FILE_DIR = "./training_output/NDE_FC_Qb_absf_$(length(LES_FILE_DIRS))simnew_$(args["hidden_layer"])layer_$(args["hidden_layer_size"])_$(args["activation"])_2Pr"
 mkpath(FILE_DIR)
@@ -111,7 +111,7 @@ ps = ComponentArray(; wT=ps_wT, wS=ps_wS)
 NNs = (wT=wT_NN, wS=wS_NN)
 sts = (wT=st_wT, wS=st_wS)
 
-scaling_params = write_scaling_params(scaling)
+scaling_params = construct_zeromeanunitvariance_scaling(scaling)
 
 function predict_residual_flux(∂T∂z_hat, ∂S∂z_hat, ∂ρ∂z_hat, T_top, S_top, p, params, sts, NNs)
     eos = TEOS10EquationOfState()

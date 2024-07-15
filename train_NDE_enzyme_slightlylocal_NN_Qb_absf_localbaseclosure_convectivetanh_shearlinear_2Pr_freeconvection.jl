@@ -111,7 +111,7 @@ ps = ComponentArray(; wT=ps_wT, wS=ps_wS)
 NNs = (wT=wT_NN, wS=wS_NN)
 sts = (wT=st_wT, wS=st_wS)
 
-scaling_params = construct_zeromeanunitvariance_scaling(scaling)
+scaling_params = write_scaling_params(scaling)
 
 function predict_residual_flux(∂T∂z_hat, ∂S∂z_hat, ∂ρ∂z_hat, T_top, S_top, p, params, sts, NNs)
     eos = TEOS10EquationOfState()

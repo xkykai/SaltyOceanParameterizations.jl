@@ -5,7 +5,7 @@ export
     LESData, LESDatasets, LESDatasetsB,
     ODEParam, ODEParams,
     ZeroMeanUnitVarianceScaling, MinMaxScaling, DiffusivityScaling,
-    construct_zeromeanunitvariance_scaling,
+    write_scaling_params,
     Dᶜ, Dᶠ, Dᶜ!, Dᶠ!,
     calculate_Ri, calculate_Ri!,
     local_Ri_ν_convectivetanh_shearlinear, local_Ri_κ_convectivetanh_shearlinear,

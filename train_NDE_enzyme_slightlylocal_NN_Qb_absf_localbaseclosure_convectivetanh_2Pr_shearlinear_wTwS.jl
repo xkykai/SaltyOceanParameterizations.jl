@@ -915,10 +915,10 @@ training_timeframes = [timeframes[1][1:5], timeframes[1][1:5], timeframes[1][1:1
 
 sim_indices = 1:length(LES_FILE_DIRS)
 
-optimizers = [Optimisers.Adam(3e-4)]
-maxiters = [5]
-end_epochs = cumsum(maxiters)
-training_timeframes = [timeframes[1][1:5]]
+# optimizers = [Optimisers.Adam(3e-4)]
+# maxiters = [5]
+# end_epochs = cumsum(maxiters)
+# training_timeframes = [timeframes[1][1:5]]
 
 # sim_indices = 1:length(LES_FILE_DIRS)
 

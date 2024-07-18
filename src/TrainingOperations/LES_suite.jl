@@ -614,7 +614,7 @@ LES_suite = Dict(
         "linearTS_dTdz_0.013_dSdz_0.00075_QU_0.0_QT_0.0003_QS_-3.0e-5_T_14.5_S_35.0_f_0.00015_WENO9nu0_Lxz_512.0_256.0_Nxz_256_128",
 
         # T_surface = 10°C
-        "linearTS_dTdz_0.013_dSdz_0.00075_QU_0.0_QT_5e-5_QS_-5.0e-6_T_10.0_S_35.0_f_0.0_WENO9nu0_Lxz_512.0_256.0_Nxz_256_128",
+        "linearTS_dTdz_0.013_dSdz_0.00075_QU_0.0_QT_5.0e-5_QS_-5.0e-6_T_10.0_S_35.0_f_0.0_WENO9nu0_Lxz_512.0_256.0_Nxz_256_128",
 
         # Southern Ocean
         # Free Convection

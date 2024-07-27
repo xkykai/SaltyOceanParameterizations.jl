@@ -86,6 +86,7 @@ timeframe_chunk = [[25:10:65 for data in field_dataset],
                    [205:10:245 for data in field_dataset],
                    [235:10:275 for data in field_dataset],
                    [249:10:289 for data in field_dataset]]
+timeframes = vcat(timeframe_chunk...)
 field_datasets = vcat([field_dataset for _ in 1:length(timeframe_chunk)]...)
 
 full_timeframes = [25:length(data["ubar"].times) for data in field_dataset]

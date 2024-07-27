@@ -800,9 +800,9 @@ function train_NDE_stochastic(ps, params, ps_baseclosure, st, NN, truths, x₀s,
             ps_min .= ps
         end
 
-        if iter % 1000 == 0
+        if iter % 200 == 0
             @info "Saving intermediate results"
-            jldsave("$(FILE_DIR)/intermediate_training_results_round$(epoch)_epoch$(iter)_end$(timeframes[end]).jld2"; u=ps_min, state=opt_statemin, loss=l_min, scaling=scaling_params, model=NN, sts=st)
+            jldsave("$(FILE_DIR)/intermediate_training_results_round$(epoch)_epoch$(iter).jld2"; u=ps_min, state=opt_statemin, loss=l_min, scaling=scaling_params, model=NN, sts=st)
             # sols = [diagnose_fields(ps_min, param, x₀, ps_baseclosure, sts, NNs, data) for (data, x₀, param) in zip(train_data_plot.data, x₀s, params)]
             # for (index, sol) in enumerate(sols)
             #     animate_data(train_data_plot.data[index], sol.sols_dimensional, sol.fluxes, sol.diffusivities, sol.sols_dimensional_noNN, sol.fluxes_noNN, sol.diffusivities_noNN, index, FILE_DIR; epoch="intermediateround$(epoch)_$(iter)")
@@ -828,7 +828,7 @@ for (i, (epoch, optimizer, maxiter, training_timeframe, plot_timeframe, training
     global sols = sols
     ps, losses, opt_state = train_NDE_stochastic(ps, params, ps_baseclosure, st, NN, truths, x₀s, train_data_plot, training_timeframe, S_scaling, scaling_params, rng; indices_training=training_index, epoch=i, maxiter=maxiter, rule=optimizer, batchsize=SGD_chunk_size)
 
-    jldsave("$(FILE_DIR)/training_results_epoch$(epoch)_end$(training_timeframe[end]).jld2"; u=ps, losses=losses, state=opt_state, scaling=scaling_params, model=NN, sts=st)
+    jldsave("$(FILE_DIR)/training_results_epoch$(epoch).jld2"; u=ps, losses=losses, state=opt_state, scaling=scaling_params, model=NN, sts=st)
 
     sols = [diagnose_fields(ps, param, x₀, ps_baseclosure, st, NN, data, length(plot_timeframe)) for (data, x₀, param) in zip(train_data_plot.data, x₀s_plot, params_plot)]
 

@@ -813,8 +813,8 @@ function train_NDE_stochastic(ps, params, ps_baseclosure, st, NN, truths, x₀s,
     return ps_min, (; total=losses), opt_statemin
 end
 
-optimizers = [Optimisers.Adam(3e-4), Optimisers.Adam(1e-4)]
-maxiters = [10000, 10000]
+optimizers = [Optimisers.Adam(3e-4), Optimisers.Adam(1e-4), Optimisers.Adam(3e-5), Optimisers.Adam(1e-5), Optimisers.Adam(1e-5)]
+maxiters = [1000, 1000, 1000, 1000, 1000]
 end_epochs = cumsum(maxiters)
 training_timeframes = [timeframes for _ in 1:length(optimizers)]
 

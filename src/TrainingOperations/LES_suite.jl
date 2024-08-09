@@ -204,7 +204,7 @@ LES_suite = Dict(
         "linearTS_dTdz_0.014_dSdz_0.0021_QU_0.0_QT_0.0003_QS_-3.0e-5_T_18.0_S_36.6_f_0.00015_WENO9nu0_Lxz_512.0_256.0_Nxz_256_128",
 
         # T_surface = 10°C
-        "linearTS_dTdz_0.014_dSdz_0.0021_QU_0.0_QT_0.0003_QS_-3.0e-5_T_10.0_S_36.6_f_8.0e-5_WENO9nu0_Lxz_512.0_256.0_Nxz_256_128",
+        "linearTS_dTdz_0.014_dSdz_0.0021_QU_0.0_QT_0.0001_QS_-1.0e-5_T_10.0_S_36.6_f_8.0e-5_WENO9nu0_Lxz_512.0_256.0_Nxz_256_128",
 
         # Wind Stress and Free Convection
         "linearTS_dTdz_0.014_dSdz_0.0021_QU_-0.0002_QT_0.0005_QS_0.0_T_18.0_S_36.6_f_8.0e-5_WENO9nu0_Lxz_512.0_256.0_Nxz_256_128",
@@ -248,7 +248,7 @@ LES_suite = Dict(
         "linearTS_dTdz_0.014_dSdz_0.0021_QU_0.0_QT_0.0003_QS_-3.0e-5_T_18.0_S_36.6_f_0.00015_WENO9nu0_Lxz_512.0_256.0_Nxz_256_128",
 
         # T_surface = 10°C
-        "linearTS_dTdz_0.014_dSdz_0.0021_QU_0.0_QT_0.0003_QS_-3.0e-5_T_10.0_S_36.6_f_8.0e-5_WENO9nu0_Lxz_512.0_256.0_Nxz_256_128",
+        "linearTS_dTdz_0.014_dSdz_0.0021_QU_0.0_QT_0.0001_QS_-1.0e-5_T_10.0_S_36.6_f_8.0e-5_WENO9nu0_Lxz_512.0_256.0_Nxz_256_128",
 
         # Wind Stress and Free Convection
         "linearTS_dTdz_0.014_dSdz_0.0021_QU_-0.0002_QT_0.0005_QS_0.0_T_18.0_S_36.6_f_8.0e-5_WENO9nu0_Lxz_512.0_256.0_Nxz_256_128",
@@ -636,7 +636,7 @@ LES_suite = Dict(
         "linearTS_dTdz_0.014_dSdz_0.0021_QU_0.0_QT_0.0003_QS_-3.0e-5_T_18.0_S_36.6_f_0.00015_WENO9nu0_Lxz_512.0_256.0_Nxz_256_128",
 
         # T_surface = 10°C
-        "linearTS_dTdz_0.014_dSdz_0.0021_QU_0.0_QT_0.0003_QS_-3.0e-5_T_10.0_S_36.6_f_8.0e-5_WENO9nu0_Lxz_512.0_256.0_Nxz_256_128",
+        "linearTS_dTdz_0.014_dSdz_0.0021_QU_0.0_QT_0.0001_QS_-1.0e-5_T_10.0_S_36.6_f_8.0e-5_WENO9nu0_Lxz_512.0_256.0_Nxz_256_128",
 
         # Equatorial Pacific
         # Free Convection

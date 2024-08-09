@@ -34,7 +34,7 @@ end
 
 args = parse_commandline()
 
-LES_FILE_DIRS = ["./LES2/$(file)/instantaneous_timeseries.jld2" for file in LES_suite["train51new"]]
+LES_FILE_DIRS = ["./LES2/$(file)/instantaneous_timeseries.jld2" for file in LES_suite["train31new"]]
 const S_scaling = args["S_scaling"]
 const momentum_ratio = args["momentum_ratio"]
 FILE_DIR = "./training_output/$(length(LES_FILE_DIRS))simnew_mom_$(momentum_ratio)_localbaseclosure_convectivetanh_shearlinear_2Pr_EKI"
@@ -614,8 +614,8 @@ prior_ΔRi = constrained_gaussian("ΔRi", ps_prior.ΔRi, ps_prior.ΔRi/5, -Inf, 
 priors = combine_distributions([prior_ν_conv, prior_ν_shear, prior_Riᶜ, prior_Pr_conv, prior_Pr_shear, prior_ΔRi])
 target = [0.]
 
-N_ensemble = 200
-N_iterations = 2000
+N_ensemble = 400
+N_iterations = 50
 Γ = prior_loss / 1e6 * I
 
 ps_eki = EKP.construct_initial_ensemble(rng, priors, N_ensemble)

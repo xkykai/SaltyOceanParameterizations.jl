@@ -615,7 +615,7 @@ priors = combine_distributions([prior_ν_conv, prior_ν_shear, prior_Riᶜ, prio
 target = [0.]
 
 N_ensemble = 400
-N_iterations = 50
+N_iterations = 200
 Γ = prior_loss / 1e6 * I
 
 ps_eki = EKP.construct_initial_ensemble(rng, priors, N_ensemble)

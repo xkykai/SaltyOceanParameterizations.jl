@@ -70,9 +70,9 @@ end
 const S_scaling = args["S_scaling"]
 const momentum_ratio = args["momentum_ratio"]
 
-LES_FILE_DIRS = ["./LES2/$(file)/instantaneous_timeseries.jld2" for file in LES_suite["train31new"]]
+LES_FILE_DIRS = ["./LES2/$(file)/instantaneous_timeseries.jld2" for file in LES_suite["train21new"]]
 
-FILE_DIR = "./training_output/NDE_Qb_Ri_absf_wTwS_$(length(LES_FILE_DIRS))simnew_$(args["hidden_layer"])layer_$(args["hidden_layer_size"])_$(args["activation"])_mom_$(momentum_ratio)_localbaseclosure_2Pr_multichunk_SGD$(SGD_chunk_size)_test"
+FILE_DIR = "./training_output/NDE_Qb_Ri_absf_wTwS_$(length(LES_FILE_DIRS))simnew_$(args["hidden_layer"])layer_$(args["hidden_layer_size"])_$(args["activation"])_mom_$(momentum_ratio)_localbaseclosure_2Pr_multichunk_SGD$(SGD_chunk_size)"
 mkpath(FILE_DIR)
 @info FILE_DIR
 

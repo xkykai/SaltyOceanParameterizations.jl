@@ -72,7 +72,7 @@ const momentum_ratio = args["momentum_ratio"]
 
 LES_FILE_DIRS = ["./LES2/$(file)/instantaneous_timeseries.jld2" for file in LES_suite["train21new"]]
 
-FILE_DIR = "./training_output/NDE_Qb_Rionly_absf_wTwS_$(length(LES_FILE_DIRS))simnew_$(args["hidden_layer"])layer_$(args["hidden_layer_size"])_$(args["activation"])_mom_$(momentum_ratio)_localbaseclosure_2Pr_multichunk_SGD$(SGD_chunk_size)"
+FILE_DIR = "./training_output/NDE_Qb_Rionly_absf_wTwS_$(length(LES_FILE_DIRS))simnew_$(args["hidden_layer"])layer_$(args["hidden_layer_size"])_$(args["activation"])_mom_$(momentum_ratio)_localbaseclosure_2Pr_multichunk_SGD$(SGD_chunk_size)_Adam3e-5"
 mkpath(FILE_DIR)
 @info FILE_DIR
 
@@ -507,8 +507,8 @@ end
 #          DuplicatedNoNeed(loss_prefactors[1:2], deepcopy(loss_prefactors[1:2])),
 #          Const(length(25:10:45)))
 
-function predict_residual_flux_dimensional(rss_shear_hat, ∂T∂z_hat, ∂S∂z_hat, ∂ρ∂z_hat, T_top, S_top, p, params, sts, NNs)
-    wT_hat, wS_hat = predict_residual_flux(rss_shear_hat, ∂T∂z_hat, ∂S∂z_hat, ∂ρ∂z_hat, T_top, S_top, p, params, sts, NNs)
+function predict_residual_flux_dimensional(Ri, ∂T∂z_hat, ∂S∂z_hat, T_top, S_top, p, params, sts, NNs)
+    wT_hat, wS_hat = predict_residual_flux(Ri, ∂T∂z_hat, ∂S∂z_hat, T_top, S_top, p, params, sts, NNs)
     
     wT = inv(params.scaling.wT).(wT_hat)
     wS = inv(params.scaling.wS).(wS_hat)
@@ -615,7 +615,7 @@ function diagnose_fields(ps, params, x₀, ps_baseclosure, sts, NNs, train_data_
     wS_diffusive_boundarys_noNN = zeros(coarse_size+1, size(Ts, 2))
 
     for i in 1:size(wT_residuals, 2)
-        wT_residuals[:, i], wS_residuals[:, i] = predict_residual_flux_dimensional(rss_shear_hats[:, i], ∂T∂z_hats[:, i], ∂S∂z_hats[:, i], ∂ρ∂z_hats[:, i], T_tops[i], S_tops[i], ps, params, sts, NNs)
+        wT_residuals[:, i], wS_residuals[:, i] = predict_residual_flux_dimensional(Ris[:, i], ∂T∂z_hats[:, i], ∂S∂z_hats[:, i], T_tops[i], S_tops[i], ps, params, sts, NNs)
         uw_diffusive_boundarys[:, i], vw_diffusive_boundarys[:, i], wT_diffusive_boundarys[:, i], wS_diffusive_boundarys[:, i] = predict_diffusive_boundary_flux_dimensional(Ris[:, i], sols.u[:, i], sols.v[:, i], sols.T[:, i], sols.S[:, i], ps_baseclosure, params)        
 
         uw_diffusive_boundarys_noNN[:, i], vw_diffusive_boundarys_noNN[:, i], wT_diffusive_boundarys_noNN[:, i], wS_diffusive_boundarys_noNN[:, i] = predict_diffusive_boundary_flux_dimensional(Ris_truth[:, i], sols_noNN.u[:, i], sols_noNN.v[:, i], sols_noNN.T[:, i], sols_noNN.S[:, i], ps_baseclosure, params)
@@ -1007,8 +1007,8 @@ function train_NDE_stochastic(ps, params, ps_baseclosure, sts, NNs, truths, x₀
     return ps_min, (; total=losses), opt_statemin
 end
 
-optimizers = [Optimisers.Adam(1e-4), Optimisers.Adam(3e-5), Optimisers.Adam(1e-5), Optimisers.Adam(3e-6), Optimisers.Adam(1e-6)]
-# optimizers = [Optimisers.Adam(3e-5), Optimisers.Adam(1e-5), Optimisers.Adam(3e-6), Optimisers.Adam(1e-6), Optimisers.Adam(1e-6)]
+# optimizers = [Optimisers.Adam(1e-4), Optimisers.Adam(3e-5), Optimisers.Adam(1e-5), Optimisers.Adam(3e-6), Optimisers.Adam(1e-6)]
+optimizers = [Optimisers.Adam(3e-5), Optimisers.Adam(1e-5), Optimisers.Adam(3e-6), Optimisers.Adam(1e-6), Optimisers.Adam(1e-6)]
 maxiters = [1000, 1000, 1000, 1000, 1000]
 # maxiters = [5]
 end_epochs = cumsum(maxiters)

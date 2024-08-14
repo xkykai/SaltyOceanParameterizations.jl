@@ -4,7 +4,7 @@ using Printf
 using SaltyOceanParameterizations
 using JLD2
 using SeawaterPolynomials.TEOS10
-using CairoMakie
+using GLMakie
 using Printf
 import Dates
 using Statistics
@@ -12,15 +12,13 @@ using Colors
 using SeawaterPolynomials
 using Oceananigans.Units
 using Oceananigans.BuoyancyModels: g_Earth
+using Oceananigans
 
-FILE_DIR = "./training_output/NDE_FC_Qb_18simnew_2layer_64_relu_2Pr/"
+FILE_DIR = "./training_output/NDE_FC_Qb_18simnew_2layer_128_relu_2Pr/"
 @info FILE_DIR
 
 BASECLOSURE_FILE_DIR = "./training_output/51simnew_mom_1.0_localbaseclosure_convectivetanh_shearlinear_2Pr_EKI/training_results_mean.jld2"
 ps_baseclosure = jldopen(BASECLOSURE_FILE_DIR, "r")["u"]
-
-scaling = train_data.scaling
-truths = [(; T=data.profile.T.scaled, S=data.profile.S.scaled, ρ=data.profile.ρ.scaled, ∂T∂z=data.profile.∂T∂z.scaled, ∂S∂z=data.profile.∂S∂z.scaled, ∂ρ∂z=data.profile.∂ρ∂z.scaled) for data in train_data.data]
 
 ps, scaling_params, sts, NNs = jldopen("$(FILE_DIR)/training_results_epoch20000_end285.jld2", "r") do file
     return file["u"], file["scaling"], file["sts"], file["model"]
@@ -229,29 +227,29 @@ end
 
 sol_T, sol_S, sol_ρ = solve_NDE(ps, params, x₀, ps_baseclosure, sts, NNs, length(ts), 1)
 #%%
-jldopen("$(FILE_DIR)/model_inference_run.jld2", "w") do file
-    file["ps_baseclosure"] = ps_baseclosure
-    file["scaling_params"] = scaling_params
-    file["sts"] = sts
-    file["model"] = NNs
-    file["Nz"] = Nz
-    file["Lz"] = Lz
-    file["dTdz"] = dTdz
-    file["dSdz"] = dSdz
-    file["T_surface"] = T_surface
-    file["S_surface"] = S_surface
-    file["wT_top"] = wT_top
-    file["wS_top"] = wS_top
-    file["f₀"] = f₀
-    file["Δt"] = Δt
-    file["τ"] = τ
-    file["T₀s"] = T₀s
-    file["S₀s"] = S₀s
-    file["params"] = params
-    file["sol_T"] = sol_T
-    file["sol_S"] = sol_S
-    file["sol_ρ"] = sol_ρ
-end
+# jldopen("$(FILE_DIR)/model_inference_run.jld2", "w") do file
+#     file["ps_baseclosure"] = ps_baseclosure
+#     file["scaling_params"] = scaling_params
+#     file["sts"] = sts
+#     file["model"] = NNs
+#     file["Nz"] = Nz
+#     file["Lz"] = Lz
+#     file["dTdz"] = dTdz
+#     file["dSdz"] = dSdz
+#     file["T_surface"] = T_surface
+#     file["S_surface"] = S_surface
+#     file["wT_top"] = wT_top
+#     file["wS_top"] = wS_top
+#     file["f₀"] = f₀
+#     file["Δt"] = Δt
+#     file["τ"] = τ
+#     file["T₀s"] = T₀s
+#     file["S₀s"] = S₀s
+#     file["params"] = params
+#     file["sol_T"] = sol_T
+#     file["sol_S"] = sol_S
+#     file["sol_ρ"] = sol_ρ
+# end
 
 fig = Figure(size=(900, 600))
 axT = CairoMakie.Axis(fig[1, 1], xlabel="T", ylabel="z")

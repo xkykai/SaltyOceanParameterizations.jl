@@ -150,6 +150,11 @@ elseif args["advection"] == "AMD"
 elseif args["advection"] == "SmagorinskyLilly"
     advection = CenteredSecondOrder()
     closure = SmagorinskyLilly()
+elseif args["advection"] == "ConstantSmagorinsky"
+    advection = CenteredSecondOrder()
+    closure = SmagorinskyLilly(Cb=0)
+else
+    error("Advection scheme not recognized")
 end
 
 const f = args["f"]

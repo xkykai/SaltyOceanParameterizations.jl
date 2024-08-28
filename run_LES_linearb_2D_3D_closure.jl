@@ -163,7 +163,7 @@ const dbdz = args["dbdz"]
 
 const pickup = args["pickup"]
 
-FILE_NAME = "linearb_dbdz_$(dbdz)_QU_$(Qᵁ)_QB_$(Qᴮ)_f_$(f)_$(args["advection"])_Lxz_$(Lx)_$(Lz)_Nxz_$(Nx)_$(Nz)"
+FILE_NAME = "linearb_statistics_dbdz_$(dbdz)_QU_$(Qᵁ)_QB_$(Qᴮ)_f_$(f)_$(args["advection"])_Lxz_$(Lx)_$(Lz)_Nxz_$(Nx)_$(Nz)"
 FILE_DIR = "$(args["file_location"])/LES/$(FILE_NAME)"
 mkpath(FILE_DIR)
 
@@ -217,6 +217,8 @@ set!(model, b=b_initial_noisy)
 
 b = model.tracers.b
 u, v, w = model.velocities
+pHY′, pNHS = model.pressures.pHY′, model.pressures.pNHS
+p = pHY′ + pNHS
 
 simulation = Simulation(model, Δt=args["dt"]second, stop_time=args["stop_time"]days)
 
@@ -263,9 +265,13 @@ uw = Field(Average(w * u, dims=(1, 2)))
 vw = Field(Average(w * v, dims=(1, 2)))
 wb = Field(Average(w * b, dims=(1, 2)))
 
+u∂p∂x = Field(Average(u * ∂x(p), dims=(1, 2)))
+v∂p∂y = Field(Average(v * ∂y(p), dims=(1, 2)))
+w∂p∂z = Field(Average(w * ∂z(p), dims=(1, 2)))
+
 field_outputs = merge(model.velocities, model.tracers)
 timeseries_outputs = (; ubar, vbar, bbar,
-                        uw, vw, wb)
+                        uw, vw, wb, u∂p∂x, v∂p∂y, w∂p∂z)
 
 # simulation.output_writers[:u] = JLD2OutputWriter(model, (; u),
 #                                                           filename = "$(FILE_DIR)/instantaneous_fields_u.jld2",

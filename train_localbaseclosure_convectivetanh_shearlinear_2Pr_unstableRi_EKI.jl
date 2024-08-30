@@ -613,8 +613,8 @@ prior_ΔRi = constrained_gaussian("ΔRi", ps_prior.ΔRi, ps_prior.ΔRi/5, -Inf, 
 priors = combine_distributions([prior_ν_conv, prior_Pr_conv, prior_ΔRi])
 target = [0.]
 
-N_ensemble = 50
-N_iterations = 10
+N_ensemble = 400
+N_iterations = 200
 Γ = prior_loss / 1e6 * I
 
 ps_eki = EKP.construct_initial_ensemble(rng, priors, N_ensemble)

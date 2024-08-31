@@ -60,13 +60,13 @@ end
 
 const S_scaling = args["S_scaling"]
 
-LES_FILE_DIRS = ["./LES2/$(file)/instantaneous_timeseries.jld2" for file in LES_suite["train19new"]]
+LES_FILE_DIRS = ["./LES2/$(file)/instantaneous_timeseries.jld2" for file in LES_suite["train54new"]]
 
 FILE_DIR = "./training_output/NDE_Qb_Ri_absf_wTwS_$(length(LES_FILE_DIRS))simnew_$(args["hidden_layer"])layer_$(args["hidden_layer_size"])_$(args["activation"])_localbaseclosure_2Pr_nouvloss"
 mkpath(FILE_DIR)
 @info FILE_DIR
 
-BASECLOSURE_FILE_DIR = "./training_output/31simnew_mom_1.0_localbaseclosure_convectivetanh_shearlinear_2Pr_EKI/training_results_mean.jld2"
+BASECLOSURE_FILE_DIR = "./training_output/51simnew_mom_1.0_localbaseclosure_convectivetanh_shearlinear_2Pr_unstableRi_EKI/training_results_mean.jld2"
 
 field_datasets = [FieldDataset(FILE_DIR, backend=OnDisk()) for FILE_DIR in LES_FILE_DIRS]
 

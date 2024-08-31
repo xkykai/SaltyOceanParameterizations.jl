@@ -62,7 +62,7 @@ const S_scaling = args["S_scaling"]
 
 LES_FILE_DIRS = ["./LES2/$(file)/instantaneous_timeseries.jld2" for file in LES_suite["train54new"]]
 
-FILE_DIR = "./training_output/NDE_Qb_Ri_absf_wTwS_$(length(LES_FILE_DIRS))simnew_$(args["hidden_layer"])layer_$(args["hidden_layer_size"])_$(args["activation"])_localbaseclosure_2Pr_noothertracer_nouvloss"
+FILE_DIR = "./training_output/NDE_Qb_Ri_absf_wTwS_$(length(LES_FILE_DIRS))simnew_$(args["hidden_layer"])layer_$(args["hidden_layer_size"])_$(args["activation"])_localbaseclosure_2Pr_commonNN_nouvloss"
 mkpath(FILE_DIR)
 @info FILE_DIR
 

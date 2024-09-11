@@ -39,6 +39,14 @@ function parse_commandline()
         help = "Scaling factor for S"
         arg_type = Float64
         default = 1.0
+      "--random_seed"
+        help = "Random seed"
+        arg_type = Int64
+        default = 123
+      "--learning_rate"
+        help = "Learning rate after first routine"
+        arg_type = Float64
+        default = 3e-5
     end
     return parse_args(s)
 end
@@ -59,6 +67,9 @@ else
 end
 
 const S_scaling = args["S_scaling"]
+
+seed = args["random_seed"]
+learning_rate = args["learning_rate"]
 
 LES_FILE_DIRS = ["./LES2/$(file)/instantaneous_timeseries.jld2" for file in LES_suite["train54new"]]
 
@@ -85,7 +96,7 @@ train_data_plot = LESDatasets(field_datasets, ZeroMeanUnitVarianceScaling, full_
 params = ODEParams(train_data; abs_f=true)
 params_plot = ODEParams(train_data_plot, scaling; abs_f=true)
 
-rng = Random.default_rng(123)
+rng = Random.default_rng(seed)
 
 #%%
 NN_layers = vcat(Dense(13, hidden_layer_size, activation), [Dense(hidden_layer_size, hidden_layer_size, activation) for _ in 1:N_hidden_layer-1]..., Dense(hidden_layer_size, 1))
@@ -935,7 +946,7 @@ function train_NDE_stochastic(ps, params, ps_baseclosure, sts, NNs, truths, x₀
     return ps_min, (; total=losses), opt_statemin
 end
 
-optimizers = [Optimisers.Adam(3e-4), Optimisers.Adam(3e-5), Optimisers.Adam(1e-5), Optimisers.Adam(1e-5), Optimisers.Adam(1e-5), Optimisers.Adam(1e-5)]
+optimizers = [Optimisers.Adam(3e-4), Optimisers.Adam(learning_rate), Optimisers.Adam(learning_rate/3), Optimisers.Adam(learning_rate/3), Optimisers.Adam(learning_rate/3), Optimisers.Adam(learning_rate/3)]
 maxiters = [2000, 2000, 2000, 2000, 2000, 2000]
 end_epochs = cumsum(maxiters)
 training_timeframes = [timeframes[1][1:5], timeframes[1][1:10], timeframes[1][1:15], timeframes[1][1:20], timeframes[1][1:25], timeframes[1][1:27]]
@@ -959,10 +970,8 @@ for (i, (epoch, optimizer, maxiter, training_timeframe, plot_timeframe)) in enum
     
     jldsave("$(FILE_DIR)/training_results_epoch$(epoch)_end$(training_timeframe[end]).jld2"; u=ps, losses=losses, state=opt_state, scaling=scaling_params, model=NNs, sts=sts)
 
-    sols = [diagnose_fields(ps, param, x₀, ps_baseclosure, sts, NNs, data, length(plot_timeframe)) for (data, x₀, param) in zip(train_data_plot.data[sim_indices], x₀s[sim_indices], params_plot[sim_indices])]
-
     for (i, index) in enumerate(sim_indices)
-        sol = sols[i]
+        sol = diagnose_fields(ps, params_plot[index], x₀s[index], ps_baseclosure, sts, NNs, train_data_plot.data[index], length(plot_timeframe))
         animate_data(train_data_plot.data[index], sol.sols_dimensional, sol.fluxes, sol.diffusivities, sol.sols_dimensional_noNN, sol.fluxes_noNN, sol.diffusivities_noNN, index, FILE_DIR, length(plot_timeframe); suffix="epoch$(epoch)_end$(training_timeframe[end])")
     end
 

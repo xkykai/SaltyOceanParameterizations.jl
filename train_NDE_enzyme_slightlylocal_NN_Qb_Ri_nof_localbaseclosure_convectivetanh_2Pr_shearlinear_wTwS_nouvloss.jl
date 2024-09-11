@@ -73,7 +73,7 @@ learning_rate = args["learning_rate"]
 
 LES_FILE_DIRS = ["./LES2/$(file)/instantaneous_timeseries.jld2" for file in LES_suite["train54new"]]
 
-FILE_DIR = "./training_output/NDE_Qb_Ri_nof_wTwS_$(length(LES_FILE_DIRS))simnew_$(args["hidden_layer"])layer_$(args["hidden_layer_size"])_$(args["activation"])_localbaseclosure_2Pr_6simstableRi_nouvloss"
+FILE_DIR = "./training_output/NDE_Qb_Ri_nof_wTwS_$(length(LES_FILE_DIRS))simnew_$(args["hidden_layer"])layer_$(args["hidden_layer_size"])_$(args["activation"])_$(seed)seed_$(learning_rate)lr_localbaseclosure_2Pr_6simstableRi"
 mkpath(FILE_DIR)
 @info FILE_DIR
 

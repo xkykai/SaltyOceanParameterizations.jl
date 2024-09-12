@@ -924,7 +924,7 @@ function train_NDE_stochastic(ps, params, ps_baseclosure, sts, NNs, truths, x₀
     N = length(indices_training)
     Nbatch = cld(N, batchsize)
     for iter in 1:maxiter
-        lr = lr_warm_up_schedule(iter, rule.eta)
+        lr = lr_n_cycle_linear(iter, 1, maxiter, rule.eta, 1e-6)
         Optimisers.adjust!(opt_state, eta=lr)
 
         shuffle!(rng, indices_training)

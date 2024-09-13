@@ -811,6 +811,14 @@ function plot_loss(losses, FILE_DIR; suffix=1)
     save("$(FILE_DIR)/losses_$(suffix).png", fig, px_per_unit=8)
 end
 
+function lr_warm_up_schedule(iter, lr_warm, iter_warm_up=40)
+    if iter <= iter_warm_up
+        return lr_warm * iter / iter_warm_up
+    else
+        return lr_warm
+    end
+end
+
 function train_NDE_multipleics(ps, params, ps_baseclosure, sts, NNs, truths, xâ‚€s, train_data_plot, timeframes, S_scaling, scaling_params; sim_index=[1], epoch=1, maxiter=2, rule=Optimisers.Adam())
     opt_state = Optimisers.setup(rule, ps)
     opt_statemin = deepcopy(opt_state)
@@ -824,6 +832,9 @@ function train_NDE_multipleics(ps, params, ps_baseclosure, sts, NNs, truths, xâ‚
     loss_prefactors = compute_loss_prefactor_density_contribution.(ind_losses, compute_density_contribution.(train_data.data), S_scaling)
 
     for iter in 1:maxiter
+        lr = lr_warm_up_schedule(iter, rule.eta)
+        Optimisers.adjust!(opt_state, eta=lr)
+
         _, l = autodiff(Enzyme.ReverseWithPrimal, 
                         loss_multipleics, 
                         Active, 
@@ -836,9 +847,6 @@ function train_NDE_multipleics(ps, params, ps_baseclosure, sts, NNs, truths, xâ‚
                         Const(NNs), 
                         DuplicatedNoNeed(loss_prefactors, deepcopy(loss_prefactors)),
                         Const(length(timeframes)))
-        if iter <= 40
-            Optimisers.adjust!(opt_state, eta=rule.eta * iter / 40)
-        end
         
         opt_state, ps = Optimisers.update!(opt_state, ps, dps)
 
@@ -886,9 +894,8 @@ function train_NDE_stochastic(ps, params, ps_baseclosure, sts, NNs, truths, xâ‚€
     N = length(indices_training)
     Nbatch = cld(N, batchsize)
     for iter in 1:maxiter
-        if iter <= 40
-            Optimisers.adjust!(opt_state, eta=rule.eta * iter / 40)
-        end
+        lr = lr_warm_up_schedule(iter, rule.eta)
+        Optimisers.adjust!(opt_state, eta=lr)
 
         shuffle!(rng, indices_training)
         for batch in 1:Nbatch

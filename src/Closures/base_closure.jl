@@ -133,7 +133,6 @@ function local_Ri_ν_convectivetanh_shearlinear_2Pr(Ri, ν_conv, ν_shear, Riᶜ
 end
 
 function local_Ri_κ_convectivetanh_shearlinear_2Pr(Ri, ν_conv, ν_shear, Riᶜ, ΔRi, Pr_conv, Pr_shear)
-
     Riᶜ <= 0 && return NaN
     κ₀ = 1e-5 / Pr_shear
     κ_shear = ν_shear / Pr_shear

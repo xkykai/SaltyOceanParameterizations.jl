@@ -74,6 +74,7 @@ const S_scaling = args["S_scaling"]
 
 seed = args["random_seed"]
 learning_rate = args["learning_rate"]
+SGD_chunk_size = args["SGD_chunk_size"]
 
 LES_FILE_DIRS = ["./LES2/$(file)/instantaneous_timeseries.jld2" for file in LES_suite["train54new"]]
 

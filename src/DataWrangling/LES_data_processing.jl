@@ -404,6 +404,72 @@ function LESDatasets(datasets::Vector, scaling::Type{<:AbstractFeatureScaling}, 
     return LESDatasets([LESData(data, scalings, timeframe, coarse_size) for (data, timeframe) in zip(datasets, timeframes)], scalings)
 end
 
+function LESDatasets(datasets::Vector, scalings, timeframes::Vector, coarse_size=32; abs_f=false)
+    eos = TEOS10EquationOfState()
+    u = [hcat([coarse_grain(interior(data["ubar"][i], 1, 1, :), coarse_size, Center) for i in timeframe]...) for (data, timeframe) in zip(datasets, timeframes)]
+    v = [hcat([coarse_grain(interior(data["vbar"][i], 1, 1, :), coarse_size, Center) for i in timeframe]...) for (data, timeframe) in zip(datasets, timeframes)]
+    T = [hcat([coarse_grain(interior(data["Tbar"][i], 1, 1, :), coarse_size, Center) for i in timeframe]...) for (data, timeframe) in zip(datasets, timeframes)]
+    S = [hcat([coarse_grain(interior(data["Sbar"][i], 1, 1, :), coarse_size, Center) for i in timeframe]...) for (data, timeframe) in zip(datasets, timeframes)]
+    ρ = [hcat([coarse_grain(interior(data["ρbar"][i], 1, 1, :), coarse_size, Center) for i in timeframe]...) for (data, timeframe) in zip(datasets, timeframes)]
+    
+    uw = [hcat([coarse_grain(interior(data["uw"][i], 1, 1, :), coarse_size+1, Face) for i in timeframe]...) for (data, timeframe) in zip(datasets, timeframes)]
+    vw = [hcat([coarse_grain(interior(data["vw"][i], 1, 1, :), coarse_size+1, Face) for i in timeframe]...) for (data, timeframe) in zip(datasets, timeframes)]
+    wT = [hcat([coarse_grain(interior(data["wT"][i], 1, 1, :), coarse_size+1, Face) for i in timeframe]...) for (data, timeframe) in zip(datasets, timeframes)]
+    wS = [hcat([coarse_grain(interior(data["wS"][i], 1, 1, :), coarse_size+1, Face) for i in timeframe]...) for (data, timeframe) in zip(datasets, timeframes)]
+
+    T_faces = [zeros(size(wT_data, 1), size(wT_data, 2)) for wT_data in wT]
+    S_faces = [zeros(size(wT_data, 1), size(wT_data, 2)) for wT_data in wT]
+
+    for (T_face, S_face, T_center, S_center) in zip(T_faces, S_faces, T, S)
+        T_face[2:end-1, :] .= 0.5 .* (T_center[1:end-1, :] .+ T_center[2:end, :])
+        S_face[2:end-1, :] .= 0.5 .* (S_center[1:end-1, :] .+ S_center[2:end, :])
+    end
+
+    αs = [zeros(size(wT_data, 1), size(wT_data, 2)) for wT_data in wT]
+    βs = [zeros(size(wT_data, 1), size(wT_data, 2)) for wT_data in wT]
+
+    for (α, β, T_face, S_face, T_center, S_center) in zip(αs, βs, T_faces, S_faces, T, S)
+        α[2:end-1, :] .= SeawaterPolynomials.thermal_expansion.(T_face[2:end-1, :], S_face[2:end-1, :], 0, Ref(eos))
+        β[2:end-1, :] .= SeawaterPolynomials.haline_contraction.(T_face[2:end-1, :], S_face[2:end-1, :], 0, Ref(eos))
+        
+        α[end, :] .= SeawaterPolynomials.thermal_expansion.(T_center[end-1, :], S_center[end-1, :], 0, Ref(eos))
+        β[end, :] .= SeawaterPolynomials.haline_contraction.(T_center[end-1, :], S_center[end-1, :], 0, Ref(eos))
+    end
+
+    wbs = [zeros(size(wT_data, 1), size(wT_data, 2)) for wT_data in wT]
+
+    for (wb, α, β, wT_data, wS_data, data) in zip(wbs, αs, βs, wT, wS, datasets)
+        wb[2:end-1, :] .= data.metadata["gravitational_acceleration"] .* (α[2:end-1, :] .* wT_data[2:end-1, :] .- β[2:end-1, :] .* wS_data[2:end-1, :])
+        wb[end, :] .= data.metadata["gravitational_acceleration"] .* (α[end, :] .* data.metadata["temperature_flux"] .- β[end, :] .* data.metadata["salinity_flux"])
+    end
+
+    for i in eachindex(u)
+        if datasets[i].metadata["momentum_flux"] == 0
+            u[i] .= 0
+            v[i] .= 0
+            uw[i] .= 0
+            vw[i] .= 0
+        end
+    end
+
+    zCs = [coarse_grain(data["ubar"].grid.zᵃᵃᶜ[1:data["ubar"].grid.Nz], coarse_size, Center) for data in datasets]
+    Dᶠs = [Dᶠ(coarse_size, zC[2] - zC[1]) for zC in zCs]
+
+    ∂u∂z = [hcat([D * u′[:, i] for i in axes(u′, 2)]...) for (D, u′) in zip(Dᶠs, u)]
+    ∂v∂z = [hcat([D * v′[:, i] for i in axes(v′, 2)]...) for (D, v′) in zip(Dᶠs, v)]
+    ∂T∂z = [hcat([D * T′[:, i] for i in axes(T′, 2)]...) for (D, T′) in zip(Dᶠs, T)]
+    ∂S∂z = [hcat([D * S′[:, i] for i in axes(S′, 2)]...) for (D, S′) in zip(Dᶠs, S)]
+    ∂ρ∂z = [hcat([D * ρ′[:, i] for i in axes(ρ′, 2)]...) for (D, ρ′) in zip(Dᶠs, ρ)]
+
+    if abs_f
+        f = [abs(data.metadata["coriolis_parameter"]) for data in datasets]
+    else
+        f = [data.metadata["coriolis_parameter"] for data in datasets]
+    end
+
+    return LESDatasets([LESData(data, scalings, timeframe, coarse_size) for (data, timeframe) in zip(datasets, timeframes)], scalings)
+end
+
 function LESDatasetsB(datasets::Vector, scaling::Type{<:AbstractFeatureScaling}, timeframes::Vector, coarse_size=32)
     u = [hcat([coarse_grain(interior(data["ubar"][i], 1, 1, :), coarse_size, Center) for i in timeframe]...) for (data, timeframe) in zip(datasets, timeframes)]
     v = [hcat([coarse_grain(interior(data["vbar"][i], 1, 1, :), coarse_size, Center) for i in timeframe]...) for (data, timeframe) in zip(datasets, timeframes)]

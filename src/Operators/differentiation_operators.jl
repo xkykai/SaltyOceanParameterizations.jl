@@ -55,3 +55,11 @@ function Dᶠ!(F, C, Δ)
     F[1] = 0
     F[end] = 0
 end
+
+"""
+    D²ᶜ(N, Δ)
+Take the second derivative of a cell-centered field with `N` grid points and `Δ` grid spacing.
+"""
+function D²ᶜ(N, Δ)
+   return Dᶜ(N, Δ) * Dᶠ(N, Δ) 
+end

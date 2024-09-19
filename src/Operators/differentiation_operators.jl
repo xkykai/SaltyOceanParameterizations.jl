@@ -63,3 +63,19 @@ Take the second derivative of a cell-centered field with `N` grid points and `Δ
 function D²ᶜ(N, Δ)
    return Dᶜ(N, Δ) * Dᶠ(N, Δ) 
 end
+
+"""
+    Iᶠ(N)
+Interpolation operator from cell-centered to face-centered grid.
+"""
+function Iᶠ(N)
+    I = zeros(N+1, N)
+    for k in 1:N
+        I[k, k]   = 1.0
+        I[k+1, k] = 1.0
+    end
+    I .= 0.5 .* I
+    I[1, 1] = 1.0
+    I[end, end] = 1.0
+    return I
+end

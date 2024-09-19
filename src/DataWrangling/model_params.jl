@@ -1,17 +1,19 @@
-using SaltyOceanParameterizations.Operators: Dᶜ, Dᶠ
+using SaltyOceanParameterizations.Operators: Dᶜ, Dᶠ, Iᶠ
 
-struct ODEParam{F, FS, T, NT, ST, Z, L, G, CS, DC, DF, DCH, DFH, UW, VW, WT, WS, SC}
+struct ODEParam{F, FS, T, NT, ST, Z, L, G, CS, DC, DF, IF, DCH, DFH, UW, VW, WT, WS, SC}
                        f :: F
                 f_scaled :: FS
                        τ :: T
              N_timesteps :: NT
              scaled_time :: ST
                       zC :: Z
+                      zF :: Z
                        H :: L
                        g :: G
              coarse_size :: CS
                       Dᶜ :: DC
                       Dᶠ :: DF
+                      Iᶠ :: IF
                   Dᶜ_hat :: DCH
                   Dᶠ_hat :: DFH
                       uw :: UW
@@ -35,11 +37,13 @@ function ODEParam(data::LESData, scaling; abs_f=false)
                     length(data.times),
                     (data.times .- data.times[1]) ./ (data.times[end] - data.times[1]),
                     data.metadata["zC"],
+                    data.metadata["zF"],
                     data.metadata["original_grid"].Lz,
                     data.metadata["gravitational_acceleration"],
                     coarse_size,
                     Dᶜ(coarse_size, data.metadata["zC"][2] - data.metadata["zC"][1]),
                     Dᶠ(coarse_size, data.metadata["zF"][3] - data.metadata["zF"][2]),
+                    Iᶠ(coarse_size),
                     Dᶜ(coarse_size, data.metadata["zC"][2] - data.metadata["zC"][1]) .* data.metadata["original_grid"].Lz,
                     Dᶠ(coarse_size, data.metadata["zF"][3] - data.metadata["zF"][2]) .* data.metadata["original_grid"].Lz,
                     (scaled = (top=scaling.uw(data.flux.uw.surface.unscaled), bottom=scaling.uw(data.flux.uw.bottom.unscaled)),

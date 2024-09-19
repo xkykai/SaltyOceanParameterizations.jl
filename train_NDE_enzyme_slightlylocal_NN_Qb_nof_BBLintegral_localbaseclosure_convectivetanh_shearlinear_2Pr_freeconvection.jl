@@ -123,15 +123,16 @@ sts = (wT=st_wT, wS=st_wS)
 
 scaling_params = write_scaling_params(scaling)
 
-function predict_residual_flux(∂T∂z_hat, ∂S∂z_hat, ∂ρ∂z_hat, ρᶠ, ∂ρ∂z, T_top, S_top, p, params, sts, NNs)
+function predict_residual_flux(∂T∂z_hat, ∂S∂z_hat, ∂ρ∂z_hat, ρ, ∂ρ∂z, T_top, S_top, p, params, sts, NNs)
     eos = TEOS10EquationOfState()
     α = SeawaterPolynomials.thermal_expansion(T_top, S_top, 0, eos)
     β = SeawaterPolynomials.haline_contraction(T_top, S_top, 0, eos)
     wT = params.wT.unscaled.top
     wS = params.wS.unscaled.top
 
-    density_change = 10 ./ abs.(params.zF[2:end]) .* (ρᶠ[end] .- ρᶠ[2:end])
-    BBL_index = max(findlast(∂ρ∂z[2:end] .- density_change .> 0) - 3, 3)
+    density_change = 8 ./ params.zC[1:end-1] .* (ρ[1:end-1] .- ρ[end])
+    diff_criteria = ∂ρ∂z[2:end-1] .- density_change
+    BBL_index = max(findlast(diff_criteria .> 0) - 2, 3)
 
     wb_top_scaled = params.scaling.wb(params.g * (α * wT - β * wS))
     common_variables = wb_top_scaled
@@ -254,7 +255,7 @@ function solve_NDE(ps, params, x₀, ps_baseclosure, sts, NNs, Nt, timestep_mult
         T_top = T[end]
         S_top = S[end]
 
-        wT_residual, wS_residual = predict_residual_flux(∂T∂z_hat, ∂S∂z_hat, ∂ρ∂z_hat, ρᶠ, ∂ρ∂z, T_top, S_top, ps, params, sts, NNs)
+        wT_residual, wS_residual = predict_residual_flux(∂T∂z_hat, ∂S∂z_hat, ∂ρ∂z_hat, ρ, ∂ρ∂z, T_top, S_top, ps, params, sts, NNs)
         predict_boundary_flux!(wT_boundary, wS_boundary, params)
 
         T_RHS .= - τ / H * scaling.wT.σ / scaling.T.σ .* (Dᶜ_hat * (wT_boundary .+ wT_residual))

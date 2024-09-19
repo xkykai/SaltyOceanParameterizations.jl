@@ -412,8 +412,8 @@ end
 #          DuplicatedNoNeed(loss_prefactors[1:2], deepcopy(loss_prefactors[1:2])),
 #          Const(length(25:10:45)))
 
-function predict_residual_flux_dimensional(∂T∂z_hat, ∂S∂z_hat, ∂ρ∂z_hat, ρᶠ, ∂ρ∂z, T_top, S_top, p, params, sts, NNs)
-    wT_hat, wS_hat = predict_residual_flux(∂T∂z_hat, ∂S∂z_hat, ∂ρ∂z_hat, ρᶠ, ∂ρ∂z, T_top, S_top, p, params, sts, NNs)
+function predict_residual_flux_dimensional(∂T∂z_hat, ∂S∂z_hat, ∂ρ∂z_hat, ρ, ∂ρ∂z, T_top, S_top, p, params, sts, NNs)
+    wT_hat, wS_hat = predict_residual_flux(∂T∂z_hat, ∂S∂z_hat, ∂ρ∂z_hat, ρ, ∂ρ∂z, T_top, S_top, p, params, sts, NNs)
     
     wT = inv(params.scaling.wT).(wT_hat)
     wS = inv(params.scaling.wS).(wS_hat)
@@ -472,6 +472,8 @@ function diagnose_fields(ps, params, x₀, ps_baseclosure, sts, NNs, train_data_
     Ss_noNN = inv(scaling.S).(sols_noNN.S)
     ρs_noNN = inv(scaling.ρ).(sols_noNN.ρ)
     
+    ∂ρ∂zs = hcat([params.Dᶠ * ρ for ρ in eachcol(ρs)]...)
+
     ∂T∂z_hats = hcat([params.scaling.∂T∂z.(params.Dᶠ * T) for T in eachcol(Ts)]...)
     ∂S∂z_hats = hcat([params.scaling.∂S∂z.(params.Dᶠ * S) for S in eachcol(Ss)]...)
     ∂ρ∂z_hats = hcat([params.scaling.∂ρ∂z.(params.Dᶠ * ρ) for ρ in eachcol(ρs)]...)
@@ -494,7 +496,7 @@ function diagnose_fields(ps, params, x₀, ps_baseclosure, sts, NNs, train_data_
     wS_diffusive_boundarys_noNN = zeros(coarse_size+1, size(Ts, 2))
 
     for i in 1:size(wT_residuals, 2)
-        wT_residuals[:, i], wS_residuals[:, i] = predict_residual_flux_dimensional(∂T∂z_hats[:, i], ∂S∂z_hats[:, i], ∂ρ∂z_hats[:, i], T_tops[i], S_tops[i], ps, params, sts, NNs)
+        wT_residuals[:, i], wS_residuals[:, i] = predict_residual_flux_dimensional(∂T∂z_hats[:, i], ∂S∂z_hats[:, i], ∂ρ∂z_hats[:, i], ρs[:, i], ∂ρ∂zs[:, i], T_tops[i], S_tops[i], ps, params, sts, NNs)
         wT_diffusive_boundarys[:, i], wS_diffusive_boundarys[:, i] = predict_diffusive_boundary_flux_dimensional(Ris[:, i], sols.T[:, i], sols.S[:, i], ps_baseclosure, params)        
 
         wT_diffusive_boundarys_noNN[:, i], wS_diffusive_boundarys_noNN[:, i] = predict_diffusive_boundary_flux_dimensional(Ris_truth[:, i], sols_noNN.T[:, i], sols_noNN.S[:, i], ps_baseclosure, params)
@@ -760,7 +762,7 @@ training_timeframes = [timeframes[1][1:5], timeframes[1][1:10], timeframes[1][1:
 sim_indices = 1:length(LES_FILE_DIRS)
 
 # optimizers = [Optimisers.Adam(3e-4)]
-# maxiters = [100]
+# maxiters = [5]
 # end_epochs = cumsum(maxiters)
 
 # sim_indices = 1:length(LES_FILE_DIRS)

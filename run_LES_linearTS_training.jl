@@ -437,8 +437,8 @@ axwρ = Axis(fig[4, 6], title="wρ", xlabel="kg m⁻² s⁻²", ylabel="z")
 
 ubarlim = (minimum(ubar_data), maximum(ubar_data))
 vbarlim = (minimum(vbar_data), maximum(vbar_data))
-Tbarlim = (minimum(Tbar_data), maximum(Tbar_data))
-Sbarlim = (minimum(Sbar_data), maximum(Sbar_data))
+Tbarlim = (minimum(Tbar_data) - 1e-13, maximum(Tbar_data) + 1e-13)
+Sbarlim = (minimum(Sbar_data) - 1e-13, maximum(Sbar_data) + 1e-13)
 bbarlim = (minimum(bbar_data), maximum(bbar_data))
 ρbarlim = (minimum(ρbar_data), maximum(ρbar_data))
 

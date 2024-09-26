@@ -204,7 +204,6 @@ function solve_NDE(ps, params, x₀, ps_baseclosure, sts, NNs, Nt, timestep_mult
     S = zeros(coarse_size)
     ρ = zeros(coarse_size)
 
-    ρᶠ = zeros(coarse_size+1)
     ∂ρ∂z = zeros(coarse_size+1)
     
     T_RHS = zeros(coarse_size)
@@ -238,7 +237,6 @@ function solve_NDE(ps, params, x₀, ps_baseclosure, sts, NNs, Nt, timestep_mult
         ρ_hat .= scaling.ρ.(ρ)
         sol_ρ[:, i-1] .= ρ_hat
 
-        ρᶠ .= Iᶠ * ρ
         ∂ρ∂z .= Dᶠ * ρ
 
         ∂T∂z_hat .= scaling.∂T∂z.(Dᶠ * T)

@@ -71,9 +71,9 @@ const S_scaling = args["S_scaling"]
 seed = args["random_seed"]
 learning_rate = args["learning_rate"]
 
-LES_FILE_DIRS = ["./LES2/$(file)/instantaneous_timeseries.jld2" for file in LES_suite["train54new"]]
+LES_FILE_DIRS = ["./LES2/$(file)/instantaneous_timeseries.jld2" for file in LES_suite["train64new"]]
 
-FILE_DIR = "./training_output/NDE_Qb_nof_BBL_wTwS_$(length(LES_FILE_DIRS))simnew_$(args["hidden_layer"])layer_$(args["hidden_layer_size"])_$(args["activation"])_$(seed)seed_$(learning_rate)lr_localbaseclosure_2Pr_6simstableRi"
+FILE_DIR = "./training_output/NDE_Qb_dt5min_nof_BBL_wTwS_$(length(LES_FILE_DIRS))simnew_$(args["hidden_layer"])layer_$(args["hidden_layer_size"])_$(args["activation"])_$(seed)seed_$(learning_rate)lr_localbaseclosure_2Pr_6simstableRi"
 mkpath(FILE_DIR)
 @info FILE_DIR
 
@@ -144,16 +144,17 @@ function predict_residual_flux(∂T∂z_hat, ∂S∂z_hat, ∂ρ∂z_hat, T_top,
     wS = params.wS.unscaled.top
 
     ∂²ρ∂z² = params.Dᶜ_hat * ∂ρ∂z_hat
-    BBL_index = max(argmax(abs.(∂²ρ∂z²[2:end-1])) - 2, 1)
+    MLD_index = argmax(abs.(∂²ρ∂z²[2:end-1])) + 1
+    BBL_index = ifelse(MLD_index - 3 < 4, ifelse(MLD_index == 2, params.coarse_size, 4), MLD_index - 3)
 
     wb_top_scaled = params.scaling.wb(params.g * (α * wT - β * wS))
-    common_variable = wb_top_scaled
+    common_variables = wb_top_scaled
 
     wT = zeros(params.coarse_size+1)
     wS = zeros(params.coarse_size+1)
 
     for i in 3:params.coarse_size-1
-        x  = vcat(∂T∂z_hat[i-1:i+1], ∂S∂z_hat[i-1:i+1], ∂ρ∂z_hat[i-1:i+1], common_variable)
+        x = vcat(∂T∂z_hat[i-1:i+1], ∂S∂z_hat[i-1:i+1], ∂ρ∂z_hat[i-1:i+1], common_variables)
         wT[i] = ifelse(i > BBL_index, first(NNs.wT(x, p.wT, sts.wT))[1], 0)
         wS[i] = ifelse(i > BBL_index, first(NNs.wS(x, p.wS, sts.wS))[1], 0)
     end
@@ -173,7 +174,7 @@ function predict_diffusivities!(νs, κs, Ris, ps_baseclosure)
     return nothing
 end
 
-function solve_NDE(ps, params, x₀, ps_baseclosure, sts, NNs, Nt, timestep_multiple=10)
+function solve_NDE(ps, params, x₀, ps_baseclosure, sts, NNs, Nt, timestep_multiple=2)
     eos = TEOS10EquationOfState()
     coarse_size = params.coarse_size
     timestep = params.scaled_time[2] - params.scaled_time[1]
@@ -326,7 +327,7 @@ sol_u, sol_v, sol_T, sol_S, sol_ρ = solve_NDE(ps, params[7], x₀s[7], ps_basec
 # save("$(FILE_DIR)/NDE_Qb_$(sol_index)_sol.png", fig)
 # display(fig)
 #%%
-function individual_loss(ps, truth, params, x₀, ps_baseclosure, st, NN, Nt, tstart=1, timestep_multiple=10)
+function individual_loss(ps, truth, params, x₀, ps_baseclosure, st, NN, Nt, tstart=1, timestep_multiple=2)
     Dᶠ = params.Dᶠ
     scaling = params.scaling
     _, _, sol_T, sol_S, sol_ρ = solve_NDE(ps, params, x₀, ps_baseclosure, st, NN, Nt, timestep_multiple)
@@ -350,7 +351,7 @@ function individual_loss(ps, truth, params, x₀, ps_baseclosure, st, NN, Nt, ts
     return (; T=T_loss, S=S_loss, ρ=ρ_loss, ∂T∂z=∂T∂z_loss, ∂S∂z=∂S∂z_loss, ∂ρ∂z=∂ρ∂z_loss)
 end
 
-function loss(ps, truth, params, x₀, ps_baseclosure, st, NN, Nt, tstart=1, timestep_multiple=10, losses_prefactor=(; T=1, S=1, ρ=1, ∂T∂z=1, ∂S∂z=1, ∂ρ∂z=1))
+function loss(ps, truth, params, x₀, ps_baseclosure, st, NN, Nt, tstart=1, timestep_multiple=2, losses_prefactor=(; T=1, S=1, ρ=1, ∂T∂z=1, ∂S∂z=1, ∂ρ∂z=1))
     losses = individual_loss(ps, truth, params, x₀, ps_baseclosure, st, NN, Nt, tstart, timestep_multiple)
     return sum(values(losses) .* values(losses_prefactor))
 end
@@ -404,12 +405,12 @@ ind_losses = [individual_loss(ps, truth, param, x₀, ps_baseclosure, sts, NNs, 
 
 loss_prefactors = compute_loss_prefactor_density_contribution.(ind_losses, compute_density_contribution.(train_data.data), S_scaling)
 
-function loss_multipleics(ps, truths, params, x₀s, ps_baseclosure, st, NN, losses_prefactor, Nt::Number, tstart=1, timestep_multiple=10)
+function loss_multipleics(ps, truths, params, x₀s, ps_baseclosure, st, NN, losses_prefactor, Nt::Number, tstart=1, timestep_multiple=2)
     losses = [loss(ps, truth, param, x₀, ps_baseclosure, st, NN, Nt, tstart, timestep_multiple, loss_prefactor) for (truth, x₀, param, loss_prefactor) in zip(truths, x₀s, params, losses_prefactor)]
     return mean(losses)
 end
 
-function loss_multipleics(ps, truths, params, x₀s, ps_baseclosure, st, NN, losses_prefactor, Nts, tstart=1, timestep_multiple=10)
+function loss_multipleics(ps, truths, params, x₀s, ps_baseclosure, st, NN, losses_prefactor, Nts, tstart=1, timestep_multiple=2)
     losses = [loss(ps, truth, param, x₀, ps_baseclosure, st, NN, Nt, tstart, timestep_multiple, loss_prefactor) for (truth, x₀, param, loss_prefactor, Nt) in zip(truths, x₀s, params, losses_prefactor, Nts)]
     return mean(losses)
 end

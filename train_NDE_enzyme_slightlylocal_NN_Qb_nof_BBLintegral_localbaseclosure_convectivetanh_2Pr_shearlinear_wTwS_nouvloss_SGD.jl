@@ -59,6 +59,7 @@ args = parse_commandline()
 
 const hidden_layer_size = args["hidden_layer_size"]
 const N_hidden_layer = args["hidden_layer"]
+const SGD_chunk_size = args["SGD_chunk_size"]
 
 if args["activation"] == "relu"
     const activation = relu
@@ -77,7 +78,7 @@ learning_rate = args["learning_rate"]
 
 LES_FILE_DIRS = ["./LES2/$(file)/instantaneous_timeseries.jld2" for file in LES_suite["train64new"]]
 
-FILE_DIR = "./training_output/NDE_Qb_dt5min_nof_BBLintegral_wTwS_$(length(LES_FILE_DIRS))simnew_$(args["hidden_layer"])layer_$(args["hidden_layer_size"])_$(args["activation"])_$(seed)seed_$(learning_rate)lr_localbaseclosure_2Pr_6simstableRi"
+FILE_DIR = "./training_output/NDE_Qb_dt5min_nof_BBLintegral_wTwS_$(length(LES_FILE_DIRS))simnew_$(args["hidden_layer"])layer_$(args["hidden_layer_size"])_$(args["activation"])_$(seed)seed_$(learning_rate)lr_localbaseclosure_2Pr_6simstableRi_SGD"
 mkpath(FILE_DIR)
 @info FILE_DIR
 

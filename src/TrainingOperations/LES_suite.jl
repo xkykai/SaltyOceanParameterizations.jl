@@ -482,7 +482,7 @@ LES_suite = Dict(
 
         # Misc cases where there is no temperature gradient
         "linearTS_dTdz_0.0_dSdz_-0.001_QU_-0.0001_QT_0.0_QS_-5.0e-5_T_10.0_S_35.0_f_0.0001_WENO9nu0_Lxz_512.0_256.0_Nxz_256_128",
-        "linearTS_dTdz_0.0_dSdz_-0.0025_QU_-0.0001_QT_0.0_QS_-0.0005_T_10.0_S_37.0_f_0.0001_WENO9nu0_Lxz_512.0_256.0_Nxz_256_128",
+        "linearTS_dTdz_0.0_dSdz_-0.0025_QU_-0.0001_QT_0.0_QS_-0.0001_T_10.0_S_37.0_f_0.0001_WENO9nu0_Lxz_512.0_256.0_Nxz_256_128",
 
         # Misc cases in nonlinear regime
         "linearTS_dTdz_0.01_dSdz_-0.005_QU_-0.0001_QT_0.0001_QS_-5.0e-5_T_10.0_S_34.0_f_0.00015_WENO9nu0_Lxz_512.0_256.0_Nxz_256_128",

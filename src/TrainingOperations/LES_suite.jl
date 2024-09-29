@@ -485,14 +485,14 @@ LES_suite = Dict(
         "linearTS_dTdz_0.0_dSdz_-0.0025_QU_-0.0001_QT_0.0_QS_-0.0005_T_10.0_S_37.0_f_0.0001_WENO9nu0_Lxz_512.0_256.0_Nxz_256_128",
 
         # Misc cases in nonlinear regime
-        "linearTS_dTdz_-0.05_dSdz_-0.005_QU_-0.0001_QT_-0.0005_QS_-5.0e-5_T_0.0_S_34.0_f_0.00015_WENO9nu0_Lxz_512.0_256.0_Nxz_256_128",
+        "linearTS_dTdz_0.01_dSdz_-0.005_QU_-0.0001_QT_0.0001_QS_-5.0e-5_T_10.0_S_34.0_f_0.00015_WENO9nu0_Lxz_512.0_256.0_Nxz_256_128",
         "linearTS_dTdz_0.0_dSdz_-0.005_QU_-0.0001_QT_0.0_QS_-5.0e-5_T_0.0_S_34.0_f_0.00015_WENO9nu0_Lxz_512.0_256.0_Nxz_256_128",
 
         # Misc cases where there is opposing fluxes
         "linearTS_dTdz_0.01_dSdz_-0.0015_QU_-0.0001_QT_0.0002_QS_5.0e-5_T_20.0_S_35.0_f_0.0001_WENO9nu0_Lxz_512.0_256.0_Nxz_256_128",
         "linearTS_dTdz_0.02_dSdz_0.003_QU_-0.0001_QT_0.0005_QS_5.0e-5_T_20.0_S_37.0_f_0.0001_WENO9nu0_Lxz_512.0_256.0_Nxz_256_128",
-        "linearTS_dTdz_0.03_dSdz_0.004_QU_-0.0001_QT_-0.0001_QS_-0.0001_T_10.0_S_35.0_f_0.0001_WENO9nu0_Lxz_512.0_256.0_Nxz_256_128",
-        "linearTS_dTdz_0.01_dSdz_-0.001_QU_-0.0001_QT_-0.0005_QS_0.0002_T_20.0_S_36.0_f_0.0001_WENO9nu0_Lxz_512.0_256.0_Nxz_256_128",
+        "linearTS_dTdz_0.03_dSdz_0.004_QU_-0.0001_QT_-0.0001_QS_-0.0001_T_15.0_S_35.0_f_0.0001_WENO9nu0_Lxz_512.0_256.0_Nxz_256_128",
+        "linearTS_dTdz_0.01_dSdz_-0.001_QU_-0.0001_QT_-0.0005_QS_-0.0002_T_20.0_S_36.0_f_0.0001_WENO9nu0_Lxz_512.0_256.0_Nxz_256_128",
     ],
     
     "train36new_stableRi" => [

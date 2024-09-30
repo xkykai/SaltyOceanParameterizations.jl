@@ -76,7 +76,7 @@ const S_scaling = args["S_scaling"]
 seed = args["random_seed"]
 learning_rate = args["learning_rate"]
 
-LES_FILE_DIRS = ["./LES2/$(file)/instantaneous_timeseries.jld2" for file in LES_suite["train64new"]]
+LES_FILE_DIRS = ["./LES2/$(file)/instantaneous_timeseries.jld2" for file in LES_suite["train54new"]]
 
 FILE_DIR = "./training_output/NDE_Qb_dt5min_nof_BBLintegral_wTwS_$(length(LES_FILE_DIRS))simnew_$(args["hidden_layer"])layer_$(args["hidden_layer_size"])_$(args["activation"])_$(seed)seed_$(learning_rate)lr_localbaseclosure_2Pr_6simstableRi_SGD"
 mkpath(FILE_DIR)
@@ -958,7 +958,7 @@ end
 
 # optimizers = [Optimisers.Adam(1e-4), Optimisers.Adam(3e-5), Optimisers.Adam(1e-5), Optimisers.Adam(3e-6), Optimisers.Adam(1e-6)]
 optimizers = [Optimisers.Adam(3e-5), Optimisers.Adam(1e-5), Optimisers.Adam(3e-6), Optimisers.Adam(1e-6), Optimisers.Adam(1e-6)]
-maxiters = [1000, 1000, 1000, 1000, 1000]
+maxiters = [2000, 2000, 2000, 2000, 2000]
 # maxiters = [5]
 end_epochs = cumsum(maxiters)
 training_timeframes = [timeframes for _ in 1:length(optimizers)]

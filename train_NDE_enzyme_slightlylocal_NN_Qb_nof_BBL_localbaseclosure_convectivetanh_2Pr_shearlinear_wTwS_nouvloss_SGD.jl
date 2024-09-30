@@ -532,7 +532,6 @@ function diagnose_fields(ps, params, x₀, ps_baseclosure, sts, NNs, train_data_
     ∂T∂z_hats = hcat([params.scaling.∂T∂z.(params.Dᶠ * T) for T in eachcol(Ts)]...)
     ∂S∂z_hats = hcat([params.scaling.∂S∂z.(params.Dᶠ * S) for S in eachcol(Ss)]...)
     ∂ρ∂z_hats = hcat([params.scaling.∂ρ∂z.(params.Dᶠ * ρ) for ρ in eachcol(ρs)]...)
-    rss_shear_hats = sqrt.(∂u∂z_hats .^ 2 .+ ∂v∂z_hats .^ 2)
 
     eos = TEOS10EquationOfState()
     Ris_truth = hcat([calculate_Ri(u, v, ρ, Dᶠ, params.g, eos.reference_density, clamp_lims=(-Inf, Inf)) 
@@ -958,7 +957,8 @@ optimizers = [Optimisers.Adam(3e-5), Optimisers.Adam(1e-5), Optimisers.Adam(3e-6
 maxiters = [2000, 2000, 2000, 2000, 2000]
 # maxiters = [5]
 end_epochs = cumsum(maxiters)
-training_timeframes = [timeframes for _ in 1:length(optimizers)]
+training_timeframe = [timeframes[1][1:5], timeframes[1][1:10], timeframes[1][1:15], timeframes[1][1:20], timeframes[1][1:25], timeframes[1][1:27]]
+training_timeframes = [[timeframe for _ in 1:length(field_datasets)] for timeframe in training_timeframe]
 
 sim_indices = [collect(1:length(timeframe)) for timeframe in training_timeframes]
 

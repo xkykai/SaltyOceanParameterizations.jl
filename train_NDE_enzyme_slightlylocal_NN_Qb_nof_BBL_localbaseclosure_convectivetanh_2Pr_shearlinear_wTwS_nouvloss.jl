@@ -71,7 +71,7 @@ const S_scaling = args["S_scaling"]
 seed = args["random_seed"]
 learning_rate = args["learning_rate"]
 
-LES_FILE_DIRS = ["./LES2/$(file)/instantaneous_timeseries.jld2" for file in LES_suite["train54new"]]
+LES_FILE_DIRS = ["./LES2/$(file)/instantaneous_timeseries.jld2" for file in LES_suite["train64new"]]
 
 FILE_DIR = "./training_output/NDE_Qb_dt5min_nof_BBL_wTwS_$(length(LES_FILE_DIRS))simnew_$(args["hidden_layer"])layer_$(args["hidden_layer_size"])_$(args["activation"])_$(seed)seed_$(learning_rate)lr_localbaseclosure_2Pr_6simstableRi"
 mkpath(FILE_DIR)
@@ -373,9 +373,12 @@ end
 function compute_loss_prefactor_density_contribution(individual_loss, contribution, S_scaling=1.0)
     T_loss, S_loss, ρ_loss, ∂T∂z_loss, ∂S∂z_loss, ∂ρ∂z_loss = values(individual_loss)
     
-    total_contribution = contribution.T + contribution.S
-    T_prefactor = total_contribution / contribution.T
-    S_prefactor = total_contribution / contribution.S
+    T_contribution = max(contribution.T, 1e-5)
+    S_contribution = max(contribution.S, 1e-5)
+
+    total_contribution = T_contribution + S_contribution
+    T_prefactor = total_contribution / T_contribution
+    S_prefactor = total_contribution / S_contribution
 
     TS_loss = T_prefactor * T_loss + S_prefactor * S_loss
 
@@ -415,7 +418,7 @@ function loss_multipleics(ps, truths, params, x₀s, ps_baseclosure, st, NN, los
     return mean(losses)
 end
 
-# loss_multipleics(ps, [truths[1]], [params[1]], [x₀s[1]], ps_baseclosure, sts, NNs, [loss_prefactors[1]], length(25:10:45))
+# loss_multipleics(ps, truths, params, x₀s, ps_baseclosure, sts, NNs, loss_prefactors, length(25:10:65))
 
 # dps = deepcopy(ps) .= 0
 # autodiff(Enzyme.ReverseWithPrimal, 

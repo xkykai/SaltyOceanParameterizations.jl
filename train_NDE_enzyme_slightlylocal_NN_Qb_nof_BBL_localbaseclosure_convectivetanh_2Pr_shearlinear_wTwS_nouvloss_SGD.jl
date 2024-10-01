@@ -962,7 +962,7 @@ training_timeframes = [[timeframe for _ in 1:length(field_datasets)] for timefra
 
 sim_indices = [collect(1:length(timeframe)) for timeframe in training_timeframes]
 
-plot_timeframes = full_timeframes
+plot_timeframes = [training_timeframe[1][1]:training_timeframe[1][end] for training_timeframe in training_timeframes]
 plot_indices = 1:length(plot_timeframes)
 sols = nothing
 for (i, (epoch, optimizer, maxiter, training_timeframe, plot_timeframe, training_index)) in enumerate(zip(end_epochs, optimizers, maxiters, training_timeframes, plot_timeframes, sim_indices))

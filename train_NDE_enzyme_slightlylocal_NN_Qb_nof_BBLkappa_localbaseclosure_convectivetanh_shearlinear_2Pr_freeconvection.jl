@@ -135,14 +135,16 @@ function predict_residual_flux(∂T∂z_hat, ∂S∂z_hat, ∂ρ∂z_hat, κs, T
     β = SeawaterPolynomials.haline_contraction(T_top, S_top, 0, eos)
     wT = params.wT.unscaled.top
     wS = params.wS.unscaled.top
+    coarse_size = params.coarse_size
 
-    BBL_index = clamp(findfirst(κs[2:end] .> κ₀) - grid_point_below_kappa + 1, 1, params.coarse_size)
+    MLD_index = findfirst(κs[2:end] .> κ₀)
+    BBL_index = ifelse(MLD_index == coarse_size, coarse_size, max(MLD_index - grid_point_below_kappa + 1, 1))
 
     wb_top_scaled = params.scaling.wb(params.g * (α * wT - β * wS))
     common_variables = wb_top_scaled
 
-    wT = zeros(params.coarse_size+1)
-    wS = zeros(params.coarse_size+1)
+    wT = zeros(coarse_size+1)
+    wS = zeros(coarse_size+1)
 
     for i in 3:params.coarse_size-1
         x = vcat(∂T∂z_hat[i-1:i+1], ∂S∂z_hat[i-1:i+1], ∂ρ∂z_hat[i-1:i+1], common_variables)

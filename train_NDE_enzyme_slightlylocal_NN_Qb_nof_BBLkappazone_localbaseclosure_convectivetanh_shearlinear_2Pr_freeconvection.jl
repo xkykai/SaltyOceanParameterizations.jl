@@ -347,9 +347,12 @@ loss(ps, truths[1], params[1], x₀s[1], ps_baseclosure, sts, NNs, length(25:10:
 function compute_loss_prefactor_density_contribution(individual_loss, contribution, S_scaling=1.0)
     T_loss, S_loss, ρ_loss, ∂T∂z_loss, ∂S∂z_loss, ∂ρ∂z_loss = values(individual_loss)
     
-    total_contribution = contribution.T + contribution.S
-    T_prefactor = total_contribution / contribution.T
-    S_prefactor = total_contribution / contribution.S
+    T_contribution = max(contribution.T, 1e-5)
+    S_contribution = max(contribution.S, 1e-5)
+
+    total_contribution = T_contribution + S_contribution
+    T_prefactor = total_contribution / T_contribution
+    S_prefactor = total_contribution / S_contribution
 
     TS_loss = T_prefactor * T_loss + S_prefactor * S_loss
 

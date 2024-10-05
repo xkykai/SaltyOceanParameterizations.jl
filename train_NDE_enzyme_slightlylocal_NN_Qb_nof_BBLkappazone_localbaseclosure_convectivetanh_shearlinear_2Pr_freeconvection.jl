@@ -19,10 +19,6 @@ function parse_commandline()
     s = ArgParseSettings()
   
     @add_arg_table! s begin
-    #   "--loss_type"
-    #     help = "Loss function used"
-    #     arg_type = String
-    #     default = "mse"
       "--hidden_layer_size"
         help = "Size of hidden layer"
         arg_type = Int64
@@ -44,7 +40,7 @@ function parse_commandline()
         arg_type = Int64
         default = 4
       "--point_above_kappa"
-        help = "Number of Grid points above convective kappa to turn off NN fluxes"
+        help = "Number of Grid points above background kappa to turn off NN fluxes"
         arg_type = Int64
         default = 0
     end
@@ -70,14 +66,13 @@ const S_scaling = args["S_scaling"]
 const grid_point_below_kappa = args["point_below_kappa"]
 const grid_point_above_kappa = args["point_above_kappa"]
 
-LES_suite_name = "trainFC24new"
+LES_suite_name = "trainFC34new"
 scaling_LES_suite_name = "train64new"
 
-FILE_DIR = "./training_output/NDE_FC_dt5min_Qb_nof_BBLkappazone$(grid_point_below_kappa)$(grid_point_above_kappa)_$(LES_suite_name)_scaling$(scaling_LES_suite_name)_$(args["hidden_layer"])layer_$(args["hidden_layer_size"])_$(args["activation"])_2Pr_test"
+FILE_DIR = "./training_output/NDE_FC_Qb_nof_BBLkappazonelast$(grid_point_below_kappa)$(grid_point_above_kappa)_$(LES_suite_name)_scaling$(scaling_LES_suite_name)_$(args["hidden_layer"])layer_$(args["hidden_layer_size"])_$(args["activation"])_2Pr"
 mkpath(FILE_DIR)
 @info FILE_DIR
 
-# BASECLOSURE_FILE_DIR = "./training_output/51simnew_mom_1.0_localbaseclosure_convectivetanh_shearlinear_2Pr_unstableRi_EKI/training_results_mean.jld2"
 BASECLOSURE_FILE_DIR = "./training_output/51simnew_6simstableRi_mom_1.0_localbaseclosure_convectivetanh_shearlinear_2Pr_unstableRi_EKI/training_results_mean.jld2"
 ps_baseclosure = jldopen(BASECLOSURE_FILE_DIR, "r")["u"]
 
@@ -143,9 +138,10 @@ function predict_residual_flux(∂T∂z_hat, ∂S∂z_hat, ∂ρ∂z_hat, κs, T
     coarse_size = params.coarse_size
     top_index = coarse_size + 1
 
-    nonbackground_κ_index = findfirst(κs[2:end] .> κ₀) + 1
-    MLD_index = ifelse(nonbackground_κ_index == top_index, top_index-1, nonbackground_κ_index - 1 + grid_point_above_kappa)
-    BBL_index = ifelse(nonbackground_κ_index == top_index, top_index, max(MLD_index - grid_point_below_kappa + 2, 3))
+    background_κ_index = findlast(κs[1:end-1] .≈ κ₀)
+    nonbackground_κ_index = background_κ_index + 1
+    last_index = ifelse(nonbackground_κ_index == top_index, top_index-1, min(background_κ_index + grid_point_above_kappa, coarse_size))
+    first_index = ifelse(nonbackground_κ_index == top_index, top_index, max(background_κ_index - grid_point_below_kappa + 1, 2))
 
     wb_top_scaled = params.scaling.wb(params.g * (α * wT - β * wS))
     common_variables = wb_top_scaled
@@ -153,27 +149,10 @@ function predict_residual_flux(∂T∂z_hat, ∂S∂z_hat, ∂ρ∂z_hat, κs, T
     wT = zeros(coarse_size+1)
     wS = zeros(coarse_size+1)
 
-    # for i in 3:coarse_size-1
-    #     x = vcat(∂T∂z_hat[i-1:i+1], ∂S∂z_hat[i-1:i+1], ∂ρ∂z_hat[i-1:i+1], common_variables)
-    #     # wT[i] = ifelse(i > BBL_index, ifelse(i < MLD_index, first(NNs.wT(x, p.wT, sts.wT))[1], 0), 0)
-    #     # wS[i] = ifelse(i > BBL_index, ifelse(i < MLD_index, first(NNs.wS(x, p.wS, sts.wS))[1], 0), 0)
-
-    #     # wT[i] = ifelse(i > BBL_index, first(NNs.wT(x, p.wT, sts.wT))[1], 0)
-    #     # wS[i] = ifelse(i > BBL_index, first(NNs.wS(x, p.wS, sts.wS))[1], 0)
-
-    #     if i > BBL_index
-    #         wT[i] = first(NNs.wT(x, p.wT, sts.wT))[1]
-    #         wS[i] = first(NNs.wS(x, p.wS, sts.wS))[1]
-    #     else
-    #         wT[i] = 0
-    #         wS[i] = 0
-    #     end
-    # end
-
-    for i in BBL_index:MLD_index
+    for i in first_index:last_index
         x = vcat(∂T∂z_hat[i-1:i+1], ∂S∂z_hat[i-1:i+1], ∂ρ∂z_hat[i-1:i+1], common_variables)
-            wT[i] = first(NNs.wT(x, p.wT, sts.wT))[1]
-            wS[i] = first(NNs.wS(x, p.wS, sts.wS))[1]
+        wT[i] = first(NNs.wT(x, p.wT, sts.wT))[1]
+        wS[i] = first(NNs.wS(x, p.wS, sts.wS))[1]
     end
     
     return wT, wS
@@ -775,18 +754,23 @@ function train_NDE_multipleics(ps, params, ps_baseclosure, sts, NNs, truths, x�
     return ps_min, (; total=losses), opt_statemin
 end
 
-optimizers = [Optimisers.Adam(3e-4), Optimisers.Adam(3e-5), Optimisers.Adam(3e-5), Optimisers.Adam(1e-5), Optimisers.Adam(1e-5), Optimisers.Adam(1e-5)]
+optimizers = [Optimisers.Adam(3e-4), Optimisers.Adam(1e-5), Optimisers.Adam(1e-5), Optimisers.Adam(3e-6), Optimisers.Adam(3e-6), Optimisers.Adam(3e-6)]
 maxiters = [2000, 2000, 2000, 2000, 2000, 2000]
 end_epochs = cumsum(maxiters)
 training_timeframes = [timeframes[1][1:5], timeframes[1][1:10], timeframes[1][1:15], timeframes[1][1:20], timeframes[1][1:25], timeframes[1][1:27]]
 
-sim_indices = 1:length(LES_FILE_DIRS)
+# optimizers = [Optimisers.Adam(3e-4)]
+# maxiters = [2000]
+# end_epochs = cumsum(maxiters)
+# training_timeframes = [timeframes[1][1:27]]
+
+# sim_indices = 1:length(LES_FILE_DIRS)
 
 # optimizers = [Optimisers.Adam(3e-4)]
 # maxiters = [100]
 # end_epochs = cumsum(maxiters)
 
-# sim_indices = 1:length(LES_FILE_DIRS)
+sim_indices = 1:length(LES_FILE_DIRS)
 
 # training_timeframes = [timeframes[1][1:5]]
 
@@ -807,5 +791,4 @@ for (i, (epoch, optimizer, maxiter, training_timeframe, plot_timeframe)) in enum
     end
 
     plot_loss(losses, FILE_DIR; suffix="epoch$(epoch)_end$(training_timeframe[end])")
-
 end

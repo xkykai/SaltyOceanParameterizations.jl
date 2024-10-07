@@ -595,14 +595,12 @@ function animate_data(train_data, sols, fluxes, diffusivities, sols_noNN, fluxes
     axvw = CairoMakie.Axis(fig[2, 2], title="vw", xlabel="vw (m² s⁻²)", ylabel="z (m)")
     axwT = CairoMakie.Axis(fig[2, 3], title="wT", xlabel="wT (m s⁻¹ °C)", ylabel="z (m)")
     axwS = CairoMakie.Axis(fig[2, 4], title="wS", xlabel="wS (m s⁻¹ g kg⁻¹)", ylabel="z (m)")
-    axRi = CairoMakie.Axis(fig[1, 6], title="Ri", xlabel="Ri", ylabel="z (m)")
+    axRi = CairoMakie.Axis(fig[1, 6], title="Ri", xlabel="arctan(Ri)", ylabel="z (m)")
     axdiffusivity = CairoMakie.Axis(fig[2, 5], title="Diffusivity", xlabel="Diffusivity (m² s⁻¹)", ylabel="z (m)")
 
     n = Observable(1)
     zC = train_data.metadata["zC"]
     zF = train_data.metadata["zF"]
-
-    Ri_max = 3
 
     u_NDE = sols.u
     v_NDE = sols.v
@@ -647,7 +645,7 @@ function animate_data(train_data, sols, fluxes, diffusivities, sols_noNN, fluxes
     wTlim = (find_min(wT_residual, train_data.flux.wT.column.unscaled), find_max(wT_residual, train_data.flux.wT.column.unscaled))
     wSlim = (find_min(wS_residual, train_data.flux.wS.column.unscaled), find_max(wS_residual, train_data.flux.wS.column.unscaled))
 
-    Rilim = (find_min(diffusivities.Ri, diffusivities.Ri_truth, diffusivities_noNN.Ri,), Ri_max)
+    Rilim = (-π/2, π/2)
 
     diffusivitylim = (find_min(diffusivities.ν, diffusivities.κ, diffusivities_noNN.ν, diffusivities_noNN.κ), 
                       find_max(diffusivities.ν, diffusivities.κ, diffusivities_noNN.ν, diffusivities_noNN.κ),)
@@ -695,9 +693,9 @@ function animate_data(train_data, sols, fluxes, diffusivities, sols_noNN, fluxes
     wT_noNNₙ = @lift wT_noNN[:, $n]
     wS_noNNₙ = @lift wS_noNN[:, $n]
 
-    Ri_truthₙ = @lift clamp.(diffusivities.Ri_truth[:, $n], Ref(-Inf..Ri_max))
-    Riₙ = @lift clamp.(diffusivities.Ri[:, $n], Ref(-Inf..Ri_max))
-    Ri_noNNₙ = @lift clamp.(diffusivities_noNN.Ri[:, $n], Ref(-Inf..Ri_max))
+    Ri_truthₙ = @lift atan.(diffusivities.Ri_truth[:, $n])
+    Riₙ = @lift atan.(diffusivities.Ri[:, $n])
+    Ri_noNNₙ = @lift atan.(diffusivities_noNN.Ri[:, $n])
 
     νₙ = @lift diffusivities.ν[:, $n]
     κₙ = @lift diffusivities.κ[:, $n]

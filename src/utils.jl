@@ -1,3 +1,5 @@
+using SeawaterPolynomials.TEOS10
+
 function find_min(a...)
     return minimum(minimum.([a...]))
 end

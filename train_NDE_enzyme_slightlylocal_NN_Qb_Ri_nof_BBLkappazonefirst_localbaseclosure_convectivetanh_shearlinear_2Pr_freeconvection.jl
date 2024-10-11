@@ -43,6 +43,10 @@ function parse_commandline()
         help = "Number of Grid points above background kappa to turn off NN fluxes"
         arg_type = Int64
         default = 0
+      "--random_seed"
+        help = "Random seed"
+        arg_type = Int64
+        default = 123
     end
     return parse_args(s)
 end
@@ -66,10 +70,12 @@ const S_scaling = args["S_scaling"]
 const grid_point_below_kappa = args["point_below_kappa"]
 const grid_point_above_kappa = args["point_above_kappa"]
 
+seed = args["random_seed"]
+
 LES_suite_name = "trainFC34new"
 scaling_LES_suite_name = "train59new"
 
-FILE_DIR = "./training_output/NDE_FC_Qb_Ri_nof_BBLkappazonefirst$(grid_point_below_kappa)$(grid_point_above_kappa)_$(LES_suite_name)_scaling$(scaling_LES_suite_name)_$(args["hidden_layer"])layer_$(args["hidden_layer_size"])_$(args["activation"])_2Pr"
+FILE_DIR = "./training_output/NDE_FC_Qb_Ri_nof_BBLkappazonefirst$(grid_point_below_kappa)$(grid_point_above_kappa)_$(LES_suite_name)_scaling$(scaling_LES_suite_name)_$(args["hidden_layer"])layer_$(args["hidden_layer_size"])_$(args["activation"])_$(seed)seed_2Pr"
 mkpath(FILE_DIR)
 @info FILE_DIR
 
@@ -101,7 +107,7 @@ train_data_plot = LESDatasets(field_datasets, scaling, full_timeframes, coarse_s
 params = ODEParams(train_data; abs_f=true)
 params_plot = ODEParams(train_data_plot, scaling; abs_f=true)
 
-rng = Random.default_rng(123)
+rng = Random.default_rng(seed)
 
 #%%
 NN_layers = vcat(Dense(13, hidden_layer_size, activation), [Dense(hidden_layer_size, hidden_layer_size, activation) for _ in 1:N_hidden_layer-1]..., Dense(hidden_layer_size, 1))

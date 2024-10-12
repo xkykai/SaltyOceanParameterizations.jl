@@ -538,7 +538,7 @@ function animate_data(train_data, sols, fluxes, diffusivities, sols_noNN, fluxes
     axρ = CairoMakie.Axis(fig[1, 3], title="ρ", xlabel="ρ (kg m⁻³)", ylabel="z (m)")
     axwT = CairoMakie.Axis(fig[2, 1], title="wT", xlabel="wT (m s⁻¹ °C)", ylabel="z (m)")
     axwS = CairoMakie.Axis(fig[2, 2], title="wS", xlabel="wS (m s⁻¹ g kg⁻¹)", ylabel="z (m)")
-    axRi = CairoMakie.Axis(fig[1, 4], title="Ri", xlabel="Ri", ylabel="z (m)")
+    axRi = CairoMakie.Axis(fig[1, 4], title="Ri", xlabel="arctan(Ri)", ylabel="z (m)")
     axdiffusivity = CairoMakie.Axis(fig[2, 3], title="Diffusivity", xlabel="Diffusivity (m² s⁻¹)", ylabel="z (m)")
 
     n = Observable(1)
@@ -581,7 +581,7 @@ function animate_data(train_data, sols, fluxes, diffusivities, sols_noNN, fluxes
     wSlim = (find_min(wS_residual, train_data.flux.wS.column.unscaled),
              find_max(wS_residual, train_data.flux.wS.column.unscaled))
 
-    Rilim = (find_min(diffusivities.Ri, diffusivities.Ri_truth, diffusivities_noNN.Ri,), Ri_max)
+    Rilim = (-π, π)
 
     diffusivitylim = (find_min(diffusivities.ν, diffusivities.κ, diffusivities_noNN.ν, diffusivities_noNN.κ), 
                       find_max(diffusivities.ν, diffusivities.κ, diffusivities_noNN.ν, diffusivities_noNN.κ),)
@@ -613,9 +613,9 @@ function animate_data(train_data, sols, fluxes, diffusivities, sols_noNN, fluxes
     wT_noNNₙ = @lift wT_noNN[:, $n]
     wS_noNNₙ = @lift wS_noNN[:, $n]
 
-    Ri_truthₙ = @lift clamp.(diffusivities.Ri_truth[:, $n], Ref(-Inf..Ri_max))
-    Riₙ = @lift clamp.(diffusivities.Ri[:, $n], Ref(-Inf..Ri_max))
-    Ri_noNNₙ = @lift clamp.(diffusivities_noNN.Ri[:, $n], Ref(-Inf..Ri_max))
+    Ri_truthₙ = @lift arctan.(diffusivities.Ri_truth[:, $n])
+    Riₙ = @lift arctan.(diffusivities.Ri[:, $n])
+    Ri_noNNₙ = @lift arctan.(diffusivities_noNN.Ri[:, $n])
 
     νₙ = @lift diffusivities.ν[:, $n]
     κₙ = @lift diffusivities.κ[:, $n]
@@ -765,23 +765,18 @@ function train_NDE_multipleics(ps, params, ps_baseclosure, sts, NNs, truths, x�
     return ps_min, (; total=losses), opt_statemin
 end
 
-optimizers = [Optimisers.Adam(3e-4), Optimisers.Adam(3e-5), Optimisers.Adam(3e-5), Optimisers.Adam(1e-5)]
-maxiters = [5000, 2000, 2000, 2000]
+optimizers = [Optimisers.Adam(3e-4), Optimisers.Adam(learning_rate), Optimisers.Adam(learning_rate), Optimisers.Adam(learning_rate/3), Optimisers.Adam(learning_rate/3), Optimisers.Adam(learning_rate/3)]
+maxiters = [2000, 2000, 2000, 2000, 2000, 2000]
 end_epochs = cumsum(maxiters)
-training_timeframes = [timeframes[1][1:15], timeframes[1][1:20], timeframes[1][1:25], timeframes[1][1:27]]
-
-# optimizers = [Optimisers.Adam(3e-4)]
-# maxiters = [2000]
-# end_epochs = cumsum(maxiters)
-# training_timeframes = [timeframes[1][1:27]]
-
-# sim_indices = 1:length(LES_FILE_DIRS)
-
-# optimizers = [Optimisers.Adam(3e-4)]
-# maxiters = [100]
-# end_epochs = cumsum(maxiters)
+training_timeframes = [timeframes[1][1:5], timeframes[1][1:10], timeframes[1][1:15], timeframes[1][1:20], timeframes[1][1:25], timeframes[1][1:27]]
 
 sim_indices = 1:length(LES_FILE_DIRS)
+
+# optimizers = [Optimisers.Adam(3e-4)]
+# maxiters = [5]
+# end_epochs = cumsum(maxiters)
+
+# sim_indices = 1:length(LES_FILE_DIRS)
 
 # training_timeframes = [timeframes[1][1:5]]
 
@@ -794,12 +789,11 @@ for (i, (epoch, optimizer, maxiter, training_timeframe, plot_timeframe)) in enum
     
     jldsave("$(FILE_DIR)/training_results_epoch$(epoch)_end$(training_timeframe[end]).jld2"; u=ps, losses=losses, state=opt_state, scaling=scaling_params, model=NNs, sts=sts)
 
-    sols = [diagnose_fields(ps, param, x₀, ps_baseclosure, sts, NNs, data, length(plot_timeframe)) for (data, x₀, param) in zip(train_data_plot.data[sim_indices], x₀s[sim_indices], params_plot[sim_indices])]
-
     for (i, index) in enumerate(sim_indices)
-        sol = sols[i]
+        sol = diagnose_fields(ps, params_plot[index], x₀s[index], ps_baseclosure, sts, NNs, train_data_plot.data[index], length(plot_timeframe))
         animate_data(train_data_plot.data[index], sol.sols_dimensional, sol.fluxes, sol.diffusivities, sol.sols_dimensional_noNN, sol.fluxes_noNN, sol.diffusivities_noNN, index, FILE_DIR, length(plot_timeframe); suffix="epoch$(epoch)_end$(training_timeframe[end])")
     end
 
     plot_loss(losses, FILE_DIR; suffix="epoch$(epoch)_end$(training_timeframe[end])")
+
 end

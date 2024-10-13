@@ -613,9 +613,9 @@ function animate_data(train_data, sols, fluxes, diffusivities, sols_noNN, fluxes
     wT_noNNₙ = @lift wT_noNN[:, $n]
     wS_noNNₙ = @lift wS_noNN[:, $n]
 
-    Ri_truthₙ = @lift arctan.(diffusivities.Ri_truth[:, $n])
-    Riₙ = @lift arctan.(diffusivities.Ri[:, $n])
-    Ri_noNNₙ = @lift arctan.(diffusivities_noNN.Ri[:, $n])
+    Ri_truthₙ = @lift atan.(diffusivities.Ri_truth[:, $n])
+    Riₙ = @lift atan.(diffusivities.Ri[:, $n])
+    Ri_noNNₙ = @lift atan.(diffusivities_noNN.Ri[:, $n])
 
     νₙ = @lift diffusivities.ν[:, $n]
     κₙ = @lift diffusivities.κ[:, $n]

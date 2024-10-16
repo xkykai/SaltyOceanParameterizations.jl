@@ -72,7 +72,7 @@ const grid_point_above_kappa = args["point_above_kappa"]
 
 seed = args["random_seed"]
 
-LES_suite_name = "trainFC19new"
+LES_suite_name = "trainFC29new"
 scaling_LES_suite_name = "train59new"
 
 FILE_DIR = "./training_output/NDE_FC_Qb_Ri_nof_BBLkappazonelast$(grid_point_below_kappa)$(grid_point_above_kappa)_$(LES_suite_name)_scaling$(scaling_LES_suite_name)_$(args["hidden_layer"])layer_$(args["hidden_layer_size"])_$(args["activation"])_$(seed)seed_2Pr"

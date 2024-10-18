@@ -53,7 +53,7 @@ PRETRAINED_NDE_DIR = "NDE_FC_Qb_Ri_nof_BBLkappazonelast55_trainFC19new_scalingtr
 index_charlast = findfirst("last", PRETRAINED_NDE_DIR)
 const grid_point_below_kappa = parse(Int, PRETRAINED_NDE_DIR[index_charlast[end]+1])
 const grid_point_above_kappa = parse(Int, PRETRAINED_NDE_DIR[index_charlast[end]+2])
-FILE_DIR = "./training_output/NDE_wTwS_$(length(LES_FILE_DIRS))simnew_$(learning_rate)_pretrained_$(PRETRAINED_NDE_DIR)_SGD_test"
+FILE_DIR = "./training_output/NDE_wTwS_$(length(LES_FILE_DIRS))simnew_$(learning_rate)_pretrained_$(PRETRAINED_NDE_DIR)_SGD"
 mkpath(FILE_DIR)
 @info FILE_DIR
 

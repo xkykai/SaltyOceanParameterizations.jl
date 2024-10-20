@@ -43,6 +43,10 @@ function parse_commandline()
         help = "Number of Grid points above background kappa to turn off NN fluxes"
         arg_type = Int64
         default = 5
+      "--random_seed"
+        help = "Random seed"
+        arg_type = Int64
+        default = 123
     end
     return parse_args(s)
 end
@@ -101,7 +105,8 @@ train_data_plot = LESDatasets(field_datasets, scaling, full_timeframes, coarse_s
 params = ODEParams(train_data; abs_f=true)
 params_plot = ODEParams(train_data_plot, scaling; abs_f=true)
 
-rng = Random.default_rng(123)
+seed = args["random_seed"]
+rng = Random.default_rng(seed)
 
 #%%
 NN_layers = vcat(Dense(10, hidden_layer_size, activation), [Dense(hidden_layer_size, hidden_layer_size, activation) for _ in 1:N_hidden_layer-1]..., Dense(hidden_layer_size, 1))

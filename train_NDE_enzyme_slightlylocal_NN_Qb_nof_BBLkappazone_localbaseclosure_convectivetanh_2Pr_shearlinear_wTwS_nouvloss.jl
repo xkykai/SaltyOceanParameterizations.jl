@@ -50,11 +50,11 @@ function parse_commandline()
       "--point_below_kappa"
         help = "Number of Grid points below convective kappa to turn off NN fluxes"
         arg_type = Int64
-        default = 4
+        default = 5
       "--point_above_kappa"
         help = "Number of Grid points above background kappa to turn off NN fluxes"
         arg_type = Int64
-        default = 0
+        default = 5
     end
     return parse_args(s)
 end
@@ -81,7 +81,7 @@ const grid_point_above_kappa = args["point_above_kappa"]
 seed = args["random_seed"]
 learning_rate = args["learning_rate"]
 
-LES_FILE_DIRS = ["./LES2/$(file)/instantaneous_timeseries.jld2" for file in LES_suite["train64new"]]
+LES_FILE_DIRS = ["./LES2/$(file)/instantaneous_timeseries.jld2" for file in LES_suite["train53new"]]
 
 FILE_DIR = "./training_output/NDE_Qb_nof_BBLkappazonelast$(grid_point_below_kappa)$(grid_point_above_kappa)_wTwS_$(length(LES_FILE_DIRS))simnew_$(args["hidden_layer"])layer_$(args["hidden_layer_size"])_$(args["activation"])_$(seed)seed_$(learning_rate)lr_localbaseclosure_2Pr_6simstableRi"
 mkpath(FILE_DIR)
@@ -386,8 +386,8 @@ end
 function compute_loss_prefactor_density_contribution(individual_loss, contribution, S_scaling=1.0)
     T_loss, S_loss, ρ_loss, ∂T∂z_loss, ∂S∂z_loss, ∂ρ∂z_loss = values(individual_loss)
     
-    T_contribution = max(contribution.T, 1e-5)
-    S_contribution = max(contribution.S, 1e-5)
+    T_contribution = max(contribution.T, 1e-2)
+    S_contribution = max(contribution.S, 1e-2)
 
     total_contribution = T_contribution + S_contribution
     T_prefactor = total_contribution / T_contribution

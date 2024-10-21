@@ -69,11 +69,12 @@ end
 const S_scaling = args["S_scaling"]
 const grid_point_below_kappa = args["point_below_kappa"]
 const grid_point_above_kappa = args["point_above_kappa"]
+seed = args["random_seed"]
 
 LES_suite_name = "trainFC23new"
 scaling_LES_suite_name = "train53new"
 
-FILE_DIR = "./training_output/NDE_FC_Qb_nof_BBLkappazonelast$(grid_point_below_kappa)$(grid_point_above_kappa)_$(LES_suite_name)_scaling$(scaling_LES_suite_name)_$(args["hidden_layer"])layer_$(args["hidden_layer_size"])_$(args["activation"])_2Pr"
+FILE_DIR = "./training_output/NDE_FC_Qb_nof_BBLkappazonelast$(grid_point_below_kappa)$(grid_point_above_kappa)_$(LES_suite_name)_scaling$(scaling_LES_suite_name)_$(args["hidden_layer"])layer_$(args["hidden_layer_size"])_$(args["activation"])_$(seed)seed_2Pr"
 mkpath(FILE_DIR)
 @info FILE_DIR
 
@@ -105,7 +106,6 @@ train_data_plot = LESDatasets(field_datasets, scaling, full_timeframes, coarse_s
 params = ODEParams(train_data; abs_f=true)
 params_plot = ODEParams(train_data_plot, scaling; abs_f=true)
 
-seed = args["random_seed"]
 rng = Random.default_rng(seed)
 
 #%%

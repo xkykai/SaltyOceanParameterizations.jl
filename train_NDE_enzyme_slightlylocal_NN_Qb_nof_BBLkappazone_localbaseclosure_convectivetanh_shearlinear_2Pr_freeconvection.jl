@@ -145,8 +145,8 @@ function predict_residual_flux(∂T∂z_hat, ∂S∂z_hat, ∂ρ∂z_hat, κs, T
 
     background_κ_index = findlast(κs[1:end-1] .≈ κ₀)
     nonbackground_κ_index = background_κ_index + 1
-    last_index = ifelse(nonbackground_κ_index == top_index, top_index-1, min(background_κ_index + grid_point_above_kappa, coarse_size))
-    first_index = ifelse(nonbackground_κ_index == top_index, top_index, max(background_κ_index - grid_point_below_kappa + 1, 2))
+    last_index = ifelse(nonbackground_κ_index == top_index, top_index-1, min(background_κ_index + grid_point_above_kappa, coarse_size-1))
+    first_index = ifelse(nonbackground_κ_index == top_index, top_index, max(background_κ_index - grid_point_below_kappa + 1, 3))
 
     wb_top_scaled = params.scaling.wb(params.g * (α * wT - β * wS))
     common_variables = wb_top_scaled

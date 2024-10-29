@@ -76,9 +76,9 @@ const grid_point_below_kappa = args["point_below_kappa"]
 seed = args["random_seed"]
 learning_rate = args["learning_rate"]
 
-LES_FILE_DIRS = ["./LES2/$(file)/instantaneous_timeseries.jld2" for file in LES_suite["train22new"]]
+LES_FILE_DIRS = ["./LES2/$(file)/instantaneous_timeseries.jld2" for file in LES_suite["train34new"]]
 
-FILE_DIR = "./training_output/NDE_Qb_Ri_nof_BBLRi$(grid_point_below_kappa)_wTwS_$(length(LES_FILE_DIRS))simnew_$(args["hidden_layer"])layer_$(args["hidden_layer_size"])_$(args["activation"])_$(seed)seed_$(learning_rate)lr_localbaseclosure_2Pr_6simstableRi"
+FILE_DIR = "./training_output/NDE_Qb_Ri_nof_BBLRifirst$(grid_point_below_kappa)_wTwS_$(length(LES_FILE_DIRS))simnew_$(args["hidden_layer"])layer_$(args["hidden_layer_size"])_$(args["activation"])_$(seed)seed_$(learning_rate)lr_localbaseclosure_2Pr_6simstableRi"
 mkpath(FILE_DIR)
 @info FILE_DIR
 
@@ -152,7 +152,7 @@ function predict_residual_flux(Ri, ∂T∂z_hat, ∂S∂z_hat, ∂ρ∂z_hat, κ
 
     arctan_Ri = atan.(Ri)
 
-    background_κ_index = findlast(Ri[2:end-1] .>= Riᶜ) + 1
+    background_κ_index = findfirst(Ri[2:end] .< Riᶜ)
     nonbackground_κ_index = background_κ_index + 1
     last_index = coarse_size
     first_index = ifelse(nonbackground_κ_index == top_index, top_index, max(background_κ_index - grid_point_below_kappa + 1, 2))

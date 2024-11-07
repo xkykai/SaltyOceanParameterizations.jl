@@ -46,7 +46,7 @@ function parse_commandline()
       "--learning_rate"
         help = "Learning rate after first routine"
         arg_type = Float64
-        default = 1e-5
+        default = 3e-4
       "--point_below_kappa"
         help = "Number of Grid points below convective kappa to turn off NN fluxes"
         arg_type = Int64
@@ -76,9 +76,9 @@ const grid_point_below_kappa = args["point_below_kappa"]
 seed = args["random_seed"]
 learning_rate = args["learning_rate"]
 
-LES_FILE_DIRS = ["./LES2/$(file)/instantaneous_timeseries.jld2" for file in LES_suite["train56new"]]
+LES_FILE_DIRS = ["./LES2/$(file)/instantaneous_timeseries.jld2" for file in LES_suite["train62newnohighrotation"]]
 
-FILE_DIR = "./training_output/NDE_NN5_Qb_Ri_nof_BBLRifirst$(grid_point_below_kappa)_wTwS_$(length(LES_FILE_DIRS))simnew_$(args["hidden_layer"])layer_$(args["hidden_layer_size"])_$(args["activation"])_$(seed)seed_$(learning_rate)lr_localbaseclosure_2Pr_6simstableRi_nowarmup"
+FILE_DIR = "./training_output/NDE_NN5_Qb_Ri_nof_BBLRifirst$(grid_point_below_kappa)_wTwS_$(length(LES_FILE_DIRS))simnew_$(args["hidden_layer"])layer_$(args["hidden_layer_size"])_$(args["activation"])_$(seed)seed_$(learning_rate)lr_localbaseclosure_2Pr_6simstableRi_nowarmup_fastschedule"
 mkpath(FILE_DIR)
 @info FILE_DIR
 
@@ -962,10 +962,10 @@ end
 # end_epochs = cumsum(maxiters)
 # training_timeframes = [timeframes[1][1:5], timeframes[1][1:10], timeframes[1][1:15], timeframes[1][1:20], timeframes[1][1:25], timeframes[1][1:27]]
 
-optimizers = [Optimisers.Adam(3e-4), Optimisers.Adam(3e-5), Optimisers.Adam(learning_rate), Optimisers.Adam(learning_rate), Optimisers.Adam(learning_rate), Optimisers.Adam(learning_rate/3), Optimisers.Adam(learning_rate/3)]
-maxiters = [2000, 5000, 2000, 2000, 2000, 2000, 2000]
+optimizers = [Optimisers.Adam(3e-4), Optimisers.Adam(3e-4), Optimisers.Adam(3e-4)]
+maxiters = [5000, 5000, 5000]
 end_epochs = cumsum(maxiters)
-training_timeframes = [timeframes[1][1:5], timeframes[1][1:5], timeframes[1][1:10], timeframes[1][1:15], timeframes[1][1:20], timeframes[1][1:25], timeframes[1][1:27]]
+training_timeframes = [timeframes[1][1:10], timeframes[1][1:20], timeframes[1][1:27]]
 
 sim_indices = 1:length(LES_FILE_DIRS)
 

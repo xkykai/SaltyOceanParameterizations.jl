@@ -334,30 +334,18 @@ function LESDatasets(datasets::Vector, scaling::Type{<:AbstractFeatureScaling}, 
     wT = [hcat([coarse_grain(interior(data["wT"][i], 1, 1, :), coarse_size+1, Face) for i in timeframe]...) for (data, timeframe) in zip(datasets, timeframes)]
     wS = [hcat([coarse_grain(interior(data["wS"][i], 1, 1, :), coarse_size+1, Face) for i in timeframe]...) for (data, timeframe) in zip(datasets, timeframes)]
 
-    T_faces = [zeros(size(wT_data, 1), size(wT_data, 2)) for wT_data in wT]
-    S_faces = [zeros(size(wT_data, 1), size(wT_data, 2)) for wT_data in wT]
+    αs = [zeros(size(wT_data, 2)) for wT_data in wT]
+    βs = [zeros(size(wT_data, 2)) for wT_data in wT]
 
-    for (T_face, S_face, T_center, S_center) in zip(T_faces, S_faces, T, S)
-        T_face[2:end-1, :] .= 0.5 .* (T_center[1:end-1, :] .+ T_center[2:end, :])
-        S_face[2:end-1, :] .= 0.5 .* (S_center[1:end-1, :] .+ S_center[2:end, :])
+    for (α, β, T_center, S_center) in zip(αs, βs, T, S)
+        α .= SeawaterPolynomials.thermal_expansion.(T_center[end, :], S_center[end, :], 0, Ref(eos))
+        β .= SeawaterPolynomials.haline_contraction.(T_center[end, :], S_center[end, :], 0, Ref(eos))
     end
 
-    αs = [zeros(size(wT_data, 1), size(wT_data, 2)) for wT_data in wT]
-    βs = [zeros(size(wT_data, 1), size(wT_data, 2)) for wT_data in wT]
+    wbs = [zeros(size(wT_data, 2)) for wT_data in wT]
 
-    for (α, β, T_face, S_face, T_center, S_center) in zip(αs, βs, T_faces, S_faces, T, S)
-        α[2:end-1, :] .= SeawaterPolynomials.thermal_expansion.(T_face[2:end-1, :], S_face[2:end-1, :], 0, Ref(eos))
-        β[2:end-1, :] .= SeawaterPolynomials.haline_contraction.(T_face[2:end-1, :], S_face[2:end-1, :], 0, Ref(eos))
-        
-        α[end, :] .= SeawaterPolynomials.thermal_expansion.(T_center[end-1, :], S_center[end-1, :], 0, Ref(eos))
-        β[end, :] .= SeawaterPolynomials.haline_contraction.(T_center[end-1, :], S_center[end-1, :], 0, Ref(eos))
-    end
-
-    wbs = [zeros(size(wT_data, 1), size(wT_data, 2)) for wT_data in wT]
-
-    for (wb, α, β, wT_data, wS_data, data) in zip(wbs, αs, βs, wT, wS, datasets)
-        wb[2:end-1, :] .= data.metadata["gravitational_acceleration"] .* (α[2:end-1, :] .* wT_data[2:end-1, :] .- β[2:end-1, :] .* wS_data[2:end-1, :])
-        wb[end, :] .= data.metadata["gravitational_acceleration"] .* (α[end, :] .* data.metadata["temperature_flux"] .- β[end, :] .* data.metadata["salinity_flux"])
+    for (wb, α, β, data) in zip(wbs, αs, βs, datasets)
+        wb .= data.metadata["gravitational_acceleration"] .* (α .* data.metadata["temperature_flux"] .- β .* data.metadata["salinity_flux"])
     end
 
     for i in eachindex(u)

@@ -39,10 +39,6 @@ function parse_commandline()
         help = "Number of Grid points below convective kappa to turn off NN fluxes"
         arg_type = Int64
         default = 5
-      "--point_above_kappa"
-        help = "Number of Grid points above background kappa to turn off NN fluxes"
-        arg_type = Int64
-        default = 5
       "--random_seed"
         help = "Random seed"
         arg_type = Int64
@@ -72,7 +68,6 @@ end
 
 const S_scaling = args["S_scaling"]
 const grid_point_below_kappa = args["point_below_kappa"]
-const grid_point_above_kappa = args["point_above_kappa"]
 seed = args["random_seed"]
 
 const NN_grid_points = args["NN_grid_points"]
@@ -81,7 +76,7 @@ LES_suite_name = "trainFC26new"
 scaling_LES_suite_name = "train62newnohighrotation"
 validation_LES_suite_name = "validate37new"
 
-FILE_DIR = "./training_output/NDE$(NN_grid_points)_FC_Qb_nof_BBLkappafirst$(grid_point_below_kappa)$(grid_point_above_kappa)_$(LES_suite_name)_scaling$(scaling_LES_suite_name)_$(args["hidden_layer"])layer_$(args["hidden_layer_size"])_$(args["activation"])_$(seed)seed_2Pr_test"
+FILE_DIR = "./training_output/NDE$(NN_grid_points)_FC_Qb_nof_BBLRifirst$(grid_point_below_kappa)_$(LES_suite_name)_scaling$(scaling_LES_suite_name)_validate$(validation_LES_suite_name)_$(args["hidden_layer"])layer_$(args["hidden_layer_size"])_$(args["activation"])_$(seed)seed_2Pr"
 mkpath(FILE_DIR)
 @info FILE_DIR
 

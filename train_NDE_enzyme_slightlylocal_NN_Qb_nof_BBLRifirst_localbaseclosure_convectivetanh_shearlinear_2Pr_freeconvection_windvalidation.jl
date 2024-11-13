@@ -1091,7 +1091,7 @@ function train_NDE_multipleics(ps, params, ps_baseclosure, sts, NNs, truths, x�
                         DuplicatedNoNeed(loss_prefactors[sim_index], deepcopy(loss_prefactors[sim_index])),
                         Const(length(timeframes)))
 
-        l_validation = loss_multipleics(ps, truths_validation[sim_index], params_validation[sim_index], x₀s_validation[sim_index], ps_baseclosure, sts, NNs, loss_prefactors_validation[sim_index], length(timeframes))
+        l_validation = loss_multipleics(ps, truths_validation, params_validation, x₀s_validation, ps_baseclosure, sts, NNs, loss_prefactors_validation, length(timeframes))
 
         # if iter <= 40
             # Optimisers.adjust!(opt_state, eta=rule.eta * iter / 40)
@@ -1156,13 +1156,13 @@ optimizers = [Optimisers.Adam(3e-4), Optimisers.Adam(1e-5), Optimisers.Adam(1e-5
 maxiters = [2000, 2000, 2000, 2000, 2000, 2000]
 end_epochs = cumsum(maxiters)
 training_timeframes = [timeframes[1][1:5], timeframes[1][1:10], timeframes[1][1:15], timeframes[1][1:20], timeframes[1][1:25], timeframes[1][1:27]]
+sim_indices = 1:length(LES_FILE_DIRS)
 
 # optimizers = [Optimisers.Adam(3e-4)]
 # maxiters = [2000]
 # end_epochs = cumsum(maxiters)
 # training_timeframes = [timeframes[1][1:27]]
 
-# sim_indices = 1:length(LES_FILE_DIRS)
 
 # optimizers = [Optimisers.Adam(3e-3)]
 # maxiters = [10]

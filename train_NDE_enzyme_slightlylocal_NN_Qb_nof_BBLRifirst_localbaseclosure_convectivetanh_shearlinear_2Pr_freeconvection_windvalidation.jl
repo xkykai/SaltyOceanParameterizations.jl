@@ -76,9 +76,13 @@ LES_suite_name = "trainFC26new"
 scaling_LES_suite_name = "train62newnohighrotation"
 validation_LES_suite_name = "validate37new"
 
-FILE_DIR = "./training_output/NDE$(NN_grid_points)_FC_Qb_nof_BBLRifirst$(grid_point_below_kappa)_$(LES_suite_name)_scaling$(scaling_LES_suite_name)_validate$(validation_LES_suite_name)_$(args["hidden_layer"])layer_$(args["hidden_layer_size"])_$(args["activation"])_$(seed)seed_2Pr"
+dirname = "NDE$(NN_grid_points)_FC_Qb_nof_BBLRifirst$(grid_point_below_kappa)_$(LES_suite_name)_scaling$(scaling_LES_suite_name)_validate$(validation_LES_suite_name)_$(args["hidden_layer"])layer_$(args["hidden_layer_size"])_$(args["activation"])_$(seed)seed_2Pr"
+FILE_DIR = "./training_output/$(dirname)"
 mkpath(FILE_DIR)
 @info FILE_DIR
+
+WEIGHTS_DIR = "./model_weights/$(dirname)"
+mkpath(WEIGHTS_DIR)
 
 BASECLOSURE_FILE_DIR = "./training_output/51simnew_6simstableRi_mom_1.0_localbaseclosure_convectivetanh_shearlinear_2Pr_unstableRi_EKI/training_results_mean.jld2"
 ps_baseclosure = jldopen(BASECLOSURE_FILE_DIR, "r")["u"]
@@ -1067,7 +1071,7 @@ function train_NDE_multipleics(ps, params, ps_baseclosure, sts, NNs, truths, x�
     loss_prefactors = compute_loss_prefactor_density_contribution.(ind_losses, compute_density_contribution.(train_data.data), S_scaling)
     loss_prefactors_validation = compute_loss_prefactor_density_contribution.(ind_losses_validation, compute_density_contribution.(validation_data.data), S_scaling)
 
-    jldopen("$(FILE_DIR)/model_weights_round$(epoch)_end$(timeframes[end]).jld2", "w") do file
+    jldopen("$(WEIGHTS_DIR)/model_weights_round$(epoch)_end$(timeframes[end]).jld2", "w") do file
         file["0"] = ps
         file["scaling"] = scaling_params
         file["model"] = NNs
@@ -1129,7 +1133,7 @@ function train_NDE_multipleics(ps, params, ps_baseclosure, sts, NNs, truths, x�
             ps_min_validation .= ps
         end
 
-        jldopen("$(FILE_DIR)/model_weights_round$(epoch)_end$(timeframes[end]).jld2", "a") do file
+        jldopen("$(WEIGHTS_DIR)/model_weights_round$(epoch)_end$(timeframes[end]).jld2", "a") do file
             file["$(iter)"] = ps
         end
 
@@ -1172,9 +1176,8 @@ sim_indices = 1:length(LES_FILE_DIRS)
 
 # training_timeframes = [timeframes[1][1:5]]
 
-plot_timeframes = full_timeframes
 sols = nothing
-for (i, (epoch, optimizer, maxiter, training_timeframe, plot_timeframe)) in enumerate(zip(end_epochs, optimizers, maxiters, training_timeframes, plot_timeframes))
+for (i, (epoch, optimizer, maxiter, training_timeframe)) in enumerate(zip(end_epochs, optimizers, maxiters, training_timeframes))
     global ps = ps
     global sols = sols
     ps, ps_validation, losses, opt_state, opt_state_validation, iter_min, iter_min_validation = train_NDE_multipleics(ps, params, ps_baseclosure, sts, NNs, 
@@ -1186,11 +1189,12 @@ for (i, (epoch, optimizer, maxiter, training_timeframe, plot_timeframe)) in enum
             u_train = ps, state_train = opt_state, iter_min = iter_min,
             u_validation = ps_validation, state_validation = opt_state_validation, iter_min_validation = iter_min_validation,
             losses = losses, scaling=scaling_params, model=NNs, sts=sts)
+    
+    plot_timeframe = training_timeframe[1]:training_timeframe[end]
 
-    sols = [diagnose_fields(ps, param, x₀, ps_baseclosure, sts, NNs, data, length(timeframe)) for (data, x₀, param, timeframe) in zip(train_data_plot.data, x₀s_plot, params_plot, plot_timeframes)]
-
-    for (i, sol) in enumerate(sols)
-        animate_data(train_data_plot.data[i], sol.sols_dimensional, sol.fluxes, sol.diffusivities, sol.sols_dimensional_noNN, sol.fluxes_noNN, sol.diffusivities_noNN, i, FILE_DIR, length(plot_timeframes[i]); suffix="epoch$(epoch)_end$(training_timeframe[end])")
+    for (i, data) in enumerate(train_data_plot.data)
+        sol = diagnose_fields(ps, params, x₀s_plot[i], ps_baseclosure, sts, NNs, data, length(plot_timeframe))
+        animate_data(data, sol.sols_dimensional, sol.fluxes, sol.diffusivities, sol.sols_dimensional_noNN, sol.fluxes_noNN, sol.diffusivities_noNN, i, FILE_DIR, length(plot_timeframes[i]); suffix="epoch$(epoch)_end$(training_timeframe[end])")
     end
 
     plot_loss(losses, FILE_DIR; suffix="epoch$(epoch)_end$(training_timeframe[end])")

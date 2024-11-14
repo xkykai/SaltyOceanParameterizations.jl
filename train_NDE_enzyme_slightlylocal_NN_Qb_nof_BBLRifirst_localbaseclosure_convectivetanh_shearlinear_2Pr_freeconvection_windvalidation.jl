@@ -105,7 +105,7 @@ train_data = LESDatasets(field_datasets, scaling, timeframes, coarse_size; abs_f
 
 LES_FILE_DIRS_validation = ["./LES2/$(file)/instantaneous_timeseries.jld2" for file in LES_suite[validation_LES_suite_name]]
 field_datasets_validation = [FieldDataset(FILE_DIR, backend=OnDisk()) for FILE_DIR in LES_FILE_DIRS_validation]
-timeframes_validation = [25:length(data["ubar"].times) for data in field_datasets_validation]
+timeframes_validation = [25:10:length(data["ubar"].times) for data in field_datasets_validation]
 validation_data = LESDatasets(field_datasets_validation, scaling, timeframes_validation, coarse_size; abs_f=true)
 
 truths = [(;    T = data.profile.T.scaled, 
@@ -618,11 +618,15 @@ ind_losses = [individual_loss(ps, truth, param, x₀, ps_baseclosure, sts, NNs, 
 
 loss_prefactors = compute_loss_prefactor_density_contribution.(ind_losses, compute_density_contribution.(train_data.data), S_scaling)
 
-function loss_multipleics(ps, truths, params, x₀s, ps_baseclosure, sts, NNs, losses_prefactor, Nt, tstart=1, timestep_multiple=10)
-    losses = [loss(ps, truth, param, x₀, ps_baseclosure, sts, NNs, Nt, tstart, timestep_multiple, loss_prefactor) for (truth, x₀, param, loss_prefactor) in zip(truths, x₀s, params, losses_prefactor)]
+function loss_multipleics(ps, truths, params, x₀s, ps_baseclosure, st, NN, losses_prefactor, Nt::Number, tstart=1, timestep_multiple=10)
+    losses = [loss(ps, truth, param, x₀, ps_baseclosure, st, NN, Nt, tstart, timestep_multiple, loss_prefactor) for (truth, x₀, param, loss_prefactor) in zip(truths, x₀s, params, losses_prefactor)]
     return mean(losses)
 end
 
+function loss_multipleics(ps, truths, params, x₀s, ps_baseclosure, st, NN, losses_prefactor, Nts, tstart=1, timestep_multiple=10)
+    losses = [loss(ps, truth, param, x₀, ps_baseclosure, st, NN, Nt, tstart, timestep_multiple, loss_prefactor) for (truth, x₀, param, loss_prefactor, Nt) in zip(truths, x₀s, params, losses_prefactor, Nts)]
+    return mean(losses)
+end
 # loss_multipleics(ps, [truths[1]], [params[1]], [x₀s[1]], ps_baseclosure, sts, NNs, [loss_prefactors[1]], length(25:10:45))
 
 # dps = deepcopy(ps) .= 0

@@ -1193,7 +1193,7 @@ for (i, (epoch, optimizer, maxiter, training_timeframe)) in enumerate(zip(end_ep
     plot_timeframe = training_timeframe[1]:training_timeframe[end]
 
     for (i, data) in enumerate(train_data_plot.data)
-        sol = diagnose_fields(ps, params, x₀s_plot[i], ps_baseclosure, sts, NNs, data, length(plot_timeframe))
+        sol = diagnose_fields(ps, params_plot[i], x₀s_plot[i], ps_baseclosure, sts, NNs, data, length(plot_timeframe))
         animate_data(data, sol.sols_dimensional, sol.fluxes, sol.diffusivities, sol.sols_dimensional_noNN, sol.fluxes_noNN, sol.diffusivities_noNN, i, FILE_DIR, length(plot_timeframe); suffix="epoch$(epoch)_end$(training_timeframe[end])")
     end
 

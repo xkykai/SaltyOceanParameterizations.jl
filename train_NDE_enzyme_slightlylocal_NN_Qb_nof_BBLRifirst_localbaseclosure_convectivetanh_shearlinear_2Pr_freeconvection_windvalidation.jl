@@ -477,64 +477,64 @@ end
 
 
 #%%
-sol_index = 1
-truth = truths[sol_index]
-sol_T, sol_S, sol_ρ = solve_NDE(ps, params[sol_index], x₀s[sol_index], ps_baseclosure, sts, NNs, length(25:10:45))
-fig = Figure(size=(900, 600))
-axT = CairoMakie.Axis(fig[1, 1], xlabel="T", ylabel="z")
-axS = CairoMakie.Axis(fig[1, 2], xlabel="S", ylabel="z")
-axρ = CairoMakie.Axis(fig[1, 3], xlabel="ρ", ylabel="z")
+# sol_index = 1
+# truth = truths[sol_index]
+# sol_T, sol_S, sol_ρ = solve_NDE(ps, params[sol_index], x₀s[sol_index], ps_baseclosure, sts, NNs, length(25:10:45))
+# fig = Figure(size=(900, 600))
+# axT = CairoMakie.Axis(fig[1, 1], xlabel="T", ylabel="z")
+# axS = CairoMakie.Axis(fig[1, 2], xlabel="S", ylabel="z")
+# axρ = CairoMakie.Axis(fig[1, 3], xlabel="ρ", ylabel="z")
 
-lines!(axT, sol_T[:, 1], params[1].zC, label="initial")
-lines!(axT, sol_T[:, end], params[1].zC, label="final")
-lines!(axT, truth.T[:, length(25:10:45)], train_data.data[1].metadata["zC"], label="truth")
+# lines!(axT, sol_T[:, 1], params[1].zC, label="initial")
+# lines!(axT, sol_T[:, end], params[1].zC, label="final")
+# lines!(axT, truth.T[:, length(25:10:45)], train_data.data[1].metadata["zC"], label="truth")
 
-lines!(axS, sol_S[:, 1], params[1].zC, label="initial")
-lines!(axS, sol_S[:, end], params[1].zC, label="final")
-lines!(axS, truth.S[:, length(25:10:45)], train_data.data[1].metadata["zC"], label="truth")
+# lines!(axS, sol_S[:, 1], params[1].zC, label="initial")
+# lines!(axS, sol_S[:, end], params[1].zC, label="final")
+# lines!(axS, truth.S[:, length(25:10:45)], train_data.data[1].metadata["zC"], label="truth")
 
-lines!(axρ, sol_ρ[:, 1], params[1].zC, label="initial")
-lines!(axρ, sol_ρ[:, end], params[1].zC, label="final")
-lines!(axρ, truth.ρ[:, length(25:10:45)], train_data.data[1].metadata["zC"], label="truth")
+# lines!(axρ, sol_ρ[:, 1], params[1].zC, label="initial")
+# lines!(axρ, sol_ρ[:, end], params[1].zC, label="final")
+# lines!(axρ, truth.ρ[:, length(25:10:45)], train_data.data[1].metadata["zC"], label="truth")
 
-axislegend(axT, orientation=:vertical, position=:rb)
-# save("$(FILE_DIR)/initial_final_truth.png", fig)
-display(fig)
-#%%
-sol_index = 1
-truth = truths_validation[sol_index]
-sol_u, sol_v, sol_T, sol_S, sol_ρ = solve_NDE_withmomentum(ps, params_validation[sol_index], x₀s_validation[sol_index], ps_baseclosure, sts, NNs, length(25:285))
+# axislegend(axT, orientation=:vertical, position=:rb)
+# # save("$(FILE_DIR)/initial_final_truth.png", fig)
+# display(fig)
+# #%%
+# sol_index = 1
+# truth = truths_validation[sol_index]
+# sol_u, sol_v, sol_T, sol_S, sol_ρ = solve_NDE_withmomentum(ps, params_validation[sol_index], x₀s_validation[sol_index], ps_baseclosure, sts, NNs, length(25:285))
 
-fig = Figure(size=(1800, 600))
-axu = CairoMakie.Axis(fig[1, 1], xlabel="u", ylabel="z")
-axv = CairoMakie.Axis(fig[1, 2], xlabel="v", ylabel="z")
-axT = CairoMakie.Axis(fig[1, 3], xlabel="T", ylabel="z")
-axS = CairoMakie.Axis(fig[1, 4], xlabel="S", ylabel="z")
-axρ = CairoMakie.Axis(fig[1, 5], xlabel="ρ", ylabel="z")
+# fig = Figure(size=(1800, 600))
+# axu = CairoMakie.Axis(fig[1, 1], xlabel="u", ylabel="z")
+# axv = CairoMakie.Axis(fig[1, 2], xlabel="v", ylabel="z")
+# axT = CairoMakie.Axis(fig[1, 3], xlabel="T", ylabel="z")
+# axS = CairoMakie.Axis(fig[1, 4], xlabel="S", ylabel="z")
+# axρ = CairoMakie.Axis(fig[1, 5], xlabel="ρ", ylabel="z")
 
-lines!(axu, sol_u[:, 1], params[1].zC, label="initial")
-lines!(axu, sol_u[:, end], params[1].zC, label="final")
-lines!(axu, truth.u[:, length(25:285)], train_data.data[1].metadata["zC"], label="truth")
+# lines!(axu, sol_u[:, 1], params[1].zC, label="initial")
+# lines!(axu, sol_u[:, end], params[1].zC, label="final")
+# lines!(axu, truth.u[:, length(25:10:285)], train_data.data[1].metadata["zC"], label="truth")
 
-lines!(axv, sol_v[:, 1], params[1].zC, label="initial")
-lines!(axv, sol_v[:, end], params[1].zC, label="final")
-lines!(axv, truth.v[:, length(25:285)], train_data.data[1].metadata["zC"], label="truth")
+# lines!(axv, sol_v[:, 1], params[1].zC, label="initial")
+# lines!(axv, sol_v[:, end], params[1].zC, label="final")
+# lines!(axv, truth.v[:, length(25:10:285)], train_data.data[1].metadata["zC"], label="truth")
 
-lines!(axT, sol_T[:, 1], params[1].zC, label="initial")
-lines!(axT, sol_T[:, end], params[1].zC, label="final")
-lines!(axT, truth.T[:, length(25:285)], train_data.data[1].metadata["zC"], label="truth")
+# lines!(axT, sol_T[:, 1], params[1].zC, label="initial")
+# lines!(axT, sol_T[:, end], params[1].zC, label="final")
+# lines!(axT, truth.T[:, length(25:10:285)], train_data.data[1].metadata["zC"], label="truth")
 
-lines!(axS, sol_S[:, 1], params[1].zC, label="initial")
-lines!(axS, sol_S[:, end], params[1].zC, label="final")
-lines!(axS, truth.S[:, length(25:285)], train_data.data[1].metadata["zC"], label="truth")
+# lines!(axS, sol_S[:, 1], params[1].zC, label="initial")
+# lines!(axS, sol_S[:, end], params[1].zC, label="final")
+# lines!(axS, truth.S[:, length(25:10:285)], train_data.data[1].metadata["zC"], label="truth")
 
-lines!(axρ, sol_ρ[:, 1], params[1].zC, label="initial")
-lines!(axρ, sol_ρ[:, end], params[1].zC, label="final")
-lines!(axρ, truth.ρ[:, length(25:285)], train_data.data[1].metadata["zC"], label="truth")
+# lines!(axρ, sol_ρ[:, 1], params[1].zC, label="initial")
+# lines!(axρ, sol_ρ[:, end], params[1].zC, label="final")
+# lines!(axρ, truth.ρ[:, length(25:10:285)], train_data.data[1].metadata["zC"], label="truth")
 
-axislegend(axT, orientation=:vertical, position=:rb)
-# save("$(FILE_DIR)/NDE_Qb_$(sol_index)_sol.png", fig)
-display(fig)
+# axislegend(axT, orientation=:vertical, position=:rb)
+# # save("$(FILE_DIR)/NDE_Qb_$(sol_index)_sol.png", fig)
+# display(fig)
 #%%
 function individual_loss(ps, truth, params, x₀, ps_baseclosure, sts, NNs, Nt, tstart=1, timestep_multiple=10)
     Dᶠ = params.Dᶠ

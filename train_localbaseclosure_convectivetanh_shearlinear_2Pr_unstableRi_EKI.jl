@@ -34,10 +34,10 @@ end
 
 args = parse_commandline()
 
-LES_FILE_DIRS = ["./LES2/$(file)/instantaneous_timeseries.jld2" for file in LES_suite["train51new_unstableRi"]]
+LES_FILE_DIRS = ["./LES2/$(file)/instantaneous_timeseries.jld2" for file in LES_suite["train56new_unstableRi"]]
 const S_scaling = args["S_scaling"]
 const momentum_ratio = args["momentum_ratio"]
-FILE_DIR = "./training_output/$(length(LES_FILE_DIRS))simnew_mom_$(momentum_ratio)_localbaseclosure_convectivetanh_shearlinear_2Pr_unstableRi_EKI"
+FILE_DIR = "./training_output/$(length(LES_FILE_DIRS))simnew_6simstableRi_mom_$(momentum_ratio)_localbaseclosure_convectivetanh_shearlinear_2Pr_unstableRi_EKI"
 mkpath(FILE_DIR)
 @info FILE_DIR
 
@@ -66,7 +66,7 @@ caches = [(boundary=(uw=zeros(coarse_size+1), vw=zeros(coarse_size+1), wT=zeros(
 
 rng = Random.default_rng(123)
 
-PS_PRIOR_DIR = "./training_output/36simnew_mom_1.0_localbaseclosure_convectivetanh_shearlinear_2Pr_stableRi_EKI/training_results_mean.jld2"
+PS_PRIOR_DIR = "./training_output/6simnew_mom_1.0_localbaseclosure_convectivetanh_shearlinear_2Pr_stableRi_EKI/training_results_mean.jld2"
 ps = jldopen(PS_PRIOR_DIR, "r")["u"]
 
 function predict_boundary_flux(params)
@@ -301,9 +301,12 @@ end
 function compute_loss_prefactor_density_contribution(individual_loss, contribution, S_scaling=1.0, momentum_ratio=0.25)
     u_loss, v_loss, T_loss, S_loss, ρ_loss, ∂u∂z_loss, ∂v∂z_loss, ∂T∂z_loss, ∂S∂z_loss, ∂ρ∂z_loss = values(individual_loss)
     
-    total_contribution = contribution.T + contribution.S
-    T_prefactor = total_contribution / contribution.T
-    S_prefactor = total_contribution / contribution.S
+    T_contribution = max(contribution.T, 1e-2)
+    S_contribution = max(contribution.S, 1e-2)
+
+    total_contribution = T_contribution + S_contribution
+    T_prefactor = total_contribution / T_contribution
+    S_prefactor = total_contribution / S_contribution
 
     TS_loss = T_prefactor * T_loss + S_prefactor * S_loss
 
@@ -607,7 +610,7 @@ loss_prefactors = compute_loss_prefactor_density_contribution.(ind_losses, compu
 prior_loss = loss_multipleics(ps_prior, truths, params, x₀s, loss_prefactors)
 
 prior_ν_conv = constrained_gaussian("ν_conv", ps_prior.ν_conv, ps_prior.ν_conv/5, -Inf, Inf)
-prior_Pr_conv = constrained_gaussian("Pr_conv", ps_prior.Pr_conv, ps_prior.Pr_conv/5, -Inf, Inf)
+prior_Pr_conv = constrained_gaussian("Pr_conv", ps_prior.Pr_conv, ps_prior.Pr_conv/20, -Inf, Inf)
 prior_ΔRi = constrained_gaussian("ΔRi", ps_prior.ΔRi, ps_prior.ΔRi/5, -Inf, Inf)
 
 priors = combine_distributions([prior_ν_conv, prior_Pr_conv, prior_ΔRi])

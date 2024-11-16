@@ -81,7 +81,7 @@ LES_suite_name = "trainFC26new"
 scaling_LES_suite_name = "train62newnohighrotation"
 validation_LES_suite_name = "validate37new"
 
-dirname = "NDE$(NN_grid_points)_FC_Qb_nof_BBLRifirst$(grid_point_below_kappa)$(grid_point_above_kappa)_$(LES_suite_name)_scaling$(scaling_LES_suite_name)_validate$(validation_LES_suite_name)_$(args["hidden_layer"])layer_$(args["hidden_layer_size"])_$(args["activation"])_$(seed)seed_2Pr"
+dirname = "NDE$(NN_grid_points)_FC_Qb_nof_BBLRifirst$(grid_point_below_kappa)$(grid_point_above_kappa)_$(LES_suite_name)_scaling$(scaling_LES_suite_name)_$(validation_LES_suite_name)_$(args["hidden_layer"])layer_$(args["hidden_layer_size"])_$(args["activation"])_$(seed)seed_2Pr"
 FILE_DIR = "./training_output/$(dirname)"
 mkpath(FILE_DIR)
 @info FILE_DIR

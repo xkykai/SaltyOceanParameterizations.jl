@@ -502,7 +502,8 @@ display(fig)
 
 @info "Begin animating..."
 
-CairoMakie.record(fig, "$(FILE_DIR)/$(FILE_NAME)_timeseries.mp4", 1:Nt, framerate=15) do nn
+VIDEO_DIR = "./LES_videos"
+CairoMakie.record(fig, "$(VIDEO_DIR)/$(FILE_NAME)_timeseries.mp4", 1:Nt, framerate=15) do nn
     n[] = nn
 end
 

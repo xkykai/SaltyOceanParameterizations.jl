@@ -2544,7 +2544,7 @@ LES_suite = Dict(
         # Very warm, very stratified
         "linearTS_dTdz_0.05_dSdz_0.007_QU_-0.0004_QT_0.0004_QS_-4.0e-5_T_25.0_S_36.0_f_0.0_WENO9nu0_Lxz_512.0_256.0_Nxz_256_128",
         "linearTS_dTdz_0.03_dSdz_0.0075_QU_-0.0002_QT_0.0003_QS_-2.0e-5_T_27.0_S_35.0_f_0.0_WENO9nu0_Lxz_512.0_256.0_Nxz_256_128",
-    ]
+    ],
     
     "validate37new" => [
         # Midlatitude Atlantic

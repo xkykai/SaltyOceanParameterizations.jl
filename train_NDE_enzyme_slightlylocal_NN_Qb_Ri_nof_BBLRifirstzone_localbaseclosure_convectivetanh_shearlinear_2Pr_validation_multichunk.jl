@@ -1104,21 +1104,21 @@ for (i, (epoch, optimizer, maxiter, training_timeframe)) in enumerate(zip(end_ep
 
     sim_indices = 1:length(field_datasets)
 
-    # @info "Training NDE"
-    # ps, ps_validation, losses, opt_state, opt_state_validation, iter_min, iter_min_validation = train_NDE_multipleics(ps, params, ps_baseclosure, sts, NNs, 
-    #                                                                                                                   truths, x₀s, train_data, truths_validation, x₀s_validation, params_validation, validation_data,
-    #                                                                                                                   train_data_plot, timeframes, S_scaling, scaling_params; 
-    #                                                                                                                   sim_index=sim_indices, epoch=i, maxiter=maxiter, rule=optimizer)
+    @info "Training NDE"
+    ps, ps_validation, losses, opt_state, opt_state_validation, iter_min, iter_min_validation = train_NDE_multipleics(ps, params, ps_baseclosure, sts, NNs, 
+                                                                                                                      truths, x₀s, train_data, truths_validation, x₀s_validation, params_validation, validation_data,
+                                                                                                                      train_data_plot, timeframes, S_scaling, scaling_params; 
+                                                                                                                      sim_index=sim_indices, epoch=i, maxiter=maxiter, rule=optimizer)
     
-    # jldsave("$(FILE_DIR)/training_results_epoch$(epoch)_duration$(length(timeframes[1])).jld2";
-    #         u_train = ps, state_train = opt_state, iter_min = iter_min,
-    #         u_validation = ps_validation, state_validation = opt_state_validation, iter_min_validation = iter_min_validation,
-    #         losses = losses, scaling=scaling_params, model=NNs, sts=sts)
+    jldsave("$(FILE_DIR)/training_results_epoch$(epoch)_duration$(length(timeframes[1])).jld2";
+            u_train = ps, state_train = opt_state, iter_min = iter_min,
+            u_validation = ps_validation, state_validation = opt_state_validation, iter_min_validation = iter_min_validation,
+            losses = losses, scaling=scaling_params, model=NNs, sts=sts)
     
-    # for (i, data) in enumerate(train_data_plot.data)
-    #     sol = diagnose_fields(ps, params_plot[i], x₀s_plot[i], ps_baseclosure, sts, NNs, data, length(plot_timeframe))
-    #     animate_data(data, sol.sols_dimensional, sol.fluxes, sol.diffusivities, sol.sols_dimensional_noNN, sol.fluxes_noNN, sol.diffusivities_noNN, i, FILE_DIR, length(plot_timeframe); suffix="epoch$(epoch)_duration$(length(timeframes[1]))")
-    # end
+    for (i, data) in enumerate(train_data_plot.data)
+        sol = diagnose_fields(ps, params_plot[i], x₀s_plot[i], ps_baseclosure, sts, NNs, data, length(plot_timeframe))
+        animate_data(data, sol.sols_dimensional, sol.fluxes, sol.diffusivities, sol.sols_dimensional_noNN, sol.fluxes_noNN, sol.diffusivities_noNN, i, FILE_DIR, length(plot_timeframe); suffix="epoch$(epoch)_duration$(length(timeframes[1]))")
+    end
 
     for (i, data) in enumerate(validation_data_plot.data)
         sol = diagnose_fields(ps, params_validation_plot[i], x₀s_validation_plot[i], ps_baseclosure, sts, NNs, data, length(plot_timeframe))

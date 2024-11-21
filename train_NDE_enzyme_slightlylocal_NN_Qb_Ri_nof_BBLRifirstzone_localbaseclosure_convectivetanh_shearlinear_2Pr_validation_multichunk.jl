@@ -77,7 +77,7 @@ seed = args["random_seed"]
 
 const NN_grid_points = args["NN_grid_points"]
 
-LES_suite_name = "trainFC26new"
+LES_suite_name = "train62newnohighrotation"
 scaling_LES_suite_name = "train62newnohighrotation"
 validation_LES_suite_name = "validate30new"
 

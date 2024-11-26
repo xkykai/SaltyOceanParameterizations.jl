@@ -468,12 +468,12 @@ ind_losses = [individual_loss(ps, truth, param, x₀, ps_baseclosure, sts, NNs, 
 
 loss_prefactors = compute_loss_prefactor_density_contribution.(ind_losses, compute_density_contribution.(train_data.data), S_scaling)
 
-function loss_multipleics(ps, truths, params, x₀s, ps_baseclosure, st, NN, losses_prefactor, Nt::Number, tstart=1, timestep_multiple=10)
+function loss_multipleics(ps, truths, params, x₀s, ps_baseclosure, st, NN, losses_prefactor, Nt::Number, tstart=1, timestep_multiple=1)
     losses = [loss(ps, truth, param, x₀, ps_baseclosure, st, NN, Nt, tstart, timestep_multiple, loss_prefactor) for (truth, x₀, param, loss_prefactor) in zip(truths, x₀s, params, losses_prefactor)]
     return mean(losses)
 end
 
-function loss_multipleics(ps, truths, params, x₀s, ps_baseclosure, st, NN, losses_prefactor, Nts, tstart=1, timestep_multiple=10)
+function loss_multipleics(ps, truths, params, x₀s, ps_baseclosure, st, NN, losses_prefactor, Nts, tstart=1, timestep_multiple=1)
     losses = [loss(ps, truth, param, x₀, ps_baseclosure, st, NN, Nt, tstart, timestep_multiple, loss_prefactor) for (truth, x₀, param, loss_prefactor, Nt) in zip(truths, x₀s, params, losses_prefactor, Nts)]
     return mean(losses)
 end
@@ -1031,7 +1031,7 @@ end
 optimizers = [Optimisers.Adam(3e-4), Optimisers.Adam(3e-5), Optimisers.Adam(1e-5)]
 maxiters = [2000, 2000, 2000]
 end_epochs = cumsum(maxiters)
-training_timeframes = [timeframes[1][1:20], timeframes[1][1:25], timeframes[1][1:27]]
+training_timeframes = [25:215, 25:265, 25:289]
 sim_indices = 1:length(LES_FILE_DIRS)
 
 # optimizers = [Optimisers.Adam(3e-4)]

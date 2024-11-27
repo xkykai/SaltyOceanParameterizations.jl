@@ -666,14 +666,13 @@ jldsave("$(FILE_DIR)/training_results_mean.jld2", u=ps_final_mean)
 jldsave("$(FILE_DIR)/training_results_min.jld2", u=ps_final_min)
 
 plot_loss(losses, FILE_DIR; epoch=1)
-# for i in eachindex(params)
-for i in 51:length(params)
+
+for i in eachindex(params)
     sols, fluxes, diffusivities = diagnose_fields(ps_final_mean, params_plot[i], x₀s[i], train_data_plot.data[i])
     animate_data(train_data_plot.data[i], diffusivities, sols, fluxes, diffusivities, i, FILE_DIR; epoch="1_mean")
 end
 
 for i in eachindex(params)
-# for i in 51:length(params)
     sols, fluxes, diffusivities = diagnose_fields(ps_final_min, params_plot[i], x₀s[i], train_data_plot.data[i])
     animate_data(train_data_plot.data[i], diffusivities, sols, fluxes, diffusivities, i, FILE_DIR; epoch="1_min")
 end

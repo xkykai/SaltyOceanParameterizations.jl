@@ -34,10 +34,11 @@ end
 
 args = parse_commandline()
 
-LES_FILE_DIRS = ["./LES2/$(file)/instantaneous_timeseries.jld2" for file in LES_suite["train56new_unstableRi"]]
+LES_suite_name = "train56new_unstableRi"
+LES_FILE_DIRS = ["./LES2/$(file)/instantaneous_timeseries.jld2" for file in LES_suite[LES_suite_name]]
 const S_scaling = args["S_scaling"]
 const momentum_ratio = args["momentum_ratio"]
-FILE_DIR = "./training_output/$(length(LES_FILE_DIRS))simnew_6simstableRi_mom_$(momentum_ratio)_localbaseclosure_convectivetanh_shearlinear_2Pr_unstableRi_EKI"
+FILE_DIR = "./training_output/$(LES_suite_name)_6simstableRi_mom_$(momentum_ratio)_localbaseclosure_convectivetanh_shearlinear_2Pr_unstableRi_EKI"
 mkpath(FILE_DIR)
 @info FILE_DIR
 
@@ -468,9 +469,9 @@ function animate_data(train_data, diffusivities, sols_noNN, fluxes_noNN, diffusi
 
     ulim = (find_min(train_data.profile.u.unscaled, u_noNN, -1e-8), find_max(train_data.profile.u.unscaled, u_noNN, 1e-8))
     vlim = (find_min(train_data.profile.v.unscaled, v_noNN, -1e-8), find_max(train_data.profile.v.unscaled, v_noNN, 1e-8))
-    Tlim = (find_min(train_data.profile.T.unscaled, T_noNN), find_max(train_data.profile.T.unscaled, T_noNN))
-    Slim = (find_min(train_data.profile.S.unscaled, S_noNN), find_max(train_data.profile.S.unscaled, S_noNN))
-    ρlim = (find_min(train_data.profile.ρ.unscaled, ρ_noNN), find_max(train_data.profile.ρ.unscaled, ρ_noNN))
+    Tlim = (find_min(train_data.profile.T.unscaled, T_noNN) - 1e-3, find_max(train_data.profile.T.unscaled, T_noNN) + 1e-3)
+    Slim = (find_min(train_data.profile.S.unscaled, S_noNN) - 1e-3, find_max(train_data.profile.S.unscaled, S_noNN) + 1e-3)
+    ρlim = (find_min(train_data.profile.ρ.unscaled, ρ_noNN) - 1e-3, find_max(train_data.profile.ρ.unscaled, ρ_noNN) + 1e-3)
 
     uwlim = (find_min(train_data.flux.uw.column.unscaled, uw_noNN, -1e-8),
              find_max(train_data.flux.uw.column.unscaled, uw_noNN, 1e-8))
@@ -665,12 +666,14 @@ jldsave("$(FILE_DIR)/training_results_mean.jld2", u=ps_final_mean)
 jldsave("$(FILE_DIR)/training_results_min.jld2", u=ps_final_min)
 
 plot_loss(losses, FILE_DIR; epoch=1)
-for i in eachindex(params)
+# for i in eachindex(params)
+for i in 51:length(params)
     sols, fluxes, diffusivities = diagnose_fields(ps_final_mean, params_plot[i], x₀s[i], train_data_plot.data[i])
     animate_data(train_data_plot.data[i], diffusivities, sols, fluxes, diffusivities, i, FILE_DIR; epoch="1_mean")
 end
 
 for i in eachindex(params)
+# for i in 51:length(params)
     sols, fluxes, diffusivities = diagnose_fields(ps_final_min, params_plot[i], x₀s[i], train_data_plot.data[i])
     animate_data(train_data_plot.data[i], diffusivities, sols, fluxes, diffusivities, i, FILE_DIR; epoch="1_min")
 end

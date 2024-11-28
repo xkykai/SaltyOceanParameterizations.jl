@@ -34,7 +34,7 @@ end
 
 args = parse_commandline()
 
-LES_suite_name = "train56new_unstableRi"
+LES_suite_name = "train56newstrongSO_unstableRi"
 LES_FILE_DIRS = ["./LES2/$(file)/instantaneous_timeseries.jld2" for file in LES_suite[LES_suite_name]]
 const S_scaling = args["S_scaling"]
 const momentum_ratio = args["momentum_ratio"]

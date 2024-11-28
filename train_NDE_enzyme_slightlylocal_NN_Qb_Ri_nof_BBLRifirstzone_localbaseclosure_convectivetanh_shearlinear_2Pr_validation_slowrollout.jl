@@ -89,7 +89,7 @@ mkpath(FILE_DIR)
 WEIGHTS_DIR = "./model_weights/$(dirname)"
 mkpath(WEIGHTS_DIR)
 
-BASECLOSURE_FILE_DIR = "./training_output/56simnew_6simstableRi_mom_1.0_localbaseclosure_convectivetanh_shearlinear_2Pr_unstableRi_EKI/training_results_mean.jld2"
+BASECLOSURE_FILE_DIR = "./training_output/train56newstrongSO_unstableRi_6simstableRi_mom_1.0_localbaseclosure_convectivetanh_shearlinear_2Pr_unstableRi_EKI/training_results_mean.jld2"
 ps_baseclosure = jldopen(BASECLOSURE_FILE_DIR, "r")["u"]
 
 coarse_size = 32
@@ -1011,7 +1011,7 @@ function train_NDE_multipleics(ps, params, ps_baseclosure, sts, NNs, truths, xâ‚
 end
 
 training_timeframes = vcat([timeframes[1][1:5]], [timeframes[1][1:i] for i in 6:27])
-optimizers = vcat([Optimisers.Adam(3e-4)], [Optimisers.Adam(3e-4) for _ in 2:length(training_timeframes)])
+optimizers = vcat([Optimisers.Adam(3e-4)], [Optimisers.Adam(3e-5) for _ in 2:length(training_timeframes)])
 maxiters = vcat([3000], [200 for _ in 2:length(training_timeframes)])
 end_epochs = cumsum(maxiters)
 sim_indices = 1:length(LES_FILE_DIRS)
@@ -1059,4 +1059,6 @@ for (i, (epoch, optimizer, maxiter, training_timeframe)) in enumerate(zip(end_ep
     end
 
     plot_loss(losses, FILE_DIR; suffix="epoch$(epoch)_end$(training_timeframe[end])")
+
+    ps .= ps_validation
 end

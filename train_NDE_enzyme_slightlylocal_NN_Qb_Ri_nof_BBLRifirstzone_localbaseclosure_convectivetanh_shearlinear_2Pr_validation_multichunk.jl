@@ -81,6 +81,7 @@ LES_suite_name = "train62newstrongSO"
 scaling_LES_suite_name = "train62newstrongSO"
 validation_LES_suite_name = "validate30new"
 baseclosure_LES_suite_name = "train56newstrongSO"
+# baseclosure_LES_suite_name = "train56new"
 
 dir_name = "NDE$(NN_grid_points)_Qb_Ri_nof_BBLRifirst$(grid_point_below_kappa)$(grid_point_above_kappa)_$(LES_suite_name)_scaling$(scaling_LES_suite_name)_$(validation_LES_suite_name)_$(args["hidden_layer"])layer_$(args["hidden_layer_size"])_$(args["activation"])_$(seed)seed_base$(baseclosure_LES_suite_name)_mc"
 FILE_DIR = "./training_output/$(dir_name)"
@@ -123,13 +124,17 @@ chunk_start = 25
 # train_data = LESDatasets(field_datasets, scaling, timeframes, coarse_size; abs_f=true)
 # params = ODEParams(train_data, scaling; abs_f=true)
 
-# truths = [(;    T = data.profile.T.scaled, 
+# truths = [(;    u = data.profile.u.scaled,
+#                 v = data.profile.v.scaled,
+#                 T = data.profile.T.scaled, 
 #                 S = data.profile.S.scaled, 
 #                 ρ = data.profile.ρ.scaled, 
+#              ∂u∂z = data.profile.∂u∂z.scaled,
+#              ∂v∂z = data.profile.∂v∂z.scaled,
 #              ∂T∂z = data.profile.∂T∂z.scaled, 
 #              ∂S∂z = data.profile.∂S∂z.scaled, 
 #              ∂ρ∂z = data.profile.∂ρ∂z.scaled) for data in train_data.data]
-# x₀s = [(; T=data.profile.T.scaled[:, 1], S=data.profile.S.scaled[:, 1]) for data in train_data.data]
+# x₀s = [(; u=data.profile.u.scaled[:, 1], v=data.profile.v.scaled[:, 1], T=data.profile.T.scaled[:, 1], S=data.profile.S.scaled[:, 1]) for data in train_data.data]
 
 # Now loading validation data (cases with winds not in training data)
 LES_FILE_DIRS_validation = ["./LES2/$(file)/instantaneous_timeseries.jld2" for file in LES_suite[validation_LES_suite_name]]
@@ -364,8 +369,8 @@ end
 
 #%%
 # sol_index = 1
-# truth = truths_validation[sol_index]
-# sol_u, sol_v, sol_T, sol_S, sol_ρ = solve_NDE(ps, params_validation[sol_index], x₀s_validation[sol_index], ps_baseclosure, sts, NNs, length(25:285))
+# truth = truths[sol_index]
+# sol_u, sol_v, sol_T, sol_S, sol_ρ = solve_NDE(ps, params[sol_index], x₀s[sol_index], ps_baseclosure, sts, NNs, size(truth.T, 2))
 
 # fig = Figure(size=(1800, 600))
 # axu = CairoMakie.Axis(fig[1, 1], xlabel="u", ylabel="z")
@@ -376,32 +381,32 @@ end
 
 # lines!(axu, sol_u[:, 1], params[1].zC, label="initial")
 # lines!(axu, sol_u[:, end], params[1].zC, label="final")
-# lines!(axu, truth.u[:, length(25:285)], train_data.data[1].metadata["zC"], label="truth")
+# lines!(axu, truth.u[:, size(truth.T, 2)], train_data.data[1].metadata["zC"], label="truth")
 
 # lines!(axv, sol_v[:, 1], params[1].zC, label="initial")
 # lines!(axv, sol_v[:, end], params[1].zC, label="final")
-# lines!(axv, truth.v[:, length(25:285)], train_data.data[1].metadata["zC"], label="truth")
+# lines!(axv, truth.v[:, size(truth.T, 2)], train_data.data[1].metadata["zC"], label="truth")
 
 # lines!(axT, sol_T[:, 1], params[1].zC, label="initial")
 # lines!(axT, sol_T[:, end], params[1].zC, label="final")
-# lines!(axT, truth.T[:, length(25:285)], train_data.data[1].metadata["zC"], label="truth")
+# lines!(axT, truth.T[:, size(truth.T, 2)], train_data.data[1].metadata["zC"], label="truth")
 
 # lines!(axS, sol_S[:, 1], params[1].zC, label="initial")
 # lines!(axS, sol_S[:, end], params[1].zC, label="final")
-# lines!(axS, truth.S[:, length(25:285)], train_data.data[1].metadata["zC"], label="truth")
+# lines!(axS, truth.S[:, size(truth.T, 2)], train_data.data[1].metadata["zC"], label="truth")
 
 # lines!(axρ, sol_ρ[:, 1], params[1].zC, label="initial")
 # lines!(axρ, sol_ρ[:, end], params[1].zC, label="final")
-# lines!(axρ, truth.ρ[:, length(25:285)], train_data.data[1].metadata["zC"], label="truth")
+# lines!(axρ, truth.ρ[:, size(truth.T, 2)], train_data.data[1].metadata["zC"], label="truth")
 
 # axislegend(axT, orientation=:vertical, position=:rb)
-# # save("$(FILE_DIR)/NDE_Qb_$(sol_index)_sol.png", fig)
+# save("$(FILE_DIR)/NDE_Qb_$(sol_index)_sol.png", fig)
 # display(fig)
 #%%
 function individual_loss(ps, truth, params, x₀, ps_baseclosure, sts, NNs, Nt, tstart=1, timestep_multiple=10)
     Dᶠ = params.Dᶠ
     scaling = params.scaling
-    sol_T, sol_S, sol_ρ = solve_NDE(ps, params, x₀, ps_baseclosure, sts, NNs, Nt, timestep_multiple)
+    sol_u, sol_v, sol_T, sol_S, sol_ρ = solve_NDE(ps, params, x₀, ps_baseclosure, sts, NNs, Nt, timestep_multiple)
 
     T_loss = mean((sol_T .- truth.T[:, tstart:tstart+Nt-1]).^2)
     S_loss = mean((sol_S .- truth.S[:, tstart:tstart+Nt-1]).^2)
@@ -427,7 +432,8 @@ function loss(ps, truth, params, x₀, ps_baseclosure, sts, NNs, Nt, tstart=1, t
     return sum(values(losses) .* values(losses_prefactor))
 end
 
-# loss(ps, truths[1], params[1], x₀s[1], ps_baseclosure, sts, NNs, length(25:10:45))
+# individual_loss(ps, truths[1], params[1], x₀s[1], ps_baseclosure, sts, NNs, length(25:10:65))
+# loss(ps, truths[1], params[1], x₀s[1], ps_baseclosure, sts, NNs, length(25:10:65))
 
 # dps = deepcopy(ps) .= 0
 # autodiff(Enzyme.ReverseWithPrimal, 
@@ -440,7 +446,7 @@ end
 #          Const(ps_baseclosure), 
 #          Const(sts), 
 #          Const(NNs),
-#          Const(length(25:10:45)))
+#          Const(length(25:10:65)))
 
 function compute_loss_prefactor_density_contribution(individual_loss, contribution, S_scaling=1.0)
     T_loss, S_loss, ρ_loss, ∂T∂z_loss, ∂S∂z_loss, ∂ρ∂z_loss = values(individual_loss)
@@ -490,7 +496,7 @@ function loss_multipleics(ps, truths, params, x₀s, ps_baseclosure, st, NN, los
 end
 
 # loss_multipleics(ps, truths, params, x₀s, ps_baseclosure, sts, NNs, loss_prefactors, length.(timeframes))
-# loss_multipleics(ps, [truths[1]], [params[1]], [x₀s[1]], ps_baseclosure, sts, NNs, [loss_prefactors[1]], length(25:10:45))
+# loss_multipleics(ps, [truths[1]], [params[1]], [x₀s[1]], ps_baseclosure, sts, NNs, [loss_prefactors[1]], length(25:10:65))
 
 # dps = deepcopy(ps) .= 0
 # autodiff(Enzyme.ReverseWithPrimal, 
@@ -504,7 +510,7 @@ end
 #          Const(sts), 
 #          Const(NNs), 
 #          DuplicatedNoNeed([loss_prefactors[1]], deepcopy([loss_prefactors[1]])),
-#          Const(length(25:10:45)))
+#          Const(length(25:10:65)))
 
 # dps = deepcopy(ps) .= 0
 # autodiff(Enzyme.ReverseWithPrimal, 
@@ -518,7 +524,7 @@ end
 #          Const(sts), 
 #          Const(NNs), 
 #          DuplicatedNoNeed(loss_prefactors[1:2], deepcopy(loss_prefactors[1:2])),
-#          Const(length(25:10:45)))
+#          Const(length(25:10:65)))
 
 function predict_residual_flux_dimensional(∂T∂z_hat, ∂S∂z_hat, ∂ρ∂z_hat, Ri, T_top, S_top, p, params, sts, NNs)
     wT_hat, wS_hat = predict_residual_flux(∂T∂z_hat, ∂S∂z_hat, ∂ρ∂z_hat, Ri, T_top, S_top, p, params, sts, NNs)

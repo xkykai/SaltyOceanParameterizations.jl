@@ -1037,8 +1037,8 @@ function train_NDE_multipleics(ps, params, ps_baseclosure, sts, NNs, truths, xâ‚
     return ps_min, ps_min_validation, (; total=losses, total_validation=losses_validation), opt_statemin, opt_statemin_validation, iter_min, iter_min_validation
 end
 
-optimizers = [Optimisers.Adam(3e-4), Optimisers.Adam(3e-5), Optimisers.Adam(3e-5), Optimisers.Adam(3e-5)]
-maxiters = [2000, 2000, 2000, 2000]
+optimizers = [Optimisers.Adam(3e-4), Optimisers.Adam(1e-4), Optimisers.Adam(1e-4), Optimisers.Adam(3e-5)]
+maxiters = [500, 500, 500, 500]
 end_epochs = cumsum(maxiters)
 
 training_timeframes = [

@@ -77,11 +77,12 @@ seed = args["random_seed"]
 
 const NN_grid_points = args["NN_grid_points"]
 
-LES_suite_name = "train62newnohighrotation"
-scaling_LES_suite_name = "train62newnohighrotation"
+LES_suite_name = "train62newstrongSO"
+scaling_LES_suite_name = "train62newstrongSO"
 validation_LES_suite_name = "validate30new"
+baseclosure_LES_suite_name = "train56newstrongSO"
 
-dir_name = "NDE$(NN_grid_points)_FC_Qb_Ri_nof_BBLRifirst$(grid_point_below_kappa)$(grid_point_above_kappa)_$(LES_suite_name)_scaling$(scaling_LES_suite_name)_$(validation_LES_suite_name)_$(args["hidden_layer"])layer_$(args["hidden_layer_size"])_$(args["activation"])_$(seed)seed_2Pr_multichunk"
+dir_name = "NDE$(NN_grid_points)_Qb_Ri_nof_BBLRifirst$(grid_point_below_kappa)$(grid_point_above_kappa)_$(LES_suite_name)_scaling$(scaling_LES_suite_name)_$(validation_LES_suite_name)_$(args["hidden_layer"])layer_$(args["hidden_layer_size"])_$(args["activation"])_$(seed)seed_base$(baseclosure_LES_suite_name)_mc"
 FILE_DIR = "./training_output/$(dir_name)"
 mkpath(FILE_DIR)
 @info FILE_DIR
@@ -89,7 +90,7 @@ mkpath(FILE_DIR)
 WEIGHTS_DIR = "./model_weights/$(dir_name)"
 mkpath(WEIGHTS_DIR)
 
-BASECLOSURE_FILE_DIR = "./training_output/56simnew_6simstableRi_mom_1.0_localbaseclosure_convectivetanh_shearlinear_2Pr_unstableRi_EKI/training_results_mean.jld2"
+BASECLOSURE_FILE_DIR = "./training_output/$(baseclosure_LES_suite_name)_unstableRi_6simstableRi_mom_1.0_localbaseclosure_convectivetanh_shearlinear_2Pr_unstableRi_EKI/training_results_mean.jld2"
 ps_baseclosure = jldopen(BASECLOSURE_FILE_DIR, "r")["u"]
 
 coarse_size = 32
@@ -1030,47 +1031,47 @@ function train_NDE_multipleics(ps, params, ps_baseclosure, sts, NNs, truths, xâ‚
     return ps_min, ps_min_validation, (; total=losses, total_validation=losses_validation), opt_statemin, opt_statemin_validation, iter_min, iter_min_validation
 end
 
-# optimizers = [Optimisers.Adam(3e-4), Optimisers.Adam(3e-5), Optimisers.Adam(3e-5), Optimisers.Adam(3e-5)]
-# maxiters = [2000, 2000, 2000, 2000]
-# end_epochs = cumsum(maxiters)
-
-# training_timeframes = [
-#     [0+chunk_start:10:40+chunk_start, 
-#      30+chunk_start:10:70+chunk_start, 
-#      60+chunk_start:10:100+chunk_start, 
-#      90+chunk_start:10:130+chunk_start, 
-#      120+chunk_start:10:160+chunk_start, 
-#      150+chunk_start:10:190+chunk_start, 
-#      180+chunk_start:10:220+chunk_start, 
-#      210+chunk_start:10:250+chunk_start, 
-#      249:10:289],
-
-#     [0+chunk_start:10:70+chunk_start,
-#      60+chunk_start:10:130+chunk_start,
-#      120+chunk_start:10:190+chunk_start,
-#      180+chunk_start:10:250+chunk_start,
-#      219:10:289],
-
-#     [0+chunk_start:10:130+chunk_start,
-#      120+chunk_start:10:250+chunk_start,
-#      159:10:289],
-
-#     [0+chunk_start:10:289]]
-
-optimizers = [Optimisers.Adam(3e-4)]
-maxiters = [2]
+optimizers = [Optimisers.Adam(3e-4), Optimisers.Adam(3e-5), Optimisers.Adam(3e-5), Optimisers.Adam(3e-5)]
+maxiters = [2000, 2000, 2000, 2000]
 end_epochs = cumsum(maxiters)
 
 training_timeframes = [
     [0+chunk_start:10:40+chunk_start, 
-        30+chunk_start:10:70+chunk_start, 
-        60+chunk_start:10:100+chunk_start, 
-        90+chunk_start:10:130+chunk_start, 
-        120+chunk_start:10:160+chunk_start, 
-        150+chunk_start:10:190+chunk_start, 
-        180+chunk_start:10:220+chunk_start, 
-        210+chunk_start:10:250+chunk_start, 
-        249:10:289]]
+     30+chunk_start:10:70+chunk_start, 
+     60+chunk_start:10:100+chunk_start, 
+     90+chunk_start:10:130+chunk_start, 
+     120+chunk_start:10:160+chunk_start, 
+     150+chunk_start:10:190+chunk_start, 
+     180+chunk_start:10:220+chunk_start, 
+     210+chunk_start:10:250+chunk_start, 
+     249:10:289],
+
+    [0+chunk_start:10:70+chunk_start,
+     60+chunk_start:10:130+chunk_start,
+     120+chunk_start:10:190+chunk_start,
+     180+chunk_start:10:250+chunk_start,
+     219:10:289],
+
+    [0+chunk_start:10:130+chunk_start,
+     120+chunk_start:10:250+chunk_start,
+     159:10:289],
+
+    [0+chunk_start:10:289]]
+
+# optimizers = [Optimisers.Adam(3e-4)]
+# maxiters = [2]
+# end_epochs = cumsum(maxiters)
+
+# training_timeframes = [
+#     [0+chunk_start:10:40+chunk_start, 
+#         30+chunk_start:10:70+chunk_start, 
+#         60+chunk_start:10:100+chunk_start, 
+#         90+chunk_start:10:130+chunk_start, 
+#         120+chunk_start:10:160+chunk_start, 
+#         150+chunk_start:10:190+chunk_start, 
+#         180+chunk_start:10:220+chunk_start, 
+#         210+chunk_start:10:250+chunk_start, 
+#         249:10:289]]
 
 sols = nothing
 plot_timeframe = 25:289

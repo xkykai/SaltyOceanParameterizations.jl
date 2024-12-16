@@ -66,6 +66,8 @@ elseif args["activation"] == "leakyrelu"
     const activation = leakyrelu
 elseif args["activation"] == "swish"
     const activation = swish
+elseif args["activation"] == "selu"
+    const activation = selu
 else
     error("Activation function not recognized")
 end
@@ -77,11 +79,12 @@ seed = args["random_seed"]
 
 const NN_grid_points = args["NN_grid_points"]
 
-LES_suite_name = "train62newnohighrotation"
-scaling_LES_suite_name = "train62newnohighrotation"
+LES_suite_name = "train62newstrongSO"
+scaling_LES_suite_name = "train62newstrongSO"
 validation_LES_suite_name = "validate30new"
+baseclosure_name = "train56newstrongSO"
 
-dirname = "NDE$(NN_grid_points)_FC_Qb_Ri_nof_BBLRifirst$(grid_point_below_kappa)$(grid_point_above_kappa)_$(LES_suite_name)_scaling$(scaling_LES_suite_name)_$(validation_LES_suite_name)_$(args["hidden_layer"])layer_$(args["hidden_layer_size"])_$(args["activation"])_$(seed)seed_2Pr"
+dirname = "NDE$(NN_grid_points)_Qb_Ri_nof_BBLRifirst$(grid_point_below_kappa)$(grid_point_above_kappa)_$(LES_suite_name)_scaling$(scaling_LES_suite_name)_$(validation_LES_suite_name)_b$(baseclosure_name)_$(args["hidden_layer"])layer_$(args["hidden_layer_size"])_$(args["activation"])_$(seed)seed_2Pr_ls10_tm10"
 FILE_DIR = "./training_output/$(dirname)"
 mkpath(FILE_DIR)
 @info FILE_DIR
@@ -89,7 +92,8 @@ mkpath(FILE_DIR)
 WEIGHTS_DIR = "./model_weights/$(dirname)"
 mkpath(WEIGHTS_DIR)
 
-BASECLOSURE_FILE_DIR = "./training_output/56simnew_6simstableRi_mom_1.0_localbaseclosure_convectivetanh_shearlinear_2Pr_unstableRi_EKI/training_results_mean.jld2"
+# BASECLOSURE_FILE_DIR = "./training_output/56simnew_6simstableRi_mom_1.0_localbaseclosure_convectivetanh_shearlinear_2Pr_unstableRi_EKI/training_results_mean.jld2"
+BASECLOSURE_FILE_DIR = "./training_output/$(baseclosure_name)_unstableRi_6simstableRi_mom_1.0_localbaseclosure_convectivetanh_shearlinear_2Pr_unstableRi_EKI2/training_results_mean.jld2"
 ps_baseclosure = jldopen(BASECLOSURE_FILE_DIR, "r")["u"]
 
 coarse_size = 32
@@ -157,17 +161,26 @@ ps_wS = ps_wS |> ComponentArray .|> Float64
 ps_wT .= glorot_uniform(rng, Float64, length(ps_wT))
 ps_wS .= glorot_uniform(rng, Float64, length(ps_wS))
 
+# NN_WEIGHTS_DIR = "$(FILE_DIR)/training_results_epoch8000_end215.jld2"
+
+# ps, NNs, sts = jldopen(NN_WEIGHTS_DIR, "r") do file
+#     ps = file["u_train"]
+#     NNs = file["model"]
+#     sts = file["sts"]
+#     return ps, NNs, sts
+# end
+
 # ps_wT .*= 1e-5
 # ps_wS .*= 1e-5
+
+ps = ComponentArray(; wT=ps_wT, wS=ps_wS)
+NNs = (wT=wT_NN, wS=wS_NN)
+sts = (wT=st_wT, wS=st_wS)
 
 x₀s = [(; u=data.profile.u.scaled[:, 1], v=data.profile.v.scaled[:, 1], T=data.profile.T.scaled[:, 1], S=data.profile.S.scaled[:, 1]) for data in train_data.data]
 x₀s_plot = [(; u=data.profile.u.scaled[:, 1], v=data.profile.v.scaled[:, 1], T=data.profile.T.scaled[:, 1], S=data.profile.S.scaled[:, 1]) for data in train_data_plot.data]
 x₀s_validation = [(; u=data.profile.u.scaled[:, 1], v=data.profile.v.scaled[:, 1], T=data.profile.T.scaled[:, 1], S=data.profile.S.scaled[:, 1]) for data in validation_data.data]
 x₀s_validation_plot = [(; u=data.profile.u.scaled[:, 1], v=data.profile.v.scaled[:, 1], T=data.profile.T.scaled[:, 1], S=data.profile.S.scaled[:, 1]) for data in validation_data_plot.data]
-
-ps = ComponentArray(; wT=ps_wT, wS=ps_wS)
-NNs = (wT=wT_NN, wS=wS_NN)
-sts = (wT=st_wT, wS=st_wS)
 
 scaling_params = write_scaling_params(scaling)
 
@@ -350,41 +363,41 @@ function solve_NDE(ps, params, x₀, ps_baseclosure, sts, NNs, Nt, timestep_mult
     return (; u=sol_u[:, 1:timestep_multiple:end], v=sol_v[:, 1:timestep_multiple:end], T=sol_T[:, 1:timestep_multiple:end], S=sol_S[:, 1:timestep_multiple:end], ρ=sol_ρ[:, 1:timestep_multiple:end])
 end
 
-#%%
-sol_index = 1
-truth = truths_validation[sol_index]
-sol_u, sol_v, sol_T, sol_S, sol_ρ = solve_NDE(ps, params_validation[sol_index], x₀s_validation[sol_index], ps_baseclosure, sts, NNs, length(25:10:285))
+# #%%
+# sol_index = 1
+# truth = truths_validation[sol_index]
+# sol_u, sol_v, sol_T, sol_S, sol_ρ = solve_NDE(ps, params_validation[sol_index], x₀s_validation[sol_index], ps_baseclosure, sts, NNs, length(25:10:285))
 
-fig = Figure(size=(1800, 600))
-axu = CairoMakie.Axis(fig[1, 1], xlabel="u", ylabel="z")
-axv = CairoMakie.Axis(fig[1, 2], xlabel="v", ylabel="z")
-axT = CairoMakie.Axis(fig[1, 3], xlabel="T", ylabel="z")
-axS = CairoMakie.Axis(fig[1, 4], xlabel="S", ylabel="z")
-axρ = CairoMakie.Axis(fig[1, 5], xlabel="ρ", ylabel="z")
+# fig = Figure(size=(1800, 600))
+# axu = CairoMakie.Axis(fig[1, 1], xlabel="u", ylabel="z")
+# axv = CairoMakie.Axis(fig[1, 2], xlabel="v", ylabel="z")
+# axT = CairoMakie.Axis(fig[1, 3], xlabel="T", ylabel="z")
+# axS = CairoMakie.Axis(fig[1, 4], xlabel="S", ylabel="z")
+# axρ = CairoMakie.Axis(fig[1, 5], xlabel="ρ", ylabel="z")
 
-lines!(axu, sol_u[:, 1], params[1].zC, label="initial")
-lines!(axu, sol_u[:, end], params[1].zC, label="final")
-lines!(axu, truth.u[:, length(25:10:285)], train_data.data[1].metadata["zC"], label="truth")
+# lines!(axu, sol_u[:, 1], params[1].zC, label="initial")
+# lines!(axu, sol_u[:, end], params[1].zC, label="final")
+# lines!(axu, truth.u[:, length(25:10:285)], train_data.data[1].metadata["zC"], label="truth")
 
-lines!(axv, sol_v[:, 1], params[1].zC, label="initial")
-lines!(axv, sol_v[:, end], params[1].zC, label="final")
-lines!(axv, truth.v[:, length(25:10:285)], train_data.data[1].metadata["zC"], label="truth")
+# lines!(axv, sol_v[:, 1], params[1].zC, label="initial")
+# lines!(axv, sol_v[:, end], params[1].zC, label="final")
+# lines!(axv, truth.v[:, length(25:10:285)], train_data.data[1].metadata["zC"], label="truth")
 
-lines!(axT, sol_T[:, 1], params[1].zC, label="initial")
-lines!(axT, sol_T[:, end], params[1].zC, label="final")
-lines!(axT, truth.T[:, length(25:10:285)], train_data.data[1].metadata["zC"], label="truth")
+# lines!(axT, sol_T[:, 1], params[1].zC, label="initial")
+# lines!(axT, sol_T[:, end], params[1].zC, label="final")
+# lines!(axT, truth.T[:, length(25:10:285)], train_data.data[1].metadata["zC"], label="truth")
 
-lines!(axS, sol_S[:, 1], params[1].zC, label="initial")
-lines!(axS, sol_S[:, end], params[1].zC, label="final")
-lines!(axS, truth.S[:, length(25:10:285)], train_data.data[1].metadata["zC"], label="truth")
+# lines!(axS, sol_S[:, 1], params[1].zC, label="initial")
+# lines!(axS, sol_S[:, end], params[1].zC, label="final")
+# lines!(axS, truth.S[:, length(25:10:285)], train_data.data[1].metadata["zC"], label="truth")
 
-lines!(axρ, sol_ρ[:, 1], params[1].zC, label="initial")
-lines!(axρ, sol_ρ[:, end], params[1].zC, label="final")
-lines!(axρ, truth.ρ[:, length(25:10:285)], train_data.data[1].metadata["zC"], label="truth")
+# lines!(axρ, sol_ρ[:, 1], params[1].zC, label="initial")
+# lines!(axρ, sol_ρ[:, end], params[1].zC, label="final")
+# lines!(axρ, truth.ρ[:, length(25:10:285)], train_data.data[1].metadata["zC"], label="truth")
 
-axislegend(axT, orientation=:vertical, position=:rb)
-save("$(FILE_DIR)/NDE_Qb_$(sol_index)_sol.png", fig)
-display(fig)
+# axislegend(axT, orientation=:vertical, position=:rb)
+# save("$(FILE_DIR)/NDE_Qb_$(sol_index)_sol.png", fig)
+# display(fig)
 #%%
 function individual_loss(ps, truth, params, x₀, ps_baseclosure, st, NN, Nt, tstart=1, timestep_multiple=10)
     Dᶠ = params.Dᶠ
@@ -415,7 +428,7 @@ function loss(ps, truth, params, x₀, ps_baseclosure, st, NN, Nt, tstart=1, tim
     return sum(values(losses) .* values(losses_prefactor))
 end
 
-loss(ps, truths[1], params[1], x₀s[1], ps_baseclosure, sts, NNs, length(25:10:45))
+# loss(ps, truths[1], params[1], x₀s[1], ps_baseclosure, sts, NNs, length(25:10:45))
 
 # dps = deepcopy(ps) .= 0
 # autodiff(Enzyme.ReverseWithPrimal, 
@@ -918,9 +931,11 @@ function train_NDE_multipleics(ps, params, ps_baseclosure, sts, NNs, truths, x�
 
     mean_loss = 0
     mean_loss_validation = 0
-
+    
+    Nts_validation = [length(data.times) for data in validation_data.data]
     ind_losses = [individual_loss(ps, truth, param, x₀, ps_baseclosure, sts, NNs, length(timeframes)) for (truth, x₀, param) in zip(truths[sim_index], x₀s[sim_index], params[sim_index])]
-    ind_losses_validation = [individual_loss(ps, truth, param, x₀, ps_baseclosure, sts, NNs, length(timeframes)) for (truth, x₀, param) in zip(truths_validation, x₀s_validation, params_validation)]
+    # ind_losses_validation = [individual_loss(ps, truth, param, x₀, ps_baseclosure, sts, NNs, length(timeframes)) for (truth, x₀, param) in zip(truths_validation, x₀s_validation, params_validation)]
+    ind_losses_validation = [individual_loss(ps, truth, param, x₀, ps_baseclosure, sts, NNs, Nt) for (truth, x₀, param, Nt) in zip(truths_validation, x₀s_validation, params_validation, Nts_validation)]
 
     loss_prefactors = compute_loss_prefactor_density_contribution.(ind_losses, compute_density_contribution.(train_data.data), S_scaling)
     loss_prefactors_validation = compute_loss_prefactor_density_contribution.(ind_losses_validation, compute_density_contribution.(validation_data.data), S_scaling)
@@ -949,7 +964,8 @@ function train_NDE_multipleics(ps, params, ps_baseclosure, sts, NNs, truths, x�
                         DuplicatedNoNeed(loss_prefactors[sim_index], deepcopy(loss_prefactors[sim_index])),
                         Const(length(timeframes)))
 
-        l_validation = loss_multipleics(ps, truths_validation, params_validation, x₀s_validation, ps_baseclosure, sts, NNs, loss_prefactors_validation, length(timeframes))
+        # l_validation = loss_multipleics(ps, truths_validation, params_validation, x₀s_validation, ps_baseclosure, sts, NNs, loss_prefactors_validation, length(timeframes))
+        l_validation = loss_multipleics(ps, truths_validation, params_validation, x₀s_validation, ps_baseclosure, sts, NNs, loss_prefactors_validation, Nts_validation)
 
         # if iter <= 40
             # Optimisers.adjust!(opt_state, eta=rule.eta * iter / 40)
@@ -965,7 +981,7 @@ function train_NDE_multipleics(ps, params, ps_baseclosure, sts, NNs, truths, x�
             l_min_validation = l_validation
         end
         
-        @printf("%s, Δt %s, round %d, iter %d/%d, (l_train, l_validate) (%6.10e, %6.10e), (lmin_train, l_min_validate) (%6.5e, %6.5e) max NN weight %6.5e, gradient norm %6.5e\n",
+        @printf("%s, Δt %s, round %d, iter %d/%d, (l_t, l_v) (%6.10e, %6.10e), (lmin_t, l_min_v) (%6.5e, %6.5e) max NN weight %6.5e, gradient norm %6.5e\n",
                 Dates.now(), prettytime(1e-9 * (time_ns() - wall_clock[1])), epoch, iter, maxiter, l, l_validation, l_min, l_min_validation,
                 maximum(abs, ps), maximum(abs, dps))
         
@@ -1010,17 +1026,52 @@ function train_NDE_multipleics(ps, params, ps_baseclosure, sts, NNs, truths, x�
     return ps_min, ps_min_validation, (; total=losses, total_validation=losses_validation), opt_statemin, opt_statemin_validation, iter_min, iter_min_validation
 end
 
-optimizers = [Optimisers.Adam(3e-4), Optimisers.Adam(3e-5), Optimisers.Adam(1e-5), Optimisers.Adam(1e-5), Optimisers.Adam(1e-5)]
-maxiters = [2000, 2000, 2000, 2000, 2000]
+# optimizers = [Optimisers.Adam(3e-4), Optimisers.Adam(3e-5), Optimisers.Adam(1e-5), Optimisers.Adam(1e-5), Optimisers.Adam(1e-5)]
+# maxiters = [2000, 2000, 2000, 2000, 2000]
+# end_epochs = cumsum(maxiters)
+# training_timeframes = [timeframes[1][1:10], timeframes[1][1:15], timeframes[1][1:20], timeframes[1][1:25], timeframes[1][1:27]]
+# sim_indices = 1:length(LES_FILE_DIRS)
+
+# optimizers = [Optimisers.Adam(3e-4), Optimisers.Adam(3e-5), Optimisers.Adam(3e-5), Optimisers.Adam(1e-5), Optimisers.Adam(1e-5), Optimisers.Adam(1e-5)]
+# maxiters = [2000, 2000, 2000, 2000, 2000, 2000]
+# end_epochs = cumsum(maxiters)
+# training_timeframes = [timeframes[1][1:5], timeframes[1][1:10], timeframes[1][1:15], timeframes[1][1:20], timeframes[1][1:25], timeframes[1][1:27]]
+# sim_indices = 1:length(LES_FILE_DIRS)
+
+# optimizers = [Optimisers.Adam(3e-4), Optimisers.Adam(3e-5), Optimisers.Adam(1e-5), Optimisers.Adam(1e-5)]
+# maxiters = [2000, 2000, 2000, 2000]
+# end_epochs = cumsum(maxiters)
+# training_timeframes = [timeframes[1][1:5], timeframes[1][1:10], timeframes[1][1:15], timeframes[1][1:27]]
+# sim_indices = 1:length(LES_FILE_DIRS)
+
+optimizers = [Optimisers.Adam(3e-4), Optimisers.Adam(3e-5), Optimisers.Adam(1e-5)]
+maxiters = [2000, 2000, 2000]
 end_epochs = cumsum(maxiters)
-training_timeframes = [timeframes[1][1:10], timeframes[1][1:15], timeframes[1][1:20], timeframes[1][1:25], timeframes[1][1:27]]
+training_timeframes = [timeframes[1][1:10], timeframes[1][1:15], timeframes[1][1:27]]
 sim_indices = 1:length(LES_FILE_DIRS)
+
+# optimizers = [Optimisers.Adam(3e-4), Optimisers.Adam(3e-5), Optimisers.Adam(3e-5), Optimisers.Adam(1e-5)]
+# maxiters = [2000, 2000, 2000, 2000]
+# end_epochs = cumsum(maxiters)
+# training_timeframes = [timeframes[1][1:15], timeframes[1][1:20], timeframes[1][1:25], timeframes[1][1:27]]
+# sim_indices = 1:length(LES_FILE_DIRS)
+
+# optimizers = [Optimisers.Adam(3e-4), Optimisers.Adam(3e-5), Optimisers.Adam(1e-5)]
+# maxiters = [2000, 2000, 2000]
+# end_epochs = cumsum(maxiters)
+# training_timeframes = [timeframes[1][1:20], timeframes[1][1:25], timeframes[1][1:27]]
+# sim_indices = 1:length(LES_FILE_DIRS)
+
+# optimizers = [Optimisers.Adam(3e-5), Optimisers.Adam(3e-5), Optimisers.Adam(1e-5)]
+# maxiters = [2, 2000, 2000]
+# end_epochs = cumsum(maxiters) .+ 8000 .- 2
+# training_timeframes = [timeframes[1][1:2], timeframes[1][1:25], timeframes[1][1:27]]
+# sim_indices = 1:length(LES_FILE_DIRS)
 
 # optimizers = [Optimisers.Adam(3e-4)]
 # maxiters = [2000]
 # end_epochs = cumsum(maxiters)
 # training_timeframes = [timeframes[1][1:27]]
-
 
 # optimizers = [Optimisers.Adam(3e-3)]
 # maxiters = [2]
@@ -1045,16 +1096,25 @@ for (i, (epoch, optimizer, maxiter, training_timeframe)) in enumerate(zip(end_ep
             losses = losses, scaling=scaling_params, model=NNs, sts=sts)
     
     plot_timeframe = training_timeframe[1]:training_timeframe[end]
+    complete_timeframe = 25:289
 
     for (i, data) in enumerate(train_data_plot.data)
-        sol = diagnose_fields(ps, params_plot[i], x₀s_plot[i], ps_baseclosure, sts, NNs, data, length(plot_timeframe))
+        sol = diagnose_fields(ps, params_plot[i], x₀s_plot[i], ps_baseclosure, sts, NNs, data, length(plot_timeframe), 2)
+        # sol = diagnose_fields(ps, params_plot[i], x₀s_plot[i], ps_baseclosure, sts, NNs, data, length(training_timeframe), 7)
         animate_data(data, sol.sols_dimensional, sol.fluxes, sol.diffusivities, sol.sols_dimensional_noNN, sol.fluxes_noNN, sol.diffusivities_noNN, i, FILE_DIR, length(plot_timeframe); suffix="epoch$(epoch)_end$(training_timeframe[end])")
     end
 
+    # for (i, data) in enumerate(validation_data_plot.data)
+    #     sol = diagnose_fields(ps, params_validation_plot[i], x₀s_validation_plot[i], ps_baseclosure, sts, NNs, data, length(plot_timeframe), 1)
+    #     animate_data(data, sol.sols_dimensional, sol.fluxes, sol.diffusivities, sol.sols_dimensional_noNN, sol.fluxes_noNN, sol.diffusivities_noNN, i, FILE_DIR, length(plot_timeframe); suffix="epoch$(epoch)_end$(training_timeframe[end])", prefix="validation")
+    # end
+
     for (i, data) in enumerate(validation_data_plot.data)
-        sol = diagnose_fields(ps, params_validation_plot[i], x₀s_validation_plot[i], ps_baseclosure, sts, NNs, data, length(plot_timeframe))
-        animate_data(data, sol.sols_dimensional, sol.fluxes, sol.diffusivities, sol.sols_dimensional_noNN, sol.fluxes_noNN, sol.diffusivities_noNN, i, FILE_DIR, length(plot_timeframe); suffix="epoch$(epoch)_end$(training_timeframe[end])", prefix="validation")
+        sol = diagnose_fields(ps, params_validation_plot[i], x₀s_validation_plot[i], ps_baseclosure, sts, NNs, data, length(complete_timeframe), 2)
+        animate_data(data, sol.sols_dimensional, sol.fluxes, sol.diffusivities, sol.sols_dimensional_noNN, sol.fluxes_noNN, sol.diffusivities_noNN, i, FILE_DIR, length(complete_timeframe); suffix="epoch$(epoch)_end$(training_timeframe[end])", prefix="validation")
     end
 
     plot_loss(losses, FILE_DIR; suffix="epoch$(epoch)_end$(training_timeframe[end])")
+
+    # ps .= ps_validation
 end

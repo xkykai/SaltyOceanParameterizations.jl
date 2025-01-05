@@ -1224,12 +1224,12 @@ function train_NDE_multipleics(ps, params, ps_baseclosure, sts, NNs, truths, x�
         if iter % 1000 == 0
             @info "Saving intermediate results"
             jldsave("$(FILE_DIR)/intermediate_training_results_round$(epoch)_epoch$(iter)_end$(timeframes[end]).jld2"; 
-                     u_train = ps_min, state_train = opt_statemin, loss_train = l_min, iter_min = iter_min, scaling=scaling_params, model=NNs, sts=sts,
-                     u_validation = ps_min_validation, state_validation = opt_statemin_validation, loss_validation = l_min_validation, iter_min_validation = iter_min_validation)
+                     u_train = ps_min, loss_train = l_min, iter_min = iter_min, scaling=scaling_params, model=NNs, sts=sts,
+                     u_validation = ps_min_validation, loss_validation = l_min_validation, iter_min_validation = iter_min_validation)
         end
         wall_clock = [time_ns()]
     end
-    return ps_min, ps_min_validation, (; total=losses, total_validation=losses_validation), opt_statemin, opt_statemin_validation, iter_min, iter_min_validation
+    return ps_min, ps_min_validation, (; total=losses, total_validation=losses_validation), iter_min, iter_min_validation
 end
 
 lrs = [3e-4, 3e-5, 3e-5]
@@ -1242,14 +1242,14 @@ sols = nothing
 for (i, (epoch, lr, maxiter, training_timeframe)) in enumerate(zip(end_epochs, lrs, maxiters, training_timeframes))
     global ps = ps
     global sols = sols
-    ps, ps_validation, losses, opt_state, opt_state_validation, iter_min, iter_min_validation = train_NDE_multipleics(ps, params, ps_baseclosure, sts, NNs, 
+    ps, ps_validation, losses, iter_min, iter_min_validation = train_NDE_multipleics(ps, params, ps_baseclosure, sts, NNs, 
                                                                                                                       truths, x₀s, truths_validation, x₀s_validation, params_validation, validation_data,
                                                                                                                       train_data_plot, training_timeframe, S_scaling, scaling_params; 
                                                                                                                       sim_index=sim_indices, epoch=i, maxiter=maxiter, lr=lr)
     
     jldsave("$(FILE_DIR)/training_results_epoch$(epoch)_end$(training_timeframe[end]).jld2";
-            u_train = ps, state_train = opt_state, iter_min = iter_min,
-            u_validation = ps_validation, state_validation = opt_state_validation, iter_min_validation = iter_min_validation,
+            u_train = ps, iter_min = iter_min,
+            u_validation = ps_validation, iter_min_validation = iter_min_validation,
             losses = losses, scaling=scaling_params, model=NNs, sts=sts)
     
     plot_timeframe = training_timeframe[1]:training_timeframe[end]

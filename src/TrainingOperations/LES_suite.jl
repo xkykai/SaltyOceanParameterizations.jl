@@ -939,9 +939,9 @@ LES_suite = Dict(
 
         # Winds + Convection
         "linearTS_dTdz_0.015_dSdz_0.002_QU_-0.0001_QT_0.0002_QS_-2.0e-5_T_20.0_S_37.0_f_0.0001_WENO9nu0_Lxz_512.0_256.0_Nxz_256_128",
-        "linearTS_dTdz_0.01_dSdz_0.0015_QU_-0.00035_QT_0.0002_QS_-1.5e-5_T_17.0_S_36.0_f_5.0e-5_WENO9nu0_Lxz_512.0_256.0_Nxz_256_128",
-        "linearTS_dTdz_0.017_dSdz_0.0018_QU_-0.00025_QT_0.0004_QS_-4.0e-5_T_12.0_S_37.0_f_2.0e-5_WENO9nu0_Lxz_512.0_256.0_Nxz_256_128",
-        "linearTS_dTdz_0.012_dSdz_0.0012_QU_-0.0004_QT_5.0e-5_QS_-5.0e-6_T_10.0_S_37.0_f_0.0_WENO9nu0_Lxz_512.0_256.0_Nxz_256_128",
+        "linearTS_dTdz_0.01_dSdz_0.0015_QU_-0.00035_QT_0.0002_QS_-1.5e-5_T_17.0_S_36.0_f_0.0001_WENO9nu0_Lxz_512.0_256.0_Nxz_256_128",
+        "linearTS_dTdz_0.017_dSdz_0.0018_QU_-0.00025_QT_0.00015_QS_-2.0e-5_T_12.0_S_37.0_f_0.0001_WENO9nu0_Lxz_512.0_256.0_Nxz_256_128",
+        "linearTS_dTdz_0.012_dSdz_0.0012_QU_-0.0004_QT_5.0e-5_QS_-5.0e-6_T_10.0_S_37.0_f_0.0001_WENO9nu0_Lxz_512.0_256.0_Nxz_256_128",
         "linearTS_dTdz_0.01_dSdz_-0.002_QU_-0.0003_QT_0.00035_QS_-3.5e-5_T_16.0_S_34.0_f_0.00015_WENO9nu0_Lxz_512.0_256.0_Nxz_256_128",
         "linearTS_dTdz_0.013_dSdz_-0.001_QU_-0.00045_QT_0.00045_QS_-4.0e-5_T_13.0_S_35.0_f_7.0e-5_WENO9nu0_Lxz_512.0_256.0_Nxz_256_128",
 
@@ -953,7 +953,7 @@ LES_suite = Dict(
         # Winds + Convection
         "linearTS_dTdz_0.01_dSdz_0.0005_QU_-0.0001_QT_0.0002_QS_-2.0e-5_T_17.0_S_34.5_f_0.0_WENO9nu0_Lxz_512.0_256.0_Nxz_256_128",
         "linearTS_dTdz_0.012_dSdz_0.0007_QU_-0.00035_QT_0.0002_QS_-1.5e-5_T_13.0_S_36.0_f_-1.0e-5_WENO9nu0_Lxz_512.0_256.0_Nxz_256_128",
-        "linearTS_dTdz_0.016_dSdz_0.0006_QU_-0.00025_QT_0.0004_QS_-4.0e-5_T_16.0_S_34.0_f_-2.0e-5_WENO9nu0_Lxz_512.0_256.0_Nxz_256_128",
+        "linearTS_dTdz_0.016_dSdz_0.0006_QU_-0.00025_QT_0.00015_QS_-2.0e-5_T_16.0_S_34.0_f_-2.0e-5_WENO9nu0_Lxz_512.0_256.0_Nxz_256_128",
         "linearTS_dTdz_0.011_dSdz_0.0003_QU_-0.0004_QT_5.0e-5_QS_-5.0e-6_T_10.0_S_36.5_f_3.0e-5_WENO9nu0_Lxz_512.0_256.0_Nxz_256_128",
         "linearTS_dTdz_0.015_dSdz_-0.0005_QU_-0.0003_QT_0.00035_QS_-3.5e-5_T_20.0_S_37.0_f_-5.0e-5_WENO9nu0_Lxz_512.0_256.0_Nxz_256_128",
         "linearTS_dTdz_0.017_dSdz_-0.0008_QU_-0.00045_QT_0.00045_QS_-4.0e-5_T_12.0_S_35.0_f_-0.0001_WENO9nu0_Lxz_512.0_256.0_Nxz_256_128",
@@ -973,15 +973,15 @@ LES_suite = Dict(
 
         # Misc cases where there is no salinity gradient
         "linearTS_dTdz_0.03_dSdz_0.0_QU_-0.0002_QT_0.00045_QS_0.0_T_20.0_S_37.0_f_0.0001_WENO9nu0_Lxz_512.0_256.0_Nxz_256_128",
-        "linearTS_dTdz_0.01_dSdz_0.0_QU_-0.0003_QT_0.00015_QS_0.0_T_15.0_S_35.0_f_5.0e-5_WENO9nu0_Lxz_512.0_256.0_Nxz_256_128",
+        "linearTS_dTdz_0.01_dSdz_0.0_QU_-0.0003_QT_0.00015_QS_0.0_T_15.0_S_35.0_f_0.0001_WENO9nu0_Lxz_512.0_256.0_Nxz_256_128",
         
         # Misc cases where there is no temperature gradient
         "linearTS_dTdz_0.0_dSdz_-0.0045_QU_-0.0003_QT_0.0_QS_-4.0e-5_T_17.0_S_36.0_f_-0.0001_WENO9nu0_Lxz_512.0_256.0_Nxz_256_128",
-        "linearTS_dTdz_0.0_dSdz_-0.0025_QU_-0.00015_QT_0.0_QS_-2.0e-5_T_16.0_S_34.0_f_-1.0e-5_WENO9nu0_Lxz_512.0_256.0_Nxz_256_128",
+        "linearTS_dTdz_0.0_dSdz_-0.0025_QU_-0.00015_QT_0.0_QS_-2.0e-5_T_16.0_S_34.0_f_-0.0001_WENO9nu0_Lxz_512.0_256.0_Nxz_256_128",
 
         # Very warm, very stratified
-        "linearTS_dTdz_0.05_dSdz_0.007_QU_-0.0004_QT_0.0004_QS_-4.0e-5_T_25.0_S_36.0_f_0.0_WENO9nu0_Lxz_512.0_256.0_Nxz_256_128",
-        "linearTS_dTdz_0.03_dSdz_0.0075_QU_-0.0002_QT_0.0003_QS_-2.0e-5_T_27.0_S_35.0_f_0.0_WENO9nu0_Lxz_512.0_256.0_Nxz_256_128",
+        "linearTS_dTdz_0.05_dSdz_0.007_QU_-0.0004_QT_0.0004_QS_-4.0e-5_T_25.0_S_36.0_f_0.0001_WENO9nu0_Lxz_512.0_256.0_Nxz_256_128",
+        "linearTS_dTdz_0.03_dSdz_0.0075_QU_-0.0002_QT_0.0003_QS_-2.0e-5_T_27.0_S_35.0_f_0.0001_WENO9nu0_Lxz_512.0_256.0_Nxz_256_128",
     ],
 
     "train21new" => [

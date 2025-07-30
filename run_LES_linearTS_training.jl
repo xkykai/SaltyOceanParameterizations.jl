@@ -326,47 +326,47 @@ field_outputs = merge(model.velocities, model.tracers)
 timeseries_outputs = (; ubar, vbar, Tbar, Sbar, bbar, ρbar,
                         uw, vw, wT, wS, wb, wρ)
 
-# simulation.output_writers[:u] = JLD2OutputWriter(model, (; u),
-#                                                           filename = "$(FILE_DIR)/instantaneous_fields_u.jld2",
-#                                                           schedule = TimeInterval(args["field_time_interval"]minutes),
-#                                                           with_halos = true,
-#                                                           init = init_save_some_metadata!)
+simulation.output_writers[:u] = JLD2OutputWriter(model, (; u),
+                                                          filename = "$(FILE_DIR)/instantaneous_fields_u.jld2",
+                                                          schedule = TimeInterval(args["field_time_interval"]minutes),
+                                                          with_halos = true,
+                                                          init = init_save_some_metadata!)
 
-# simulation.output_writers[:v] = JLD2OutputWriter(model, (; v),
-#                                                           filename = "$(FILE_DIR)/instantaneous_fields_v.jld2",
-#                                                           schedule = TimeInterval(args["field_time_interval"]minutes),
-#                                                           with_halos = true,
-#                                                           init = init_save_some_metadata!)
+simulation.output_writers[:v] = JLD2OutputWriter(model, (; v),
+                                                          filename = "$(FILE_DIR)/instantaneous_fields_v.jld2",
+                                                          schedule = TimeInterval(args["field_time_interval"]minutes),
+                                                          with_halos = true,
+                                                          init = init_save_some_metadata!)
 
-# simulation.output_writers[:w] = JLD2OutputWriter(model, (; w),
-#                                                           filename = "$(FILE_DIR)/instantaneous_fields_w.jld2",
-#                                                           schedule = TimeInterval(args["field_time_interval"]minutes),
-#                                                           with_halos = true,
-#                                                           init = init_save_some_metadata!)
+simulation.output_writers[:w] = JLD2OutputWriter(model, (; w),
+                                                          filename = "$(FILE_DIR)/instantaneous_fields_w.jld2",
+                                                          schedule = TimeInterval(args["field_time_interval"]minutes),
+                                                          with_halos = true,
+                                                          init = init_save_some_metadata!)
 
-# simulation.output_writers[:T] = JLD2OutputWriter(model, (; T),
-#                                                           filename = "$(FILE_DIR)/instantaneous_fields_T.jld2",
-#                                                           schedule = TimeInterval(args["field_time_interval"]minutes),
-#                                                           with_halos = true,
-#                                                           init = init_save_some_metadata!)
+simulation.output_writers[:T] = JLD2OutputWriter(model, (; T),
+                                                          filename = "$(FILE_DIR)/instantaneous_fields_T.jld2",
+                                                          schedule = TimeInterval(args["field_time_interval"]minutes),
+                                                          with_halos = true,
+                                                          init = init_save_some_metadata!)
 
-# simulation.output_writers[:S] = JLD2OutputWriter(model, (; S),
-#                                                           filename = "$(FILE_DIR)/instantaneous_fields_S.jld2",
-#                                                           schedule = TimeInterval(args["field_time_interval"]minutes),
-#                                                           with_halos = true,
-#                                                           init = init_save_some_metadata!)
+simulation.output_writers[:S] = JLD2OutputWriter(model, (; S),
+                                                          filename = "$(FILE_DIR)/instantaneous_fields_S.jld2",
+                                                          schedule = TimeInterval(args["field_time_interval"]minutes),
+                                                          with_halos = true,
+                                                          init = init_save_some_metadata!)
 
-# simulation.output_writers[:b] = JLD2OutputWriter(model, (; b),
-#                                                           filename = "$(FILE_DIR)/instantaneous_fields_b.jld2",
-#                                                           schedule = TimeInterval(args["field_time_interval"]minutes),
-#                                                           with_halos = true,
-#                                                           init = init_save_some_metadata!)
+simulation.output_writers[:b] = JLD2OutputWriter(model, (; b),
+                                                          filename = "$(FILE_DIR)/instantaneous_fields_b.jld2",
+                                                          schedule = TimeInterval(args["field_time_interval"]minutes),
+                                                          with_halos = true,
+                                                          init = init_save_some_metadata!)
 
-# simulation.output_writers[:ρ] = JLD2OutputWriter(model, (; ρ),
-#                                                           filename = "$(FILE_DIR)/instantaneous_fields_rho.jld2",
-#                                                           schedule = TimeInterval(args["field_time_interval"]minutes),
-#                                                           with_halos = true,
-#                                                           init = init_save_some_metadata!)
+simulation.output_writers[:ρ] = JLD2OutputWriter(model, (; ρ),
+                                                          filename = "$(FILE_DIR)/instantaneous_fields_rho.jld2",
+                                                          schedule = TimeInterval(args["field_time_interval"]minutes),
+                                                          with_halos = true,
+                                                          init = init_save_some_metadata!)
 
 simulation.output_writers[:timeseries] = JLD2OutputWriter(model, timeseries_outputs,
                                                           filename = "$(FILE_DIR)/instantaneous_timeseries.jld2",
